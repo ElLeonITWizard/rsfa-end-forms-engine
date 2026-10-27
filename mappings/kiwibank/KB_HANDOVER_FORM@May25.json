@@ -1,0 +1,894 @@
+{
+  "schemaVersion": 1,
+  "templateId": "KB_HANDOVER_FORM",
+  "templateVersion": "May25",
+  "templateFile": "15867550a027__KB_Handover_Form_May25.pdf",
+  "templateSha256": "15867550a027dc54cbb825e4f4e5cd1b7a97f43935e42abd6e738f275162f1a2",
+  "encryption": "reject",
+  "sourceKeyNormalization": "macroforge-v1",
+  "provenance": {
+    "importer": "tools/import_mforge.py 0.1.0",
+    "sourceFile": "RSFA End Forms Filling BluePrint 271026.mforge",
+    "sourceSha256": "8052c17b374b551272e17f5036de1ebfa9a295328eb8a6d079d30eec788b9a51",
+    "flow": "Flow C",
+    "flowDisplayName": "End Forms Flow Filling",
+    "node": 6,
+    "legacyPdfName": "KB_Handover Form_May25.pdf",
+    "lenderCondition": "Banks to Send Contains KiwiBank",
+    "importedOn": "2026-10-27"
+  },
+  "pdf": {
+    "pages": 2,
+    "acroform": true,
+    "xfa": false,
+    "fields": {
+      "1 10": {
+        "kind": "text"
+      },
+      "1 11": {
+        "kind": "text"
+      },
+      "1 12": {
+        "kind": "text"
+      },
+      "1 13": {
+        "kind": "text"
+      },
+      "1 14": {
+        "kind": "text"
+      },
+      "1 15": {
+        "kind": "text"
+      },
+      "1 16": {
+        "kind": "text"
+      },
+      "1 17": {
+        "kind": "text"
+      },
+      "1 18": {
+        "kind": "text"
+      },
+      "1 19": {
+        "kind": "combo",
+        "states": [
+          "Select...",
+          "Yes",
+          "No",
+          "Clients have existing account for loan payments",
+          "Will use Revolving for loan payments"
+        ]
+      },
+      "1 20": {
+        "kind": "combo",
+        "states": [
+          "Select...",
+          "Yes",
+          "No"
+        ]
+      },
+      "1 21": {
+        "kind": "combo",
+        "states": [
+          "Select...",
+          "Phone",
+          "Text",
+          "Not required"
+        ]
+      },
+      "1 22": {
+        "kind": "combo",
+        "states": [
+          "Select...",
+          "Yes",
+          "Customer is already AEOI completed"
+        ]
+      },
+      "1 23": {
+        "kind": "combo",
+        "states": [
+          "Select...",
+          "CDD already completed",
+          "CDD documents attached",
+          "ID checker already completed"
+        ]
+      },
+      "1 24": {
+        "kind": "radio",
+        "states": [
+          "0",
+          "1"
+        ],
+        "widgets": 2
+      },
+      "1 25": {
+        "kind": "radio",
+        "states": [
+          "0",
+          "1"
+        ],
+        "widgets": 2
+      },
+      "1 3": {
+        "kind": "text"
+      },
+      "1 4": {
+        "kind": "text"
+      },
+      "1 5": {
+        "kind": "text"
+      },
+      "1 6": {
+        "kind": "text"
+      },
+      "1 7": {
+        "kind": "text"
+      },
+      "1 8": {
+        "kind": "text"
+      },
+      "1 9": {
+        "kind": "text"
+      },
+      "2 1": {
+        "kind": "text",
+        "maxLen": 8,
+        "comb": true
+      },
+      "2 10": {
+        "kind": "combo",
+        "states": [
+          "Select...",
+          "6 months",
+          "1 year",
+          "2 years",
+          "3 years",
+          "4 years",
+          "5 years"
+        ]
+      },
+      "2 11": {
+        "kind": "text"
+      },
+      "2 12": {
+        "kind": "text"
+      },
+      "2 13": {
+        "kind": "text"
+      },
+      "2 14": {
+        "kind": "combo",
+        "states": [
+          "Select...",
+          "Revolving",
+          "Offset",
+          "Variable",
+          "6 months",
+          "1 year",
+          "2 years",
+          "3 years",
+          "4 years",
+          "5 years"
+        ]
+      },
+      "2 15": {
+        "kind": "text"
+      },
+      "2 16": {
+        "kind": "combo",
+        "states": [
+          "Select...",
+          "6 months",
+          "1 year",
+          "2 years",
+          "3 years",
+          "4 years",
+          "5 years"
+        ]
+      },
+      "2 17": {
+        "kind": "text"
+      },
+      "2 18": {
+        "kind": "text"
+      },
+      "2 19": {
+        "kind": "text"
+      },
+      "2 2": {
+        "kind": "text",
+        "maxLen": 8,
+        "comb": true
+      },
+      "2 20": {
+        "kind": "combo",
+        "states": [
+          "Select...",
+          "Revolving",
+          "Offset",
+          "Variable",
+          "6 months",
+          "1 year",
+          "2 years",
+          "3 years",
+          "4 years",
+          "5 years"
+        ]
+      },
+      "2 21": {
+        "kind": "text"
+      },
+      "2 22": {
+        "kind": "combo",
+        "states": [
+          "Select...",
+          "6 months",
+          "1 year",
+          "2 years",
+          "3 years",
+          "4 years",
+          "5 years"
+        ]
+      },
+      "2 23": {
+        "kind": "text"
+      },
+      "2 24": {
+        "kind": "text"
+      },
+      "2 25": {
+        "kind": "text"
+      },
+      "2 26": {
+        "kind": "combo",
+        "states": [
+          "Select...",
+          "Revolving",
+          "Offset",
+          "Variable",
+          "6 months",
+          "1 year",
+          "2 years",
+          "3 years",
+          "4 years",
+          "5 years"
+        ]
+      },
+      "2 27": {
+        "kind": "text"
+      },
+      "2 28": {
+        "kind": "combo",
+        "states": [
+          "Select...",
+          "6 months",
+          "1 year",
+          "2 years",
+          "3 years",
+          "4 years",
+          "5 years"
+        ]
+      },
+      "2 29": {
+        "kind": "text"
+      },
+      "2 29 total": {
+        "kind": "text"
+      },
+      "2 3": {
+        "kind": "combo",
+        "states": [
+          "Select...",
+          "Weekly",
+          "Fortnightly",
+          "Monthly"
+        ]
+      },
+      "2 30": {
+        "kind": "text"
+      },
+      "2 32": {
+        "kind": "text"
+      },
+      "2 33": {
+        "kind": "combo",
+        "states": [
+          "Select...",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "8"
+        ]
+      },
+      "2 34": {
+        "kind": "combo",
+        "states": [
+          "Select...",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "8"
+        ]
+      },
+      "2 35": {
+        "kind": "combo",
+        "states": [
+          "Select...",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "8"
+        ]
+      },
+      "2 4": {
+        "kind": "text"
+      },
+      "2 5": {
+        "kind": "text"
+      },
+      "2 6": {
+        "kind": "text"
+      },
+      "2 7": {
+        "kind": "text"
+      },
+      "2 8": {
+        "kind": "combo",
+        "states": [
+          "Select...",
+          "Revolving",
+          "Offset",
+          "Variable",
+          "6 months",
+          "1 year",
+          "2 years",
+          "3 years",
+          "4 years",
+          "5 years"
+        ]
+      },
+      "2 9": {
+        "kind": "text"
+      },
+      "3 1": {
+        "kind": "checkbox",
+        "states": [
+          "Y"
+        ]
+      },
+      "3 2": {
+        "kind": "checkbox",
+        "states": [
+          "Y"
+        ]
+      },
+      "3 3": {
+        "kind": "checkbox",
+        "states": [
+          "Y"
+        ]
+      },
+      "3 4": {
+        "kind": "checkbox",
+        "states": [
+          "Y"
+        ]
+      },
+      "3 5": {
+        "kind": "checkbox",
+        "states": [
+          "Y"
+        ]
+      },
+      "3 6": {
+        "kind": "checkbox",
+        "states": [
+          "Y"
+        ]
+      },
+      "3 7": {
+        "kind": "checkbox",
+        "states": [
+          "Y"
+        ]
+      },
+      "4 1": {
+        "kind": "text"
+      },
+      "4 2": {
+        "kind": "text"
+      },
+      "4 3": {
+        "kind": "text"
+      },
+      "4 4": {
+        "kind": "text"
+      },
+      "4 5": {
+        "kind": "text"
+      },
+      "5 1": {
+        "kind": "text"
+      },
+      "5 2": {
+        "kind": "text"
+      },
+      "5 3": {
+        "kind": "text"
+      },
+      "6 1": {
+        "kind": "combo",
+        "states": [
+          "Select ...",
+          "Accessibility",
+          "Account setup",
+          "Financial assistance required",
+          "Protecting from financial misconduct"
+        ]
+      },
+      "6 3": {
+        "kind": "combo",
+        "states": [
+          "Select ...",
+          "Quarterly",
+          "Six monthly",
+          "Annually"
+        ]
+      },
+      "6 4": {
+        "kind": "text"
+      },
+      "7 1": {
+        "kind": "text"
+      },
+      "7 2": {
+        "kind": "text",
+        "maxLen": 8,
+        "comb": true
+      },
+      "Adviser sign-off": {
+        "kind": "checkbox",
+        "states": [
+          "Y"
+        ]
+      },
+      "Application#": {
+        "kind": "text"
+      },
+      "Outcome": {
+        "kind": "combo",
+        "states": [
+          "Select …",
+          "General Customer Care",
+          "Covid 19 Customer Care"
+        ]
+      },
+      "RESET": {
+        "kind": "pushbutton"
+      },
+      "SUBMIT": {
+        "kind": "pushbutton"
+      }
+    }
+  },
+  "fields": [
+    {
+      "pdfField": "1 3",
+      "kind": "text",
+      "source": {
+        "key": "Applicant 1 Full Name"
+      },
+      "legacy": {
+        "field": "1 3",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "1 4",
+      "kind": "text",
+      "source": {
+        "key": "Applicant 1 Primary Email Address"
+      },
+      "legacy": {
+        "field": "1 4",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "1 5",
+      "kind": "text",
+      "source": {
+        "key": "Applicant 1 Mobile"
+      },
+      "legacy": {
+        "field": "1 5",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "1 6",
+      "kind": "text",
+      "source": {
+        "key": "Applicant 1 Best time to call"
+      },
+      "legacy": {
+        "field": "1 6",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "1 7",
+      "kind": "text",
+      "source": {
+        "key": "Applicant 2 Full Name"
+      },
+      "legacy": {
+        "field": "1 7",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "1 8",
+      "kind": "text",
+      "source": {
+        "key": "Applicant 2 Primary Email Address"
+      },
+      "legacy": {
+        "field": "1 8",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "1 9",
+      "kind": "text",
+      "source": {
+        "key": "Applicant 2 Mobile"
+      },
+      "legacy": {
+        "field": "1 9",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "2 1",
+      "kind": "text",
+      "source": {
+        "key": "Expected settlement date"
+      },
+      "legacy": {
+        "field": "2 1",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "2 30",
+      "kind": "text",
+      "source": {
+        "key": "Cash contribution"
+      },
+      "legacy": {
+        "field": "2 30",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "2 4",
+      "kind": "text",
+      "source": {
+        "key": "KIWIBANK Account Number 1"
+      },
+      "legacy": {
+        "field": "2 4",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "4 1",
+      "kind": "text",
+      "source": {
+        "key": "Solicitor's Name"
+      },
+      "legacy": {
+        "field": "4 1",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "4 2",
+      "kind": "text",
+      "source": {
+        "key": "Solicitor's Firm"
+      },
+      "legacy": {
+        "field": "4 2",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "4 3",
+      "kind": "text",
+      "source": {
+        "key": "Solicitor location"
+      },
+      "legacy": {
+        "field": "4 3",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "4 4",
+      "kind": "text",
+      "source": {
+        "key": "Solicitor's Phone Number"
+      },
+      "legacy": {
+        "field": "4 4",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "4 5",
+      "kind": "text",
+      "source": {
+        "key": "Solicitor's Primary Email"
+      },
+      "legacy": {
+        "field": "4 5",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "7 1",
+      "kind": "text",
+      "source": {
+        "key": "Adviser name"
+      },
+      "legacy": {
+        "field": "7 1",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "7 2",
+      "kind": "text",
+      "source": {
+        "generated": "today",
+        "format": "ddMMyyyy",
+        "zone": "Pacific/Auckland"
+      },
+      "legacy": {
+        "field": "7 2",
+        "mapping": "direct_text"
+      },
+      "reviewRequired": "MacroForge '[TODAY]' output format is not documented in the export; format derived from comb MaxLen"
+    },
+    {
+      "pdfField": "Application#",
+      "kind": "text",
+      "source": {
+        "key": "Application Reference"
+      },
+      "legacy": {
+        "field": "Application#",
+        "mapping": "source_key"
+      }
+    }
+  ],
+  "unsupported": [
+    {
+      "pdfField": "2 2",
+      "legacyType": "line_item",
+      "lineItemField": "First repayment date",
+      "index": 1,
+      "reason": "subitem (LineItems.<field>_<n>) key naming vs Make 'Subitems' titles not yet verified"
+    },
+    {
+      "pdfField": "2 3",
+      "legacyType": "line_item",
+      "lineItemField": "Repayment frequency",
+      "index": 1,
+      "reason": "subitem (LineItems.<field>_<n>) key naming vs Make 'Subitems' titles not yet verified"
+    },
+    {
+      "pdfField": "2 6",
+      "legacyType": "line_item",
+      "lineItemField": "Borrowers",
+      "index": 1,
+      "reason": "subitem (LineItems.<field>_<n>) key naming vs Make 'Subitems' titles not yet verified"
+    },
+    {
+      "pdfField": "2 12",
+      "legacyType": "line_item",
+      "lineItemField": "Borrowers",
+      "index": 2,
+      "reason": "subitem (LineItems.<field>_<n>) key naming vs Make 'Subitems' titles not yet verified"
+    },
+    {
+      "pdfField": "2 18",
+      "legacyType": "line_item",
+      "lineItemField": "Borrowers",
+      "index": 3,
+      "reason": "subitem (LineItems.<field>_<n>) key naming vs Make 'Subitems' titles not yet verified"
+    },
+    {
+      "pdfField": "2 24",
+      "legacyType": "line_item",
+      "lineItemField": "Borrowers",
+      "index": 4,
+      "reason": "subitem (LineItems.<field>_<n>) key naming vs Make 'Subitems' titles not yet verified"
+    },
+    {
+      "pdfField": "2 7",
+      "legacyType": "line_item",
+      "lineItemField": "Loan amount",
+      "index": 1,
+      "reason": "subitem (LineItems.<field>_<n>) key naming vs Make 'Subitems' titles not yet verified"
+    },
+    {
+      "pdfField": "2 13",
+      "legacyType": "line_item",
+      "lineItemField": "Loan amount",
+      "index": 2,
+      "reason": "subitem (LineItems.<field>_<n>) key naming vs Make 'Subitems' titles not yet verified"
+    },
+    {
+      "pdfField": "2 19",
+      "legacyType": "line_item",
+      "lineItemField": "Loan amount",
+      "index": 3,
+      "reason": "subitem (LineItems.<field>_<n>) key naming vs Make 'Subitems' titles not yet verified"
+    },
+    {
+      "pdfField": "2 25",
+      "legacyType": "line_item",
+      "lineItemField": "Loan amount",
+      "index": 4,
+      "reason": "subitem (LineItems.<field>_<n>) key naming vs Make 'Subitems' titles not yet verified"
+    },
+    {
+      "pdfField": "2 9",
+      "legacyType": "line_item",
+      "lineItemField": "Interest rate",
+      "index": 1,
+      "reason": "subitem (LineItems.<field>_<n>) key naming vs Make 'Subitems' titles not yet verified"
+    },
+    {
+      "pdfField": "2 15",
+      "legacyType": "line_item",
+      "lineItemField": "Interest rate",
+      "index": 2,
+      "reason": "subitem (LineItems.<field>_<n>) key naming vs Make 'Subitems' titles not yet verified"
+    },
+    {
+      "pdfField": "2 21",
+      "legacyType": "line_item",
+      "lineItemField": "Interest rate",
+      "index": 3,
+      "reason": "subitem (LineItems.<field>_<n>) key naming vs Make 'Subitems' titles not yet verified"
+    },
+    {
+      "pdfField": "2 27",
+      "legacyType": "line_item",
+      "lineItemField": "Interest rate",
+      "index": 4,
+      "reason": "subitem (LineItems.<field>_<n>) key naming vs Make 'Subitems' titles not yet verified"
+    },
+    {
+      "pdfField": "2 11",
+      "legacyType": "line_item",
+      "lineItemField": "Loan term in years",
+      "index": 1,
+      "reason": "subitem (LineItems.<field>_<n>) key naming vs Make 'Subitems' titles not yet verified"
+    },
+    {
+      "pdfField": "2 17",
+      "legacyType": "line_item",
+      "lineItemField": "Loan term in years",
+      "index": 2,
+      "reason": "subitem (LineItems.<field>_<n>) key naming vs Make 'Subitems' titles not yet verified"
+    },
+    {
+      "pdfField": "2 23",
+      "legacyType": "line_item",
+      "lineItemField": "Loan term in years",
+      "index": 3,
+      "reason": "subitem (LineItems.<field>_<n>) key naming vs Make 'Subitems' titles not yet verified"
+    },
+    {
+      "pdfField": "2 29",
+      "legacyType": "line_item",
+      "lineItemField": "Loan term in years",
+      "index": 4,
+      "reason": "subitem (LineItems.<field>_<n>) key naming vs Make 'Subitems' titles not yet verified"
+    }
+  ],
+  "importErrors": [],
+  "importWarnings": [
+    {
+      "code": "TODAY_FORMAT_UNVERIFIED",
+      "pdfField": "7 2"
+    },
+    {
+      "code": "LINE_ITEM_INSTANCES_PRESENT",
+      "count": 1
+    }
+  ],
+  "staleLegacyMappings": [],
+  "unmappedPdfFields": [
+    "1 10",
+    "1 11",
+    "1 12",
+    "1 13",
+    "1 14",
+    "1 15",
+    "1 16",
+    "1 17",
+    "1 18",
+    "1 19",
+    "1 20",
+    "1 21",
+    "1 22",
+    "1 23",
+    "1 24",
+    "1 25",
+    "2 10",
+    "2 11",
+    "2 12",
+    "2 13",
+    "2 14",
+    "2 15",
+    "2 16",
+    "2 17",
+    "2 18",
+    "2 19",
+    "2 2",
+    "2 20",
+    "2 21",
+    "2 22",
+    "2 23",
+    "2 24",
+    "2 25",
+    "2 26",
+    "2 27",
+    "2 28",
+    "2 29",
+    "2 29 total",
+    "2 3",
+    "2 32",
+    "2 33",
+    "2 34",
+    "2 35",
+    "2 5",
+    "2 6",
+    "2 7",
+    "2 8",
+    "2 9",
+    "3 1",
+    "3 2",
+    "3 3",
+    "3 4",
+    "3 5",
+    "3 6",
+    "3 7",
+    "5 1",
+    "5 2",
+    "5 3",
+    "6 1",
+    "6 3",
+    "6 4",
+    "Adviser sign-off",
+    "Outcome"
+  ]
+}

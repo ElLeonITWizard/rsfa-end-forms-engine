@@ -1,0 +1,22 @@
+{
+  "requestId": "poc-ghl-np-trust-0001",
+  "templateId": "GHL_NP_TRUST_FORM",
+  "templateVersion": "8-19",
+  "data": {
+    "Applicant 1 Organisation legal name (entity/company/trust/branch)": "Example Family Trust",
+    "What is the objective of your trust/organisation?": "Hold the family home for fictional beneficiaries",
+    "GHL Why have you come to Sovereign Home Loans?": "Everyday banking",
+    "Total credits or deposits (next 12 months) (GHL Trust)": "$1M-$5M",
+    "Sources of credits": "Donations",
+    "Cash deposits frequency (GHL Trust)": "Never",
+    "International Money Transfers – In frequency": "Infrequently",
+    "Int Transfers IN - Average Value per Payment (GHL Trust)": "Less than $1,000",
+    "International Money Transfers – Out frequency": "Occasionally (monthly)",
+    "Int Transfers OUT - Average Value per Payment (GHL Trust)": "$1,000-$5,000",
+    "International payments activity details (including countries involved)": "Fictional test transfers to Australia",
+    "Receive transactions/funds from third parties?": "No",
+    "If yes, purpose": null,
+    "GHL Other reasons to come": "",
+    "GHL Other sources of credits": ""
+  }
+}

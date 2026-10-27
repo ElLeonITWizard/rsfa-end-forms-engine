@@ -1,0 +1,790 @@
+{
+  "schemaVersion": 1,
+  "templateId": "GHL_NP_TRUST_FORM",
+  "templateVersion": "8-19",
+  "templateFile": "0057d507cf71__GHL_N_P_Trust_8_19.pdf",
+  "templateSha256": "0057d507cf71176f8692e73ec320c49fa343136af353805efb780f27ab50797c",
+  "encryption": "preserve",
+  "sourceKeyNormalization": "macroforge-v1",
+  "provenance": {
+    "importer": "tools/import_mforge.py 0.1.0",
+    "sourceFile": "RSFA End Forms Filling BluePrint 271026.mforge",
+    "sourceSha256": "8052c17b374b551272e17f5036de1ebfa9a295328eb8a6d079d30eec788b9a51",
+    "flow": "Flow C",
+    "flowDisplayName": "End Forms Flow Filling",
+    "node": 3,
+    "legacyPdfName": "GHL_N&P Trust_8 19.pdf",
+    "lenderCondition": "Banks to Send Contains ASB",
+    "importedOn": "2026-10-27"
+  },
+  "pdf": {
+    "pages": 2,
+    "acroform": true,
+    "xfa": false,
+    "fields": {
+      "Check Box100": {
+        "kind": "checkbox",
+        "states": [
+          "1",
+          "2",
+          "3"
+        ],
+        "widgets": 3
+      },
+      "Check Box101": {
+        "kind": "checkbox",
+        "states": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "widgets": 4
+      },
+      "Check Box102": {
+        "kind": "checkbox",
+        "states": [
+          "1",
+          "2",
+          "3"
+        ],
+        "widgets": 3
+      },
+      "Check Box103": {
+        "kind": "checkbox",
+        "states": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "widgets": 4
+      },
+      "Check Box104": {
+        "kind": "checkbox",
+        "states": [
+          "1",
+          "2",
+          "3"
+        ],
+        "widgets": 3
+      },
+      "Check Box105": {
+        "kind": "checkbox",
+        "states": [
+          "Yes",
+          "No"
+        ],
+        "widgets": 2
+      },
+      "Check Box106": {
+        "kind": "checkbox",
+        "states": [
+          "Yes"
+        ]
+      },
+      "Check Box94": {
+        "kind": "checkbox",
+        "states": [
+          "Yes",
+          "No"
+        ],
+        "widgets": 2
+      },
+      "Check Box95": {
+        "kind": "checkbox",
+        "states": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+        ],
+        "widgets": 5
+      },
+      "Check Box96": {
+        "kind": "checkbox",
+        "states": [
+          "1"
+        ]
+      },
+      "Check Box97": {
+        "kind": "checkbox",
+        "states": [
+          "Yes"
+        ]
+      },
+      "Check Box98": {
+        "kind": "checkbox",
+        "states": [
+          "Yes"
+        ]
+      },
+      "Check Box99": {
+        "kind": "checkbox",
+        "states": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "widgets": 4
+      },
+      "Customer internal number": {
+        "kind": "text"
+      },
+      "D": {
+        "kind": "text"
+      },
+      "D_2": {
+        "kind": "text"
+      },
+      "Full trustorganisation name": {
+        "kind": "text"
+      },
+      "If yes what is the purpose": {
+        "kind": "text"
+      },
+      "M": {
+        "kind": "text"
+      },
+      "M_2": {
+        "kind": "text"
+      },
+      "Please provide details of the activity": {
+        "kind": "text"
+      },
+      "Please provide details of the activity including countries involved": {
+        "kind": "text"
+      },
+      "Please provide details of the activity including countries involved_2": {
+        "kind": "text"
+      },
+      "What is the objective of your trustorganisation": {
+        "kind": "text"
+      },
+      "Y": {
+        "kind": "text"
+      },
+      "Y_2": {
+        "kind": "text"
+      },
+      "Y_3": {
+        "kind": "text"
+      },
+      "Y_4": {
+        "kind": "text"
+      },
+      "undefined": {
+        "kind": "text"
+      },
+      "undefined_2": {
+        "kind": "text"
+      }
+    }
+  },
+  "fields": [
+    {
+      "pdfField": "Check Box101",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "International Money Transfers – In frequency",
+          "operator": "equals",
+          "value": "Frequently (daily / weekly / fortnightly)"
+        }
+      },
+      "legacy": {
+        "field": "Check Box101#1",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "1"
+    },
+    {
+      "pdfField": "Check Box101",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "International Money Transfers – In frequency",
+          "operator": "equals",
+          "value": "Infrequently"
+        }
+      },
+      "legacy": {
+        "field": "Check Box101#2",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "2"
+    },
+    {
+      "pdfField": "Check Box101",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "International Money Transfers – In frequency",
+          "operator": "contains",
+          "value": "Occasionally"
+        }
+      },
+      "legacy": {
+        "field": "Check Box101#3",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "3"
+    },
+    {
+      "pdfField": "Check Box101",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "International Money Transfers – In frequency",
+          "operator": "equals",
+          "value": "Never"
+        }
+      },
+      "legacy": {
+        "field": "Check Box101#4",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "4"
+    },
+    {
+      "pdfField": "Check Box102",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "Int Transfers IN - Average Value per Payment (GHL Trust)",
+          "operator": "equals",
+          "value": "Less than $1,000"
+        }
+      },
+      "legacy": {
+        "field": "Check Box102#1",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "1"
+    },
+    {
+      "pdfField": "Check Box102",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "Int Transfers IN - Average Value per Payment (GHL Trust)",
+          "operator": "equals",
+          "value": "$1,000-$5,000"
+        }
+      },
+      "legacy": {
+        "field": "Check Box102#2",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "2"
+    },
+    {
+      "pdfField": "Check Box102",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "Int Transfers IN - Average Value per Payment (GHL Trust)",
+          "operator": "equals",
+          "value": "More than $10,000"
+        }
+      },
+      "legacy": {
+        "field": "Check Box102#3",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "3"
+    },
+    {
+      "pdfField": "Check Box103",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "International Money Transfers – Out frequency",
+          "operator": "equals",
+          "value": "Frequently (daily / weekly / fortnightly)"
+        }
+      },
+      "legacy": {
+        "field": "Check Box103#1",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "1"
+    },
+    {
+      "pdfField": "Check Box103",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "International Money Transfers – Out frequency",
+          "operator": "equals",
+          "value": "Infrequently"
+        }
+      },
+      "legacy": {
+        "field": "Check Box103#2",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "2"
+    },
+    {
+      "pdfField": "Check Box103",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "International Money Transfers – Out frequency",
+          "operator": "contains",
+          "value": "Occasionally"
+        }
+      },
+      "legacy": {
+        "field": "Check Box103#3",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "3"
+    },
+    {
+      "pdfField": "Check Box103",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "International Money Transfers – Out frequency",
+          "operator": "equals",
+          "value": "Never"
+        }
+      },
+      "legacy": {
+        "field": "Check Box103#4",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "4"
+    },
+    {
+      "pdfField": "Check Box104",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "Int Transfers OUT - Average Value per Payment (GHL Trust)",
+          "operator": "equals",
+          "value": "Less than $1,000"
+        }
+      },
+      "legacy": {
+        "field": "Check Box104#1",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "1"
+    },
+    {
+      "pdfField": "Check Box104",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "Int Transfers OUT - Average Value per Payment (GHL Trust)",
+          "operator": "equals",
+          "value": "$1,000-$5,000"
+        }
+      },
+      "legacy": {
+        "field": "Check Box104#2",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "2"
+    },
+    {
+      "pdfField": "Check Box104",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "Int Transfers OUT - Average Value per Payment (GHL Trust)",
+          "operator": "equals",
+          "value": "More than $10,000"
+        }
+      },
+      "legacy": {
+        "field": "Check Box104#3",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "3"
+    },
+    {
+      "pdfField": "Check Box105",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "Receive transactions_funds from third parties?",
+          "operator": "equals",
+          "value": "No"
+        }
+      },
+      "legacy": {
+        "field": "Check Box105#No",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "No"
+    },
+    {
+      "pdfField": "Check Box105",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "Receive transactions_funds from third parties?",
+          "operator": "equals",
+          "value": "Yes"
+        }
+      },
+      "legacy": {
+        "field": "Check Box105#Yes",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "Yes"
+    },
+    {
+      "pdfField": "Check Box94",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "GHL Why have you come to Sovereign Home Loans?",
+          "operator": "equals",
+          "value": "Other (please specify)"
+        }
+      },
+      "legacy": {
+        "field": "Check Box94#No",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "No"
+    },
+    {
+      "pdfField": "Check Box94",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "GHL Why have you come to Sovereign Home Loans?",
+          "operator": "equals",
+          "value": "Everyday banking"
+        }
+      },
+      "legacy": {
+        "field": "Check Box94#Yes",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "Yes"
+    },
+    {
+      "pdfField": "Check Box95",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "Total credits or deposits (next 12 months) (GHL Trust)",
+          "operator": "equals",
+          "value": "Less than $250K"
+        }
+      },
+      "legacy": {
+        "field": "Check Box95#1",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "1"
+    },
+    {
+      "pdfField": "Check Box95",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "Total credits or deposits (next 12 months) (GHL Trust)",
+          "operator": "equals",
+          "value": "$250K-$1M"
+        }
+      },
+      "legacy": {
+        "field": "Check Box95#2",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "2"
+    },
+    {
+      "pdfField": "Check Box95",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "Total credits or deposits (next 12 months) (GHL Trust)",
+          "operator": "equals",
+          "value": "$1M-$5M"
+        }
+      },
+      "legacy": {
+        "field": "Check Box95#3",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "3"
+    },
+    {
+      "pdfField": "Check Box95",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "Total credits or deposits (next 12 months) (GHL Trust)",
+          "operator": "equals",
+          "value": "$5M-$10M"
+        }
+      },
+      "legacy": {
+        "field": "Check Box95#4",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "4"
+    },
+    {
+      "pdfField": "Check Box95",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "Total credits or deposits (next 12 months) (GHL Trust)",
+          "operator": "equals",
+          "value": "More than $10M"
+        }
+      },
+      "legacy": {
+        "field": "Check Box95#5",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "5"
+    },
+    {
+      "pdfField": "Check Box96",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "Sources of credits",
+          "operator": "equals",
+          "value": "Dividends from investments"
+        }
+      },
+      "legacy": {
+        "field": "Check Box96",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified"
+    },
+    {
+      "pdfField": "Check Box97",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "Sources of credits",
+          "operator": "equals",
+          "value": "Donations"
+        }
+      },
+      "legacy": {
+        "field": "Check Box97",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified"
+    },
+    {
+      "pdfField": "Check Box98",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "Sources of credits",
+          "operator": "equals",
+          "value": "Other (please specify)"
+        }
+      },
+      "legacy": {
+        "field": "Check Box98",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified"
+    },
+    {
+      "pdfField": "Check Box99",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "Cash deposits frequency (GHL Trust)",
+          "operator": "equals",
+          "value": "Frequently (daily / weekly / fortnightly)"
+        }
+      },
+      "legacy": {
+        "field": "Check Box99#1",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "1"
+    },
+    {
+      "pdfField": "Check Box99",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "Cash deposits frequency (GHL Trust)",
+          "operator": "equals",
+          "value": "Infrequently"
+        }
+      },
+      "legacy": {
+        "field": "Check Box99#2",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "2"
+    },
+    {
+      "pdfField": "Check Box99",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "Cash deposits frequency (GHL Trust)",
+          "operator": "contains",
+          "value": "Occasionally"
+        }
+      },
+      "legacy": {
+        "field": "Check Box99#3",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "3"
+    },
+    {
+      "pdfField": "Check Box99",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "Cash deposits frequency (GHL Trust)",
+          "operator": "equals",
+          "value": "Never"
+        }
+      },
+      "legacy": {
+        "field": "Check Box99#4",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "4"
+    },
+    {
+      "pdfField": "Full trustorganisation name",
+      "kind": "text",
+      "source": {
+        "key": "Applicant 1 Organisation legal name (entity_company_trust_branch)"
+      },
+      "legacy": {
+        "field": "Full trustorganisation name",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "If yes what is the purpose",
+      "kind": "text",
+      "source": {
+        "key": "If yes, purpose"
+      },
+      "legacy": {
+        "field": "If yes what is the purpose",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "Please provide details of the activity including countries involved",
+      "kind": "text",
+      "source": {
+        "key": "International payments activity details (including countries involved)"
+      },
+      "legacy": {
+        "field": "Please provide details of the activity including countries involved",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "Please provide details of the activity including countries involved_2",
+      "kind": "text",
+      "source": {
+        "key": "International payments activity details (including countries involved)"
+      },
+      "legacy": {
+        "field": "Please provide details of the activity including countries involved_2",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "What is the objective of your trustorganisation",
+      "kind": "text",
+      "source": {
+        "key": "What is the objective of your trust_organisation?"
+      },
+      "legacy": {
+        "field": "What is the objective of your trustorganisation",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "undefined",
+      "kind": "text",
+      "source": {
+        "key": "GHL Other reasons to come"
+      },
+      "legacy": {
+        "field": "undefined",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "undefined_2",
+      "kind": "text",
+      "source": {
+        "key": "GHL Other sources of credits"
+      },
+      "legacy": {
+        "field": "undefined_2",
+        "mapping": "source_key"
+      }
+    }
+  ],
+  "unsupported": [],
+  "importErrors": [],
+  "importWarnings": [],
+  "staleLegacyMappings": [],
+  "unmappedPdfFields": [
+    "Check Box100",
+    "Check Box106",
+    "Customer internal number",
+    "D",
+    "D_2",
+    "M",
+    "M_2",
+    "Please provide details of the activity",
+    "Y",
+    "Y_2",
+    "Y_3",
+    "Y_4"
+  ]
+}

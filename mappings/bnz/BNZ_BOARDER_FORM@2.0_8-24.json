@@ -1,0 +1,185 @@
+{
+  "schemaVersion": 1,
+  "templateId": "BNZ_BOARDER_FORM",
+  "templateVersion": "2.0_8-24",
+  "templateFile": "7982ae8cbda9__BNZ_BoarderForm_2.0_8_24.pdf",
+  "templateSha256": "7982ae8cbda97f0be9173c2632839afaa7c0d725349cab32dddbd62520509795",
+  "encryption": "reject",
+  "sourceKeyNormalization": "macroforge-v1",
+  "provenance": {
+    "importer": "tools/import_mforge.py 0.1.0",
+    "sourceFile": "RSFA End Forms Filling BluePrint 271026.mforge",
+    "sourceSha256": "8052c17b374b551272e17f5036de1ebfa9a295328eb8a6d079d30eec788b9a51",
+    "flow": "Flow C",
+    "flowDisplayName": "End Forms Flow Filling",
+    "node": 15,
+    "legacyPdfName": "BNZ_BoarderForm_2.0_8 24.pdf",
+    "lenderCondition": "Banks to Send Contains BNZ",
+    "importedOn": "2026-10-27"
+  },
+  "pdf": {
+    "pages": 1,
+    "acroform": true,
+    "xfa": false,
+    "fields": {
+      "Date 1": {
+        "kind": "text",
+        "maxLen": 6,
+        "comb": true
+      },
+      "Date 2": {
+        "kind": "text",
+        "maxLen": 6,
+        "comb": true
+      },
+      "Text 1": {
+        "kind": "text"
+      },
+      "Text 2": {
+        "kind": "text"
+      },
+      "Text 3": {
+        "kind": "text"
+      },
+      "Text 4": {
+        "kind": "text"
+      },
+      "Text 5": {
+        "kind": "text"
+      },
+      "Text 6": {
+        "kind": "text"
+      }
+    }
+  },
+  "fields": [
+    {
+      "pdfField": "Date 1",
+      "kind": "text",
+      "source": {
+        "generated": "today",
+        "format": "ddMMyy",
+        "zone": "Pacific/Auckland"
+      },
+      "legacy": {
+        "field": "Date 1",
+        "mapping": "direct_text"
+      },
+      "reviewRequired": "MacroForge '[TODAY]' output format is not documented in the export; format taken from the field's own AFDate_FormatEx action"
+    },
+    {
+      "pdfField": "Date 2",
+      "kind": "text",
+      "source": {
+        "generated": "today",
+        "format": "ddMMyy",
+        "zone": "Pacific/Auckland"
+      },
+      "legacy": {
+        "field": "Date 2",
+        "mapping": "direct_text"
+      },
+      "reviewRequired": "MacroForge '[TODAY]' output format is not documented in the export; format taken from the field's own AFDate_FormatEx action"
+    },
+    {
+      "pdfField": "Text 2",
+      "kind": "text",
+      "source": {
+        "key": "1st Property Address Street"
+      },
+      "legacy": {
+        "field": "Text 2",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "Text 3",
+      "kind": "text",
+      "source": {
+        "key": "1st Property Address City"
+      },
+      "legacy": {
+        "field": "Text 3",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "Text 4",
+      "kind": "text",
+      "source": {
+        "key": "1st Property Address Postcode"
+      },
+      "legacy": {
+        "field": "Text 4",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "Text 5",
+      "kind": "text",
+      "source": {
+        "key": "Number of rooms proposed to be rented"
+      },
+      "legacy": {
+        "field": "Text 5",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "Text 6",
+      "kind": "text",
+      "source": {
+        "key": "Proposed weekly amount(s) per room"
+      },
+      "legacy": {
+        "field": "Text 6",
+        "mapping": "source_key"
+      }
+    }
+  ],
+  "unsupported": [
+    {
+      "pdfField": null,
+      "legacyType": "overlay_text",
+      "customFieldId": "custom_text_1_1777387659",
+      "page": 0,
+      "rect": [
+        121.0,
+        160.0,
+        395.0,
+        182.0
+      ],
+      "sourceKey": "Applicant 1 Full Name",
+      "reason": "free-positioned overlay; MacroForge rect coordinate system/scale unverified (does not match PDF points or 96 DPI)"
+    },
+    {
+      "pdfField": null,
+      "legacyType": "overlay_text",
+      "customFieldId": "custom_text_2_1777387667",
+      "page": 0,
+      "rect": [
+        398.0,
+        161.0,
+        671.0,
+        182.0
+      ],
+      "sourceKey": "Applicant 2 Full Name",
+      "reason": "free-positioned overlay; MacroForge rect coordinate system/scale unverified (does not match PDF points or 96 DPI)"
+    }
+  ],
+  "importErrors": [],
+  "importWarnings": [
+    {
+      "code": "TODAY_FORMAT_UNVERIFIED",
+      "pdfField": "Date 1"
+    },
+    {
+      "code": "TODAY_FORMAT_UNVERIFIED",
+      "pdfField": "Date 2"
+    }
+  ],
+  "staleLegacyMappings": [],
+  "unmappedPdfFields": [
+    "Text 1"
+  ]
+}

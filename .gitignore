@@ -1,0 +1,26 @@
+# Private evidence, real lender PDFs, generated output. NEVER commit.
+.local/
+
+# Legacy exports and spreadsheets must never be committed, wherever they land.
+*.mforge
+*.blueprint.json
+*.xlsx
+*.xls
+module-*-output-bundles.json
+
+# Build output
+engine/target/
+__pycache__/
+*.pyc
+.venv/
+
+# Secrets
+.env
+*.pem
+*.key
+
+# Editors / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
