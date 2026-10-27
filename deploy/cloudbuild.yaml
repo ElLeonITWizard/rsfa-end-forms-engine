@@ -1,0 +1,14 @@
+# Cloud Build config for the POC image. Submit ONLY the staged context produced by tools/stage_deploy.py
+# (see docs/04-cloud-run-deployment.md); never the repository root.
+# The Maven unit tests run inside the image build (Dockerfile `build` stage); a failing test fails the build.
+steps:
+  - id: build-poc-image
+    name: gcr.io/cloud-builders/docker
+    env:
+      - DOCKER_BUILDKIT=1
+    args: ["build", "--target", "poc", "-f", "engine/Dockerfile", "-t", "${_IMAGE}", "."]
+images:
+  - "${_IMAGE}"
+options:
+  logging: CLOUD_LOGGING_ONLY   # required with a user-specified build service account
+timeout: 1200s

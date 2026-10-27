@@ -13,8 +13,11 @@
 # and never stored in a layer:
 #   docker build --secret id=build_ca,src=/path/ca-bundle.crt --build-arg APT_MIRROR=https://archive.ubuntu.com/ubuntu ...
 
-# BUILD_IMAGE is overridable only so the build stage can be verified where Docker Hub is rate-limited.
-ARG BUILD_IMAGE=maven:3.9.11-eclipse-temurin-21
+# Official Docker Hub images via Google's mirror (no Docker Hub rate limits, also used by Cloud Build), pinned by
+# digest for reproducible builds. Digests recorded 2026-10-27; update deliberately (see docs/04).
+ARG BUILD_IMAGE=mirror.gcr.io/library/maven:3.9.11-eclipse-temurin-21@sha256:6fdc855a6ed81d288ca7ca37ac6ff5e9308b612485c0801d70b25a858c83d237
+ARG RUNTIME_IMAGE=mirror.gcr.io/library/eclipse-temurin:21-jre@sha256:6ef3295d2cef695fd288f928a15a92081a7ce61da9e785b6fd09b2ea0c1aa8e5
+
 FROM ${BUILD_IMAGE} AS build
 WORKDIR /src
 ARG MAVEN_EXTRA_OPTS=
@@ -34,7 +37,7 @@ COPY engine/src engine/src
 RUN MAVEN_OPTS="$MAVEN_EXTRA_OPTS $( [ -f /tmp/build-truststore ] && echo -Djavax.net.ssl.trustStore=/tmp/build-truststore )" \
     mvn -q -B -f engine/pom.xml package
 
-FROM eclipse-temurin:21-jre AS runtime-base
+FROM ${RUNTIME_IMAGE} AS runtime-base
 # Fonts are NOT needed to fill: overlays and the Unicode fallback use Liberation Sans embedded from the
 # PDFBox jar, and bank templates carry their own fonts. They are installed so the `render` command
 # (and any future flattening/thumbnails) draws standard-14 fonts correctly: fonts-urw-base35
@@ -67,8 +70,18 @@ EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "/app/end-forms-engine.jar"]
 CMD ["serve"]
 
+# First Cloud Run deployment (POC). Build ONLY from the staged context produced by tools/stage_deploy.py, which
+# contains the allowlisted manifests (mappings/) and SHA-verified templates (poc-templates/) and nothing else:
+#   docker build -f engine/Dockerfile --target poc .local/deploy/context      (or Cloud Build: deploy/cloudbuild.yaml)
+# Production would instead mount a private GCS bucket at /templates (D-010).
+FROM runtime-base AS poc
+COPY --from=build /src/engine/target/end-forms-engine.jar /app/end-forms-engine.jar
+COPY poc-templates /app/templates
+ENV ENGINE_TEMPLATE_DIRS=/app/templates
+
 FROM runtime-base AS runtime-prebuilt
 COPY engine/target/end-forms-engine.jar /app/end-forms-engine.jar
 
 FROM runtime-base AS runtime
 COPY --from=build /src/engine/target/end-forms-engine.jar /app/end-forms-engine.jar
+

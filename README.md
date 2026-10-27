@@ -83,6 +83,22 @@ docker run --rm -p 127.0.0.1:8080:8080 -e ENGINE_AUTH=API_KEY -e ENGINE_API_KEY=
 The default target (`docker build -f engine/Dockerfile .`) compiles and tests inside Docker. Proxy and CA options are in
 the Dockerfile header. The verification results are in `docs/02-poc-guide-and-tests.md`.
 
+## Google Cloud Run (prepared, not deployed)
+
+The first private deployment generates BNZ Boarder only. The full runbook, with exact `gcloud` commands, IAM, the
+authenticated `/health` and `/generate` calls, and rollback, is in [`docs/04-cloud-run-deployment.md`](docs/04-cloud-run-deployment.md).
+In short:
+1. RSFA approves the allowlist entry in `deploy/poc-allowlist.json`.
+2. `python3 tools/stage_deploy.py --templates .local/generated/templates --out .local/deploy/context`
+3. `gcloud builds submit` the staged context.
+4. `gcloud run deploy --no-allow-unauthenticated` with `ENGINE_AUTH=PLATFORM_IAM`.
+5. Call it with `Authorization: Bearer $(gcloud auth print-identity-token)` or through `gcloud run services proxy`.
+
+Authentication modes:
+- `API_KEY`: local development, key from the environment, at least 32 characters, never committed.
+- `PLATFORM_IAM`: Cloud Run only. It refuses to start unless `K_SERVICE` is set.
+- `NONE`: loopback only.
+
 ## Current limitations
 
 - Three real templates are tested end-to-end (BNZ Boarder, BNZ Handover partially, GHL N&P Trust). The other 22 are imported but untested.
@@ -92,6 +108,7 @@ the Dockerfile header. The verification results are in `docs/02-poc-guide-and-te
   - row-less line-item conditions.
 - The overlay position transform (`/1.2`) is strongly evidenced but not compared with a real MacroForge output.
   The overlay font and size are engine policy.
-- Constant ticks stay Off until a human approves them in the manifest (`"approved": true`).
+- No declaration is certified by default: template-preset ticks are cleared, and constant ticks need a validated
+  `approval` record in the manifest (D-016).
 - The legacy `[TODAY]` format and `equals`/`contains` semantics are inferred, not confirmed.
 - There is no flattening, no SharePoint upload and no Make integration yet.

@@ -9,8 +9,9 @@ import com.fasterxml.jackson.databind.JsonNode;
  * <p>Several rules may target the same button field with different {@code option}s
  * (legacy {@code Field#option} syntax); at most one of them may select at fill time.
  *
- * <p>{@code approved}: a constant "checked" rule ticks a box regardless of the data, which can amount to
- * a declaration or consent. The engine applies it only after a human sets {@code approved: true}.
+ * <p>{@code approval}: a constant "checked" rule ticks a box regardless of the data, which can amount to
+ * a declaration, certification or consent. The engine applies it only with a complete, valid
+ * {@link Approval}. The bare legacy flag {@code approved: true} is rejected (D-016).
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record FieldRule(
@@ -19,9 +20,21 @@ public record FieldRule(
         String option,
         Source source,
         boolean required,
-        boolean approved) {
+        Approval approval,
+        Boolean approved) {
 
     public enum Kind { text, checkbox, radio, combo, list }
+
+    /**
+     * A recorded human authorization for a constant tick.
+     *
+     * @param approvedBy who authorized it (name or role at RSFA)
+     * @param approvedOn ISO date of the authorization; must not be in the future
+     * @param reference  where the decision is recorded (ticket, email, decision-log id)
+     */
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record Approval(String approvedBy, String approvedOn, String reference) {
+    }
 
     /**
      * Exactly one of {@code key}, {@code constant}, {@code generated}, {@code when} or {@code lineItem} is set.

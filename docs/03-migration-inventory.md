@@ -162,8 +162,13 @@ Flow D (test flow) holds a second copy of `ANZ_Entity_FACTA_8 25.pdf` with 2 map
 
 1. **BNZ Gifting declaration:** the embedded PDF has no form fields, and MacroForge's own scan found none. Its 57 rules
    are copies of BNZ Onboarding Joint Personal rules. [inference] The legacy run cannot fill it. TODO: confirm with a real output.
-2. **Adviser certification auto-ticked:** BNZ Handover `Check Box 31#I have` ("I confirm I have recommended … as
-   appropriate") is a legacy constant `checked`. In total, 36 constant ticks exist. The engine applies none until a human approves each (D-013).
+2. **Adviser certification pre-ticked:**
+   - BNZ Handover `Confirmation` (page 1, "By ticking here, I confirm I have recommended … as appropriate") is **ticked
+     in BNZ's blank template itself**. The engine now clears template presets unless an authorized rule selects them (D-016).
+     WBC Refix `Check Box1` (page 2) is the only other preset found.
+   - Separately, 36 legacy constant `checked` rules exist (e.g. BNZ Handover `Check Box 31#I have`, page 4). None is applied
+     without a validated approval record.
+   - Correction: iteration 2 wrongly identified the red-bar certification as `Check Box 31`.
 3. **Date format mismatch:** BNZ Handover `First Repayment Date n` is a 6-cell comb (`DDMMYY`), but Make sends subitem dates as
    `DDMMYYYY`. The engine refuses (`TEXT_TOO_LONG`) rather than truncating. A reviewed transform is needed.
 4. **Combo options:** values must match the PDF options exactly (e.g. BNZ purposes start with "–  "). Whether the Monday labels match is unverified.

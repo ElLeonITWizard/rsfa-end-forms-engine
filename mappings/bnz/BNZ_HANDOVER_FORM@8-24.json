@@ -355,6 +355,9 @@
         "kind": "checkbox",
         "states": [
           "Yes"
+        ],
+        "presetOn": [
+          "Yes"
         ]
       },
       "Contact name": {
@@ -2905,6 +2908,14 @@
     {
       "code": "CONSTANT_CHECKBOX",
       "pdfField": "Check Box 31#I#20have"
+    },
+    {
+      "code": "TEMPLATE_PRESET_BUTTON",
+      "pdfField": "Confirmation",
+      "states": [
+        "Yes"
+      ],
+      "note": "on in the blank template; the engine clears it unless an approved rule selects it"
     },
     {
       "code": "LINE_ITEM_INSTANCES_PRESENT",

@@ -37,6 +37,19 @@ final class SyntheticTemplate {
     private SyntheticTemplate() {
     }
 
+    /** RGB of the placeholder letters drawn under the "Date" comb cells. */
+    static final float[] PLACEHOLDER = {0.55f, 0.65f, 0.95f};
+
+    /** The synthetic template with "Consent box" already ticked, like BNZ Handover's "Confirmation". */
+    static byte[] buildWithPresetTick() throws IOException {
+        try (PDDocument doc = org.apache.pdfbox.Loader.loadPDF(build())) {
+            ((PDCheckBox) doc.getDocumentCatalog().getAcroForm().getField("Consent box")).check();
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            doc.save(out);
+            return out.toByteArray();
+        }
+    }
+
     static byte[] build() throws IOException {
         try (PDDocument doc = new PDDocument()) {
             PDPage page = new PDPage(PDRectangle.A4);
@@ -55,11 +68,27 @@ final class SyntheticTemplate {
                 cs.newLineAtOffset(40, 800);
                 cs.showText("SYNTHETIC TEST FORM - not a lender document");
                 cs.endText();
+                // faint placeholder letters inside the 6 comb cells of "Date" (x 40..160, 20pt cells), like BNZ forms
+                cs.setNonStrokingColor(PLACEHOLDER[0], PLACEHOLDER[1], PLACEHOLDER[2]);
+                for (int i = 0; i < 6; i++) {
+                    cs.beginText();
+                    cs.setFont(helv, 9);
+                    cs.newLineAtOffset(40 + i * 20 + 4, 685);
+                    cs.showText("DDMMYY".substring(i, i + 1));
+                    cs.endText();
+                }
+                // "Code" comb cells (x 200..280, 20pt cells): left half of each cell grey -> not a uniform background
+                cs.setNonStrokingColor(0.8f, 0.8f, 0.8f);
+                for (int i = 0; i < 4; i++) {
+                    cs.addRect(200 + i * 20, 680, 10, 18);
+                }
+                cs.fill();
             }
 
             text(form, page, "Full name", 40, 740, 300, 0, false);
             text(form, page, "Postcode", 40, 710, 80, 4, false);
             text(form, page, "Date", 40, 680, 120, 6, true);
+            text(form, page, "Code", 200, 680, 80, 4, true);
             PDTextField notes = text(form, page, "Notes", 40, 600, 300, 0, false);
             notes.setMultiline(true);
             // opaque background, like some bank widgets: overlays drawn under it may be hidden

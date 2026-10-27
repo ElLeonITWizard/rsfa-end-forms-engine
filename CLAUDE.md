@@ -28,8 +28,11 @@ README.md                 5-minute quickstart
 docs/01-context-and-architecture.md   RSFA/Make/Monday/MacroForge context, data contract, security
 docs/02-poc-guide-and-tests.md        manifest schema, POC steps, what is supported, tests, gaps
 docs/03-migration-inventory.md        evidence-based inventory of the legacy .mforge
+docs/04-cloud-run-deployment.md       Cloud Run runbook (prepared, not executed), rollback
 docs/decisions.md                     decision log (ADR-lite)
 tools/import_mforge.py    legacy importer (inventory | extract | manifest)
+tools/stage_deploy.py     builds the minimal, approved build context for Cloud Run (allowlist + SHA + blank check)
+deploy/                   poc-allowlist.json (templates allowed into the image + approvals), cloudbuild.yaml, bucket lifecycle
 engine/                   Maven project: library, CLI (inspect | fill | serve), HTTP API, Dockerfile
 mappings/<lender>/<TEMPLATE_ID>@<version>.json   imported manifests (no client data; reviewed)
 tests/fixtures/           synthetic requests (fictional "Jane Example" data only)
@@ -64,35 +67,41 @@ extracted to `.local/generated/templates/`. A green build without them proves on
    `sample_payload`, `variable_map`, `flow_data` (`__raw_webhook_payload`, `current_parsed_pdf_data`), `export_folder`,
    `filename_generator` or `webhook_url`.
 3. Never call the MacroForge webhook or any production endpoint. Never modify Make scenarios `8731317` / `9254149`.
-4. Never fill signature or push-button fields. Never synthesise signatures. Constant "checked" boxes are applied
-   only when a human sets `"approved": true` on that rule (D-013). Never set it on someone's behalf.
-   `[TODAY]` dates near declarations are flagged `reviewRequired`.
+4. Never fill signature or push-button fields. Never synthesise signatures. **No declaration is certified by default.**
+   - Template-preset ticks are cleared.
+   - Constant ticks need a validated `approval` record (approvedBy, approvedOn, reference; D-016).
+   - Never write an approval, or approve an allowlist entry, on someone's behalf.
+   - `[TODAY]` dates near declarations are flagged `reviewRequired`.
 5. Issues, logs and errors carry field names, keys and codes only, never data values.
 6. Unsupported or unresolved legacy rules must be reported (manifest `unsupported` / `unresolvedLegacyMappings`,
    engine warning). Never silently coerce them, never alias names or invent coordinates, and never label a mapping
    "obsolete" without RSFA's decision (use `inert` only with evidence; see docs/03).
 7. Fixtures are fictional. Do not derive them from real records.
+8. Nothing is deployed or changed in Google Cloud without RSFA's explicit approval of the exact commands (docs/04).
+   Never build from the repo root for deployment: only from the staged context.
 
-## Current status (2026-10-27, iteration 2)
+## Current status (2026-10-27, iteration 3)
 
 - **BNZ Boarder is complete**, including Customer name(s):
-  - 7 imported fields + 2 legacy overlays, placed with the evidenced `rect / 1.2` transform (docs/03);
-  - deterministic: identical bytes across runs and host/container;
-  - a macron variant (`Ōtāhuhu`, `Tāwhiri`) passes via the embedded Unicode font.
-- **LineItems**: generic `lineItem` source. BNZ Handover fills 3 synthetic facilities into rows 1–3 (rows 4–6 empty).
-- Second checkbox template: `GHL_N&P Trust_8 19.pdf` (multi-widget on-states, owner-encrypted, incremental save).
-- Import coverage, Flow C:
-  - 1,013 mappings = 804 imported (109 line items) + 19 unsupported + 138 unresolved + 52 inert; 14/14 overlays imported.
-  - Only 3 templates are tested end-to-end. **Equivalence with MacroForge is not proven for any template.**
-- Docker:
-  - The runtime image was built and verified locally: fill, render, HTTP, fonts.
-  - The full build ran with a local stand-in for the rate-limited `maven` base image.
-  - Nothing is deployed.
-- Open decisions for RSFA (docs/02 "Known gaps"):
-  - 36 constant ticks awaiting approval;
+  - 7 imported fields + 2 legacy overlays (`rect / 1.2`, docs/03);
+  - deterministic (identical bytes across runs, host and container);
+  - macrons via the embedded Unicode font.
+- **Declarations:** template-preset ticks are cleared (BNZ Handover `Confirmation`). Constant ticks need a validated approval.
+- **Comb dates** (e.g. BNZ Handover `Date 3`): centred, with printed placeholders knocked out using the measured background.
+- **LineItems:** BNZ Handover fills 3 synthetic facilities into rows 1–3.
+- **Coverage, Flow C:** 1,013 mappings = 804 imported + 19 unsupported + 138 unresolved + 52 inert. Only 3 templates
+  are tested end-to-end. **Equivalence with MacroForge is not proven.**
+- **Cloud Run: prepared, NOT deployed.**
+  - The POC image (target `poc`, BNZ Boarder only) was built locally from the staged context with the official pinned base
+    images, and verified in a local Cloud Run emulation.
+  - The runbook is `docs/04-cloud-run-deployment.md`.
+  - Blocked on: RSFA's approval of the commands and of the allowlist entry in `deploy/poc-allowlist.json`.
+- **Open decisions** (docs/02 "Known gaps"):
+  - 36 constant ticks;
   - the DDMMYYYY → 6-cell date transform;
   - the LineItems name conflict;
-  - the `8731317` re-trigger guard.
+  - the `8731317` re-trigger guard;
+  - Make service-to-service auth.
 
 ## Keep the docs true
 

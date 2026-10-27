@@ -118,6 +118,7 @@ public final class FormFiller {
                 }
             }
             run.doc = doc;
+            run.combs = new CombAppearance(template);
             PDAcroForm form = doc.getDocumentCatalog().getAcroForm();
             if (form == null || form.getFields().isEmpty()) {
                 run.error("NO_ACROFORM", null, null, "template has no interactive form fields");
@@ -139,6 +140,7 @@ public final class FormFiller {
             for (Manifest.Overlay o : manifest.overlays()) {
                 planOverlay(doc, o, data, run, writes);
             }
+            clearTemplatePresets(form, run, writes);
             if (run.hasErrors()) {
                 return run.result(null);
             }
@@ -158,6 +160,14 @@ public final class FormFiller {
         } catch (IOException e) {
             run.error("PDF_IO_ERROR", null, null, "could not read or write PDF: " + e.getClass().getSimpleName());
             return run.result(null);
+        } finally {
+            if (run.combs != null) {
+                try {
+                    run.combs.close();
+                } catch (IOException ignored) {
+                    // the sampling copy is read-only; nothing to recover
+                }
+            }
         }
     }
 
@@ -240,6 +250,10 @@ public final class FormFiller {
                             "value needed the embedded Unicode font instead of the field's own font");
                 }
                 field.setValue(value);
+                String combWarning = run.combs.apply(run.doc, field, value);
+                if (combWarning != null) {
+                    run.warning(combWarning, name, null, "comb cells drawn without placeholder knockout");
+                }
                 run.filled.add(name);
             } catch (IllegalArgumentException e) {
                 // PDFBox throws when the field's font cannot encode a character (e.g. macrons)
@@ -297,10 +311,17 @@ public final class FormFiller {
                 on = matches(s.when(), data, name, run);
             } else if (s.constant() != null && s.constant().isBoolean()) {
                 on = s.constant().booleanValue();
-                if (on && !r.approved()) {
-                    run.warning("CONSTANT_CHECK_NOT_APPROVED", name, null,
-                            "constant tick not applied: set approved=true after human review");
-                    continue;
+                if (on) {
+                    String invalid = approvalProblem(r);
+                    if (invalid != null) {
+                        if (r.approval() == null && !Boolean.TRUE.equals(r.approved())) {
+                            run.warning("CONSTANT_CHECK_NOT_APPROVED", name, null,
+                                    "constant tick not applied: needs a recorded approval (approvedBy, approvedOn, reference)");
+                            continue;
+                        }
+                        run.error("INVALID_APPROVAL", name, null, invalid);
+                        return;
+                    }
                 }
             } else if (s.key() != null && field instanceof PDRadioButton && state == null) {
                 String v = scalar(name, s, r.required(), data, run); // radio fed directly with an export value
@@ -344,6 +365,7 @@ public final class FormFiller {
             return;
         }
         String target = selected.isEmpty() ? "Off" : selected.iterator().next();
+        run.decidedButtons.add(name); // selected by an authorized rule, or explicitly forced Off
         writes.add(() -> {
             try {
                 if (target.equals("Off") && field instanceof PDCheckBox cb) {
@@ -356,6 +378,59 @@ public final class FormFiller {
                 run.error("APPEARANCE_FAILED", name, null, "could not set button state");
             }
         });
+    }
+
+    /** Null when the rule carries a complete, valid approval; otherwise the reason (no data values). */
+    private String approvalProblem(FieldRule r) {
+        FieldRule.Approval a = r.approval();
+        if (a == null) {
+            return Boolean.TRUE.equals(r.approved())
+                    ? "'approved: true' alone is not an authorization; record approvedBy, approvedOn and reference"
+                    : "no approval recorded";
+        }
+        if (a.approvedBy() == null || a.approvedBy().isBlank() || a.reference() == null || a.reference().isBlank()) {
+            return "approval must name approvedBy and reference";
+        }
+        try {
+            LocalDate on = LocalDate.parse(String.valueOf(a.approvedOn()));
+            if (on.isAfter(today.apply(ZoneId.of("Pacific/Auckland")))) {
+                return "approvedOn is in the future";
+            }
+        } catch (DateTimeException e) {
+            return "approvedOn must be an ISO date (YYYY-MM-DD)";
+        }
+        return null;
+    }
+
+    /**
+     * Buttons that are already on in the blank template (a bank's pre-ticked declaration, for example) are reset to
+     * Off unless a rule of this fill selected them. Template defaults never certify anything on their own.
+     */
+    private void clearTemplatePresets(PDAcroForm form, Run run, List<Runnable> writes) {
+        for (PDField f : form.getFieldTree()) {
+            if (!(f instanceof PDCheckBox || f instanceof PDRadioButton) || run.decidedButtons.contains(f.getFullyQualifiedName())) {
+                continue;
+            }
+            String v = f.getValueAsString();
+            if (v == null || v.isEmpty() || "Off".equals(v)) {
+                continue;
+            }
+            String name = f.getFullyQualifiedName();
+            run.skipped.remove(name);
+            writes.add(() -> {
+                try {
+                    if (f instanceof PDCheckBox cb) {
+                        cb.unCheck();
+                    } else {
+                        ((PDRadioButton) f).setValue("Off");
+                    }
+                    run.warning("TEMPLATE_PRESET_CLEARED", name, null,
+                            "button was on in the blank template and no authorized rule selected it; set to Off");
+                } catch (IOException | IllegalArgumentException e) {
+                    run.error("APPEARANCE_FAILED", name, null, "could not clear template preset");
+                }
+            });
+        }
     }
 
     // ------------------------------------------------------------------ values
@@ -657,11 +732,13 @@ public final class FormFiller {
     private static final class Run {
         final Manifest manifest;
         PDDocument doc;
+        CombAppearance combs;
         boolean fullUnicodeFont;
         private PDType0Font unicodeFont;
         final List<Issue> issues = new ArrayList<>();
         final List<String> filled = new ArrayList<>();
         final List<String> skipped = new ArrayList<>();
+        final Set<String> decidedButtons = new java.util.HashSet<>();
 
         void error(String code, String f, String k, String m) {
             issues.add(Issue.error(code, f, k, m));

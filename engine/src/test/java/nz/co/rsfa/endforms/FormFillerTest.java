@@ -159,27 +159,93 @@ class FormFillerTest {
     }
 
     @Test
-    void unmatchedConditionLeavesExistingStateUntouched() throws IOException {
-        byte[] prechecked = FILLER.fill(template, manifest(
-                "[{\"pdfField\":\"Consent box\",\"kind\":\"checkbox\",\"source\":{\"constant\":true},\"approved\":true}]"),
-                data("{}")).pdf();
+    void unmatchedConditionWritesNothing() throws IOException {
         String rules = """
                 [{"pdfField":"Consent box","kind":"checkbox","source":{"when":{"key":"Consent","operator":"equals","value":"Yes"}}}]""";
-        FillResult r = FILLER.fill(prechecked, manifest(rules, prechecked), data("{\"Consent\":\"No\"}"));
+        FillResult r = FILLER.fill(template, manifest(rules), data("{\"Consent\":\"No\"}"));
         assertTrue(r.ok(), () -> r.issues().toString());
         assertEquals(List.of("Consent box"), r.skipped());
-        assertEquals("Yes", values(r.pdf()).get("Consent box"), "a non-matching condition must not force Off");
+        assertTrue(r.filled().isEmpty());
+        assertEquals("Off", values(r.pdf()).get("Consent box"));
     }
 
     @Test
     void constantCheckedAndUnchecked() throws IOException {
         String rules = """
-                [{"pdfField":"Consent box","kind":"checkbox","source":{"constant":true},"approved":true},
-                 {"pdfField":"Frequency","kind":"checkbox","option":"3","source":{"constant":false}}]""";
+                [{"pdfField":"Consent box","kind":"checkbox","source":{"constant":true},"approval":%s},
+                 {"pdfField":"Frequency","kind":"checkbox","option":"3","source":{"constant":false}}]""".formatted(APPROVAL);
         FillResult r = FILLER.fill(template, manifest(rules), data("{}"));
         assertTrue(r.ok(), () -> r.issues().toString());
         assertEquals("Yes", values(r.pdf()).get("Consent box"));
         assertEquals("Off", values(r.pdf()).get("Frequency"));
+    }
+
+    static final String APPROVAL = "{\"approvedBy\":\"Test Adviser (fictional)\",\"approvedOn\":\"2026-10-01\",\"reference\":\"TEST-001\"}";
+
+    @Test
+    void incompleteOrUnverifiableApprovalsFailTheFill() throws IOException {
+        for (String bad : List.of("\"approved\":true",
+                "\"approval\":{\"approvedBy\":\"\",\"approvedOn\":\"2026-10-01\",\"reference\":\"X\"}",
+                "\"approval\":{\"approvedBy\":\"A\",\"approvedOn\":\"2026-12-31\",\"reference\":\"X\"}",
+                "\"approval\":{\"approvedBy\":\"A\",\"approvedOn\":\"1 Oct\",\"reference\":\"X\"}")) {
+            String rules = "[{\"pdfField\":\"Consent box\",\"kind\":\"checkbox\",\"source\":{\"constant\":true}," + bad + "}]";
+            FillResult r = FILLER.fill(template, manifest(rules), data("{}"));
+            assertNull(r.pdf(), bad);
+            assertEquals(List.of("INVALID_APPROVAL"), codes(r), bad);
+        }
+    }
+
+    @Test
+    void templatePresetTicksAreClearedUnlessAnAuthorizedRuleSelectsThem() throws IOException {
+        byte[] preset = SyntheticTemplate.buildWithPresetTick();
+        FillResult none = FILLER.fill(preset, manifest("[]", preset), data("{}"));
+        assertEquals("Off", values(none.pdf()).get("Consent box"));
+        assertEquals(List.of("TEMPLATE_PRESET_CLEARED"), codes(none));
+
+        String when = "[{\"pdfField\":\"Consent box\",\"kind\":\"checkbox\",\"source\":{\"when\":{\"key\":\"C\",\"operator\":\"equals\",\"value\":\"Yes\"}}}]";
+        assertEquals("Yes", values(FILLER.fill(preset, manifest(when, preset), data("{\"C\":\"Yes\"}")).pdf()).get("Consent box"));
+        assertEquals("Off", values(FILLER.fill(preset, manifest(when, preset), data("{\"C\":\"No\"}")).pdf()).get("Consent box"));
+
+        String unapproved = "[{\"pdfField\":\"Consent box\",\"kind\":\"checkbox\",\"source\":{\"constant\":true}}]";
+        FillResult u = FILLER.fill(preset, manifest(unapproved, preset), data("{}"));
+        assertEquals("Off", values(u.pdf()).get("Consent box"), "an unapproved constant must not keep the preset tick");
+        assertEquals(List.of("CONSTANT_CHECK_NOT_APPROVED", "TEMPLATE_PRESET_CLEARED"), codes(u));
+
+        String approved = "[{\"pdfField\":\"Consent box\",\"kind\":\"checkbox\",\"source\":{\"constant\":true},\"approval\":" + APPROVAL + "}]";
+        FillResult a = FILLER.fill(preset, manifest(approved, preset), data("{}"));
+        assertEquals("Yes", values(a.pdf()).get("Consent box"));
+        assertTrue(a.issues().isEmpty(), a.issues().toString());
+    }
+
+    // ------------------------------------------------------------------ comb fields
+
+    @Test
+    void combDigitsAreCentredAndPlaceholdersKnockedOut() throws IOException {
+        String rules = "[{\"pdfField\":\"Date\",\"kind\":\"text\",\"source\":{\"key\":\"d\"}}]";
+        FillResult r = FILLER.fill(template, manifest(rules), data("{\"d\":\"271026\"}"));
+        assertTrue(r.ok(), () -> r.issues().toString());
+        assertTrue(r.issues().isEmpty(), r.issues().toString());
+        assertEquals("271026", values(r.pdf()).get("Date"), "the value itself is never altered");
+        int before = Rendering.colourPixels(template, 0, 40, 680, 120, 18, SyntheticTemplate.PLACEHOLDER, 40);
+        int after = Rendering.colourPixels(r.pdf(), 0, 40, 680, 120, 18, SyntheticTemplate.PLACEHOLDER, 40);
+        assertTrue(before > 100, "fixture must show placeholders, got " + before);
+        assertEquals(0, after, "placeholders under filled cells must be hidden");
+        for (int i = 0; i < 6; i++) {
+            float[] c = Rendering.inkCentre(r.pdf(), 0, 40 + i * 20, 680, 20, 18);
+            assertEquals(40 + i * 20 + 10, c[0], 1.0, "digit " + i + " horizontally centred");
+            assertEquals(689, c[1], 1.5, "digit " + i + " vertically centred");
+        }
+    }
+
+    @Test
+    void combKnockoutIsSkippedOnANonUniformBackground() throws IOException {
+        String rules = "[{\"pdfField\":\"Code\",\"kind\":\"text\",\"source\":{\"key\":\"c\"}}]";
+        FillResult r = FILLER.fill(template, manifest(rules), data("{\"c\":\"AB12\"}"));
+        assertTrue(r.ok());
+        assertEquals(List.of("COMB_BACKGROUND_NOT_UNIFORM"), codes(r));
+        try (PDDocument d = Loader.loadPDF(r.pdf())) {
+            assertEquals("AB12", d.getDocumentCatalog().getAcroForm().getField("Code").getValueAsString());
+        }
     }
 
     @Test

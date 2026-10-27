@@ -131,6 +131,7 @@ public final class Main {
         String apiKey = env.get("ENGINE_API_KEY");
         ApiServer.AuthMode auth = ApiServer.AuthMode.valueOf(
                 env.getOrDefault("ENGINE_AUTH", apiKey != null ? "API_KEY" : "NONE"));
+        ApiServer.requirePlatformForIam(auth, env);
         TemplateCatalog catalog = TemplateCatalog.load(Path.of(env.getOrDefault("ENGINE_MAPPINGS_DIR", "mappings")),
                 dirs(env.getOrDefault("ENGINE_TEMPLATE_DIRS", ".local/generated/templates")));
         ApiServer server = new ApiServer(catalog, new FormFiller(), auth, apiKey);

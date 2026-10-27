@@ -65,6 +65,17 @@ public final class ApiServer {
         }
     }
 
+    /**
+     * PLATFORM_IAM trusts Cloud Run's IAM invoker check, which only exists on Cloud Run. Cloud Run always sets
+     * K_SERVICE; without it the service would be unauthenticated, so startup is refused.
+     */
+    public static void requirePlatformForIam(AuthMode auth, java.util.Map<String, String> env) {
+        if (auth == AuthMode.PLATFORM_IAM && (env.get("K_SERVICE") == null || env.get("K_SERVICE").isBlank())) {
+            throw new IllegalStateException("ENGINE_AUTH=PLATFORM_IAM is only allowed on Cloud Run (K_SERVICE not set); "
+                    + "use API_KEY locally");
+        }
+    }
+
     public int start(String host, int port) throws IOException {
         InetSocketAddress addr = new InetSocketAddress(host, port);
         if (auth == AuthMode.NONE && !addr.getAddress().isLoopbackAddress()) {

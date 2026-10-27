@@ -189,6 +189,7 @@ class PdfField:
     comb: bool = False
     read_only: bool = False
     date_format: str | None = None  # from an Acrobat AFDate_FormatEx action, converted to Java pattern
+    preset_on: list[str] = field(default_factory=list)  # button states already ON in the blank template
 
 
 def inspect_pdf(pdf_bytes: bytes) -> dict:
@@ -260,6 +261,8 @@ def inspect_pdf(pdf_bytes: bytes) -> dict:
                 f.date_format = m.group(1).replace("m", "M")
         if kind in ("checkbox", "radio"):
             for w in widgets:
+                if str(w.get("/AS", "/Off")) != "/Off":
+                    f.preset_on.append(str(w.get("/AS")).lstrip("/"))
                 ap = w.get("/AP")
                 n = ap.get_object().get("/N") if ap is not None else None
                 for st in (n.get_object().keys() if n is not None else []):
@@ -478,6 +481,10 @@ def classify(ref: TemplateRef, pdf_info: dict | None, siblings: tuple = ()) -> C
             continue
         out.entries.append({"pdfField": name, "kind": kind or "text", "source": {"key": source}, "legacy": legacy})
 
+    for name_, pf_ in pdf_fields.items():
+        if pf_.preset_on:
+            out.warnings.append({"code": "TEMPLATE_PRESET_BUTTON", "pdfField": name_, "states": pf_.preset_on,
+                                 "note": "on in the blank template; the engine clears it unless an approved rule selects it"})
     for fld in ref.conditions:
         if fld not in ref.mappings:
             out.warnings.append({"code": "ORPHAN_CONDITION", "pdfField": fld})
@@ -671,7 +678,8 @@ def cmd_manifest(args) -> int:
                 "fields": {n: {"kind": f.kind, **({"states": f.states} if f.states else {}),
                                **({"maxLen": f.max_len} if f.max_len else {}),
                                **({"comb": True} if f.comb else {}),
-                               **({"widgets": f.widgets} if f.widgets > 1 else {})}
+                               **({"widgets": f.widgets} if f.widgets > 1 else {}),
+                               **({"presetOn": f.preset_on} if f.preset_on else {})}
                            for n, f in sorted(info["fields"].items())}},
         "fields": sorted(cls.entries, key=lambda e: (e["pdfField"], e.get("option", ""))),
         "overlays": cls.overlays,

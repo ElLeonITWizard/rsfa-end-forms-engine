@@ -125,6 +125,14 @@ class ApiServerTest {
     }
 
     @Test
+    void platformIamIsOnlyAllowedOnCloudRun() {
+        assertThrows(IllegalStateException.class,
+                () -> ApiServer.requirePlatformForIam(ApiServer.AuthMode.PLATFORM_IAM, java.util.Map.of()));
+        ApiServer.requirePlatformForIam(ApiServer.AuthMode.PLATFORM_IAM, java.util.Map.of("K_SERVICE", "rsfa-end-forms-engine"));
+        ApiServer.requirePlatformForIam(ApiServer.AuthMode.API_KEY, java.util.Map.of());
+    }
+
+    @Test
     void unauthenticatedModeIsLoopbackOnly() throws IOException {
         TemplateCatalog empty = TemplateCatalog.load(Files.createDirectories(dir.resolve("empty")), List.of());
         ApiServer open = new ApiServer(empty, new FormFiller(), ApiServer.AuthMode.NONE, null);

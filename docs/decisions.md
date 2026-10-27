@@ -63,15 +63,15 @@ Lightweight ADR log, newest last. Status: `proposed` | `accepted` | `superseded`
   Keys that collide after this are merged into an array, which makes any rule reading them fail rather than pick one.
 - **Next review:** once a direct Make → engine contract is designed, consider mapping by Monday column **ID** instead of title.
 
-### D-009 Authentication pattern (future, not deployed)
-- **Date:** 2026-10-27 · **Status:** proposed
+### D-009 Authentication pattern
+- **Date:** 2026-10-27 · **Status:** accepted for the first deployment (human invokers via Cloud Run IAM); Make service-to-service still proposed
 - **Decision:** On Cloud Run, deploy with `--no-allow-unauthenticated` and `ENGINE_AUTH=PLATFORM_IAM`. The caller presents a Google
   ID token for a dedicated service account. If Make cannot mint ID tokens, use `API_KEY` (≥32 chars from Secret Manager),
   ideally behind API Gateway. `NONE` is refused on non-loopback binds.
 - **Next review:** before any deployment, which needs explicit approval.
 
 ### D-010 Templates on Cloud Run via read-only Cloud Storage volume
-- **Date:** 2026-10-27 · **Status:** proposed
+- **Date:** 2026-10-27 · **Status:** proposed for production; deferred for the POC by D-018
 - **Decision:** Mount a private GCS bucket at `/templates` (Cloud Run volume mount) and set `ENGINE_TEMPLATE_DIRS=/templates`.
   The engine needs no storage SDK. Mappings are baked into the image.
 - **Next review:** with D-009.
@@ -112,6 +112,11 @@ Lightweight ADR log, newest last. Status: `proposed` | `accepted` | `superseded`
 - **Decision:** a constant `true` rule is applied only when the manifest rule has `"approved": true`. Otherwise the box
   stays Off with `CONSTANT_CHECK_NOT_APPROVED`. Constant `false` (legacy default Off) needs no approval.
 - **Trade-offs:** the output differs from legacy until RSFA approves each tick. This is deliberate.
+- **Correction (2026-10-27, iteration 3):**
+  - The BNZ Handover certification "By ticking here, I confirm I have recommended …" is field **`Confirmation`** (page 1),
+    not `Check Box 31` (page 4). `Confirmation` is pre-ticked in BNZ's blank template and passed through because no
+    rule touched it.
+  - **Superseded by D-016**: the boolean `approved` is replaced by a validated approval record, and template presets are cleared.
 
 ### D-014 Unicode text: check each field's own font, fall back to an embedded Unicode font by manifest policy
 - **Date:** 2026-10-27 · **Status:** accepted (POC)
@@ -133,3 +138,50 @@ Lightweight ADR log, newest last. Status: `proposed` | `accepted` | `superseded`
   - The Dockerfile has a `runtime-prebuilt` target for verifying with a host-built jar.
   - Optional `BUILD_IMAGE`, `APT_MIRROR`, `MAVEN_EXTRA_OPTS` and a BuildKit secret `build_ca` support TLS-intercepting proxies without leaving anything in the image.
 - **Validation:** see the Docker verification table in docs/02.
+
+### D-016 Declarations are never certified by default
+- **Date:** 2026-10-27 · **Status:** accepted · supersedes the `approved` flag of D-013
+- **Context:**
+  - BNZ Handover's blank template ships with the adviser certification `Confirmation` already ticked.
+  - The engine left untouched fields as the template had them, so the output certified on the adviser's behalf.
+  - A bare `"approved": true` is not a validated authorization either: anyone editing JSON can set it.
+- **Decision:**
+  1. Every checkbox or radio that is on in the template, and that no rule of this fill selected or forced Off, is reset to
+     Off (`TEMPLATE_PRESET_CLEARED`). The importer lists such fields (`TEMPLATE_PRESET_BUTTON`, `presetOn`).
+  2. A constant tick needs `approval: {approvedBy, approvedOn, reference}`. The engine validates it: all present, and
+     `approvedOn` an ISO date not in the future. If absent, the tick is not applied (warning). If malformed, or `approved: true` alone,
+     the fill fails (`INVALID_APPROVAL`).
+- **Evidence:** in 25 templates, 2 widgets are preset (BNZ Handover `Confirmation`, WBC Refix `Check Box1`). Both are now cleared.
+- **Trade-offs:** outputs differ from legacy where legacy relied on template presets. Recording approvals is manual by design.
+
+### D-017 Comb fields: own appearance, centred glyphs, measured placeholder knockout
+- **Date:** 2026-10-27 · **Status:** accepted
+- **Context:**
+  - BNZ date boxes (`DD|MM|YY`) print faint placeholder letters in each cell.
+  - PDFBox's comb appearance drew digits over them, so `Date 3` on BNZ Handover page 4 looked misaligned or struck through.
+- **Decision:** for comb fields, the engine writes its own appearance:
+  - each character is centred in its cell (glyph width, cap height), in the field's font, size and colour;
+  - placeholders are knocked out only in cells that receive a character, using the cell background **measured from
+    the blank template's rendering**;
+  - if the samples disagree, there is no knockout and a `COMB_BACKGROUND_NOT_UNIFORM` warning;
+  - values are never altered.
+- **Validation:** synthetic test (placeholder pixels 0, digit ink centred within 1 pt) and BNZ Handover `Date 3`
+  (0 placeholder pixels in cell interiors; the rest are neutral digit anti-aliasing).
+
+### D-018 First Cloud Run deployment: staged context, baked allowlisted templates, IAM-only access
+- **Date:** 2026-10-27 · **Status:** proposed: **awaiting RSFA approval before any command runs**
+- **Decision:**
+  - Build from a context staged by `tools/stage_deploy.py`: allowlist, SHA-256, human approval, blank-PDF check and
+    content scan, with the output inside `.local/`.
+  - Cloud Build runs regionally with a dedicated build SA (Artifact Registry writer on one repository, read access to the
+    private source bucket with a 7-day lifecycle, log writer).
+  - Deploy by image digest, with `--no-allow-unauthenticated`, `ENGINE_AUTH=PLATFORM_IAM` (only allowed when `K_SERVICE` is set),
+    a runtime SA with no roles, and the requested sizing.
+  - Base images are pinned by digest via `mirror.gcr.io`.
+- **Trade-offs:** templates change only with a new image. The blank BNZ form is stored in a private registry.
+  Make cannot call it yet (D-009).
+- **Validation:** local Cloud Run emulation (PLATFORM_IAM + K_SERVICE, 1 CPU / 1 GiB, read-only FS):
+  - ready in 0.7 s;
+  - `/generate` 200 in 0.9 s cold / 0.2 s warm, about 100 MiB;
+  - output byte-identical to host;
+  - 0 data values in logs.

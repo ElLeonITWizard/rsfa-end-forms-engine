@@ -141,10 +141,19 @@ class LegacyTemplatesTest {
             }
         }
         assertVisible(r.pdf(), k.template(), List.of("Loan Amount 1", "Agreed Interest 2", "Loan Amount 3"));
-        // the adviser certification tick is a legacy constant: not applied until a human approves it
+        // legacy constant ticks are not applied without a recorded approval
         assertEquals("Off", fieldValues(r.pdf(), List.of("Check Box 31")).get("Check Box 31"));
         assertTrue(r.issues().stream().anyMatch(i -> i.code().equals("CONSTANT_CHECK_NOT_APPROVED")
                 && "Check Box 31".equals(i.pdfField())));
+        // the adviser certification ("By ticking here, I confirm I have recommended ...") is pre-ticked in BNZ's
+        // blank template; with no authorized rule the engine must clear it
+        assertEquals("Yes", fieldValues(k.template(), List.of("Confirmation")).get("Confirmation"));
+        assertEquals("Off", fieldValues(r.pdf(), List.of("Confirmation")).get("Confirmation"));
+        assertTrue(r.issues().stream().anyMatch(i -> i.code().equals("TEMPLATE_PRESET_CLEARED")
+                && "Confirmation".equals(i.pdfField())));
+        // Date 3 (adviser date, comb DD|MM|YY): value intact, digits centred, placeholder letters hidden
+        assertEquals("271026", fieldValues(r.pdf(), List.of("Date 3")).get("Date 3"));
+        assertCombPlaceholdersHidden(k.template(), r.pdf(), "Date 3");
         writeOutput("BNZ_Handover_POC.pdf", r.pdf());
     }
 
@@ -257,6 +266,31 @@ class LegacyTemplatesTest {
                 assertTrue(visible, "no visible rendering for field " + n);
             }
         }
+    }
+
+    /** The template's own placeholder colour (most common light, non-white colour in the cells) must vanish. */
+    static void assertCombPlaceholdersHidden(byte[] blank, byte[] filled, String field) throws IOException {
+        PDRectangle r;
+        int page;
+        try (PDDocument d = Loader.loadPDF(filled)) {
+            PDAnnotationWidget w = d.getDocumentCatalog().getAcroForm().getField(field).getWidgets().getFirst();
+            r = w.getRectangle();
+            page = d.getPages().indexOf(w.getPage());
+        }
+        float[] colour = Rendering.dominantLightColour(blank, page, r.getLowerLeftX(), r.getLowerLeftY(), r.getWidth(), r.getHeight());
+        int cells;
+        try (PDDocument d = Loader.loadPDF(filled)) {
+            cells = ((org.apache.pdfbox.pdmodel.interactive.form.PDTextField) d.getDocumentCatalog().getAcroForm().getField(field)).getMaxLen();
+        }
+        float cw = r.getWidth() / cells;
+        int before = 0, after = 0;
+        for (int i = 0; i < cells; i++) { // cell interiors only, 1.5pt clear of borders and divider lines
+            float x = r.getLowerLeftX() + i * cw + 1.5f, y = r.getLowerLeftY() + 1.5f, w = cw - 3f, h = r.getHeight() - 3f;
+            before += Rendering.colourPixels(blank, page, x, y, w, h, colour, 6);
+            after += Rendering.colourPixels(filled, page, x, y, w, h, colour, 6); // ±6: excludes neutral digit anti-aliasing
+        }
+        assertTrue(before > 50, field + ": expected visible placeholders in the blank template, got " + before);
+        assertTrue(after < before / 20, field + ": placeholders still visible, before=" + before + " after=" + after);
     }
 
     static void writeOutput(String name, byte[] pdf) throws IOException {

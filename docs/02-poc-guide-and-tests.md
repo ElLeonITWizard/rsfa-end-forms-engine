@@ -50,7 +50,8 @@ and review the diff. Every `reviewRequired` entry needs a human decision before 
     {"pdfField": "Date 1", "kind": "text", "source": {"generated": "today", "format": "ddMMyy", "zone": "Pacific/Auckland"}},
     {"pdfField": "Check Box95", "kind": "checkbox", "option": "3",
      "source": {"when": {"key": "Total credits or deposits (next 12 months) (GHL Trust)", "operator": "equals", "value": "$1M-$5M"}}},
-    {"pdfField": "Some box", "kind": "checkbox", "source": {"constant": true}, "approved": false},
+    {"pdfField": "Some box", "kind": "checkbox", "source": {"constant": true},
+     "approval": {"approvedBy": "<name/role>", "approvedOn": "YYYY-MM-DD", "reference": "<ticket/decision>"}},
     {"pdfField": "Loan Amount 2", "kind": "text",
      "source": {"lineItem": {"array": "Subitems", "position": 2, "path": ["values", "Loan amount"]}}}
   ],
@@ -76,7 +77,9 @@ Kinds: `text`, `checkbox`, `radio`, `combo`, `list`. Sources: `key` | `constant`
 | **LineItems** | element `position` (1-based) of the array, then `path` inside it. Fewer rows than the form → skipped quietly. Array absent / column absent in a row → `SOURCE_KEY_ABSENT`. Non-array → error |
 | Checkbox/radio `when` | exact (`equals`) / substring (`contains`), case-sensitive. A non-match leaves the field untouched. More than one selected option → `CONFLICTING_SELECTION` |
 | Checkbox constant `false` | forces Off; works on multi-state fields without an option (legacy field-level `unchecked` default) |
-| **Checkbox constant `true`** | applied **only if `"approved": true`**; otherwise left Off with `CONSTANT_CHECK_NOT_APPROVED` (D-013) |
+| **Checkbox constant `true`** | applied **only with a valid `approval` record** (approvedBy, past/present ISO `approvedOn`, reference). Absent → left Off with `CONSTANT_CHECK_NOT_APPROVED`. Malformed, or `approved: true` alone → `INVALID_APPROVAL` error (D-016) |
+| **Template preset buttons** | any checkbox/radio already on in the blank template and not selected or forced Off by a rule of this fill is reset to Off (`TEMPLATE_PRESET_CLEARED`), e.g. BNZ Handover `Confirmation` (D-016) |
+| **Comb fields** (`DD\|MM\|YY` boxes) | engine-drawn appearance: each character centred in its cell. Printed placeholder letters are knocked out in filled cells using the background measured from the blank template. A non-uniform background means no knockout and `COMB_BACKGROUND_NOT_UNIFORM`. The value is never changed (D-017) |
 | Combo/list | value must be an export or display option, else `INVALID_OPTION` |
 | Signature / push button target | always `FORBIDDEN_TARGET` |
 | **Overlays** | single line drawn into the page content in **embedded Liberation Sans** at `rect`: size min(maxSize 10, 70% of the rect height), shrunk to fit the width, 2pt left padding, vertically centred. Under 6pt → `OVERLAY_TEXT_TOO_LONG`. Rect outside the page → `OVERLAY_OUT_OF_PAGE`. A widget with a background colour under it → `OVERLAY_UNDER_OPAQUE_WIDGET` warning. Encrypted template → `OVERLAY_ON_ENCRYPTED_TEMPLATE` (not verified yet). Rotated page → error |
@@ -98,6 +101,8 @@ Unresolved items (138) are listed per manifest in `unresolvedLegacyMappings`.
 | 2 | **Complete BNZ Boarder incl. customer name(s)**, deterministic | **Passed**: 7 fields + 2 overlays. The overlay text is asserted by region extraction. Bytes are identical across runs and host/container |
 | 3 | Māori macrons in overlays and fields | **Passed**: `Aroha Tūhoe-Example`, `Mere Tāwhiri-Sample`, `Ōtāhuhu` (host + container render) |
 | 4 | Repeated LineItems example | **Passed**: BNZ Handover, 3 facilities into rows 1–3, rows 4–6 empty |
+| 4a | No declaration certified without a validated approval | **Passed**: BNZ Handover `Confirmation` (pre-ticked in the template) is cleared; constant ticks need a validated approval |
+| 4b | Comb dates readable (BNZ Handover `Date 3`, BNZ Boarder `Date 1/2`) | **Passed**: centred digits, placeholders hidden, values unchanged |
 | 5 | Checkbox template | **Passed**: GHL N&P Trust. Radio only on the synthetic template |
 | 6 | Docker image runs the engine with required fonts | **Passed** with caveats (see below) |
 | 7 | Same output as MacroForge for the same input | **Not testable**: no MacroForge output is available. Overlay font/size are engine policy |
@@ -106,21 +111,22 @@ Unresolved items (138) are listed per manifest in `unresolvedLegacyMappings`.
 
 | Suite | Command | Count |
 |---|---|---|
-| Importer (synthetic .mforge) | `python3 -m unittest discover -s tests/importer -v` | 8 |
-| Engine unit (synthetic AcroForm): widget kinds, errors, normalisation, line items, overlays, fonts, approval gate, rendering, no value echo | `cd engine && mvn -B test` | 22 |
-| HTTP API | (same) | 6 |
-| Legacy templates: BNZ Boarder (+ macrons), BNZ Handover line items, the DDMMYYYY gap, GHL, manifest resolution. **Skipped without `.local` templates** | (same) | 6 |
+| Importer (synthetic .mforge) + deployment staging (`tools/stage_deploy.py`) | `python3 -m unittest discover -s tests/importer -v` | 8 + 5 |
+| Engine unit (synthetic AcroForm): widget kinds, errors, normalisation, line items, overlays, fonts, approval validation, template presets, comb appearance, rendering, no value echo | `cd engine && mvn -B test` | 26 |
+| HTTP API (incl. PLATFORM_IAM only with `K_SERVICE`) | (same) | 7 |
+| Legacy templates: BNZ Boarder (+ macrons), BNZ Handover (line items, `Confirmation` cleared, `Date 3`), the DDMMYYYY gap, GHL, manifest resolution. **Skipped without `.local` templates** | (same) | 6 |
 
-Last full run (2026-10-27):
-- Host: 42 passed (8 Python + 34 Java, none skipped).
-- Inside the Docker build: 28 Java passed, 6 skipped by design (no private templates in the build context).
+Last full run (2026-10-27, iteration 3):
+- Host: 52 passed (13 Python + 39 Java, none skipped).
+- Inside the Docker build (official pinned Maven image): 33 Java passed, 6 skipped by design.
+- Cloud Run deployment preparation and its local emulation: `docs/04-cloud-run-deployment.md`.
 
 ## Docker verification (2026-10-27)
 
 | Check | Result |
 |---|---|
 | `runtime-prebuilt` image (host-built jar) | built; runs as uid 10001; Temurin 21 JRE; fontconfig + URW base-35 (D050000L Dingbats) |
-| Full default build (Maven inside Docker, tests inside) | **passed**, with one substitution: Docker Hub and ECR Public rate-limited the `maven:3.9.11-eclipse-temurin-21` pull, so `BUILD_IMAGE` was set to a local stand-in (the pulled `eclipse-temurin:21-jre` + JDK 21 + Maven 3.9.11). **Not verified: the official Maven base image itself** |
+| Full default build (Maven inside Docker, tests inside) | **passed with the official images**: since iteration 3, base images are pulled via `mirror.gcr.io` and pinned by digest. In iteration 2, a stand-in was needed (Docker Hub rate limit) |
 | Fill in the container (4 fixtures, read-only `/templates` mount) | all OK; 3 of 4 outputs **byte-identical** to the host. GHL differs only in the encrypted appended revision (random AES IV) |
 | Render in the container (PDFBox) | macrons in overlays and fallback field correct; bank ZapfDingbats ✔ renders via URW |
 | HTTP in the container | `$PORT` honoured; `/health` 200; `/generate` 200 PDF; 401 without key; `NONE` on 0.0.0.0 refuses to start; `PLATFORM_IAM` starts; 0 data values in logs |
@@ -142,7 +148,7 @@ docker build -f engine/Dockerfile -t end-forms-engine:dev .     # full build, wh
 1. Overlay transform (1.2) and engine font policy: compare with one real MacroForge output (any template with overlays).
 2. LineItems name conflict (`… in months/years` vs `… months/years`): confirm which names MacroForge produces today.
 3. Decide on a reviewed transform for Make's `DDMMYYYY` subitem dates into 6-cell `DDMMYY` comb fields (BNZ Handover).
-4. Approve or reject the 36 constant ticks (`approved: true` per rule), starting with BNZ Handover `Check Box 31`.
+4. Approve or reject the 36 constant ticks: record an `approval` per rule, or leave them unapplied.
 5. Confirm the legacy `[TODAY]` format and the `equals`/`contains` semantics in a parallel run.
 6. Verify that the Monday labels match the PDF combo options exactly (BNZ product and purpose).
 7. Re-run the full Docker build with the official Maven base image where Docker Hub is reachable.

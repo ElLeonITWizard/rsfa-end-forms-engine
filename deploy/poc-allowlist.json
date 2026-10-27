@@ -1,0 +1,16 @@
+{
+  "purpose": "Templates allowed into the first isolated Cloud Run deployment (POC). Blank lender forms only: no client data. Each entry is SHA-256 pinned and needs a recorded human approval before tools/stage_deploy.py will stage it.",
+  "templates": [
+    {
+      "templateId": "BNZ_BOARDER_FORM",
+      "templateVersion": "2.0_8-24",
+      "sha256": "7982ae8cbda97f0be9173c2632839afaa7c0d725349cab32dddbd62520509795",
+      "why": "Acceptance goal: generate the BNZ Boarder PDF on Cloud Run from a synthetic payload.",
+      "approval": {
+        "approvedBy": "",
+        "approvedOn": "",
+        "reference": ""
+      }
+    }
+  ]
+}
