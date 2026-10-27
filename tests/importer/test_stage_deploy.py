@@ -38,15 +38,17 @@ class StageDeployTest(unittest.TestCase):
         shutil.rmtree(self.tmp, ignore_errors=True)
         shutil.rmtree(self.out.parent, ignore_errors=True)
 
-    def setup_template(self, pdf: bytes, approval=None, allow_sha=None):
+    # Defaults to the template key the real demo UI offers (engine/src/main/resources/ui/forms.json), which staging
+    # requires to be allowlisted.
+    def setup_template(self, pdf: bytes, approval=None, allow_sha=None, tid="BNZ_BOARDER_FORM", ver="2.0_8-24"):
         sha = hashlib.sha256(pdf).hexdigest()
         name = f"{sha[:12]}__Test_Form.pdf"
         (self.templates / name).write_bytes(pdf)
-        (self.mappings / "T@1.json").write_text(json.dumps(
-            {"schemaVersion": 1, "templateId": "T", "templateVersion": "1", "templateFile": name, "templateSha256": sha,
+        (self.mappings / f"{tid}@{ver}.json").write_text(json.dumps(
+            {"schemaVersion": 1, "templateId": tid, "templateVersion": ver, "templateFile": name, "templateSha256": sha,
              "fields": []}))
         allow = self.tmp / "allow.json"
-        allow.write_text(json.dumps({"templates": [{"templateId": "T", "templateVersion": "1",
+        allow.write_text(json.dumps({"templates": [{"templateId": tid, "templateVersion": ver,
                                                     "sha256": allow_sha or sha, "approval": approval}]}))
         return allow
 
@@ -56,12 +58,38 @@ class StageDeployTest(unittest.TestCase):
     def test_approved_blank_template_is_staged_with_exact_file_set(self):
         self.stage(self.setup_template(minimal_form_pdf(), APPROVAL))
         files = sorted(p.relative_to(self.out).as_posix() for p in self.out.rglob("*") if p.is_file())
-        self.assertIn("mappings/test/T@1.json", files)
+        self.assertIn("mappings/test/BNZ_BOARDER_FORM@2.0_8-24.json", files)
+        for name in sd.UI_ASSETS:
+            self.assertIn(f"{sd.UI_DIR}/{name}", files)
         self.assertEqual([f for f in files if f.startswith("poc-templates/")],
                          [f"poc-templates/{hashlib.sha256(minimal_form_pdf()).hexdigest()[:12]}__Test_Form.pdf"])
         self.assertFalse((self.out / "UNAPPROVED_LOCAL_TEST_ONLY").exists())
         self.assertTrue(all(f.startswith(("engine/", "mappings/", "poc-templates/")) or f in
                             (".gcloudignore", "cloudbuild.yaml", "STAGED_FILES.txt") for f in files), files)
+
+    def test_demo_ui_offering_a_non_allowlisted_template_is_refused(self):
+        # This allowlist only has T@1, but the real UI offers BNZ Boarder.
+        with self.assertRaisesRegex(sd.StageError, "not allowlisted: BNZ_BOARDER_FORM@2.0_8-24"):
+            self.stage(self.setup_template(minimal_form_pdf(), APPROVAL, tid="T", ver="1"))
+        self.assertFalse(self.out.exists())
+
+    def test_ui_checks_refuse_cdn_and_webhook_markers(self):
+        ui = self.tmp / "ui"
+        ui.mkdir()
+        for name in sd.UI_ASSETS:
+            (ui / name).write_text('{"templates": []}' if name == "forms.json" else "/* ok */")
+        self.assertIsNone(sd.ui_problem(ui, set()))
+        (ui / "index.html").write_text('<script src="https://cdn.example.org/x.js"></script>')
+        self.assertIn("another origin", sd.ui_problem(ui, set()))
+        (ui / "index.html").write_text("<p>ok</p>")
+        (ui / "forms.json").write_text('{"templates": [{"templateId": "X", "templateVersion": "1"}]}')
+        self.assertIn("not allowlisted: X@1", sd.ui_problem(ui, set()))
+        self.assertIsNone(sd.ui_problem(ui, {"X@1"}))
+        (ui / "app.css").unlink()
+        self.assertIn("missing", sd.ui_problem(ui, set()))
+        js = ui / "app.js"
+        js.write_text("const u = 'webhook_url';")
+        self.assertIn("forbidden content", sd.content_problem(js))
 
     def test_missing_or_future_approval_is_refused(self):
         for bad in (None, {"approvedBy": "", "approvedOn": "2026-10-27", "reference": "x"},

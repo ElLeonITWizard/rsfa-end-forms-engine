@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en-NZ">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>RSFA End Forms Engine</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="ui/app.css">
+  <script src="ui/app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">RS</span>
+      <div>
+        <h1>RSFA End Forms Engine</h1>
+        <p class="tagline">Lender end forms, filled from your data, every time the same way.</p>
+      </div>
+    </div>
+    <div class="engine-status" id="engine-status" role="status" aria-live="polite">
+      <span class="dot" aria-hidden="true"></span><span id="engine-status-text">Checking engine…</span>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="card form-card" aria-labelledby="form-title">
+      <div class="card-head">
+        <h2 id="form-title">Prepare a form</h2>
+        <span class="badge">Synthetic data only</span>
+      </div>
+
+      <label class="field" for="template">
+        <span class="label">Lender form</span>
+        <select id="template" name="template" disabled><option>Loading…</option></select>
+      </label>
+      <p class="template-desc" id="template-desc"></p>
+
+      <form id="form" novalidate>
+        <div id="sections"></div>
+        <fieldset class="section">
+          <legend>Date</legend>
+          <div class="grid">
+            <label class="field" for="today">
+              <span class="label" id="date-label">Form date</span>
+              <input type="date" id="today" name="today">
+              <span class="hint" id="date-hint"></span>
+            </label>
+          </div>
+        </fieldset>
+        <p class="notice" id="notice"></p>
+        <div class="actions">
+          <button type="button" class="btn secondary" id="load-sample">Load Sample Data</button>
+          <button type="button" class="btn ghost" id="clear">Clear</button>
+          <button type="submit" class="btn primary" id="generate">
+            <span class="spinner" aria-hidden="true"></span><span class="btn-text">Generate PDF</span>
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <section class="card result-card" aria-labelledby="result-title">
+      <div class="card-head">
+        <h2 id="result-title">Generated form</h2>
+        <a class="btn primary small" id="download" href="#" download hidden>Download PDF</a>
+      </div>
+
+      <div class="message" id="message" role="alert" hidden></div>
+
+      <dl class="provenance" id="provenance" hidden>
+        <div class="span2"><dt>Produced by</dt><dd id="p-engine">Deterministic mapping engine — no AI</dd></div>
+        <div class="span2"><dt>Template</dt><dd id="p-template"></dd></div>
+        <div><dt>Fields filled</dt><dd id="p-filled"></dd></div>
+        <div><dt>Warnings</dt><dd id="p-warnings"></dd></div>
+        <div><dt>Time</dt><dd id="p-time"></dd></div>
+        <div class="wide"><dt>Document fingerprint (SHA-256)</dt><dd id="p-sha" class="mono"></dd></div>
+      </dl>
+
+      <div class="preview" id="preview">
+        <div class="empty" id="empty">
+          <p class="empty-title">No form generated yet</p>
+          <p>Load the sample data, adjust any field, then select <strong>Generate PDF</strong>.</p>
+        </div>
+        <iframe id="pdf-frame" title="Generated PDF preview" hidden></iframe>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    Demo environment · PDFs are produced by version-controlled field mappings (Apache PDFBox). No AI is used to place or
+    interpret values. Signatures and declarations are never completed automatically.
+  </footer>
+</body>
+</html>

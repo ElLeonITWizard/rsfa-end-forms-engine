@@ -237,6 +237,11 @@ CODE=$(curl -s -D "$OUT/generate.headers" -o "$OUT/BNZ_Boarder_cloudrun.pdf" -w 
   -H "Authorization: Bearer $ID_TOKEN" -H 'Content-Type: application/json' --data @"$FIXTURE" "$URL/generate")
 [ "$CODE" = 200 ] || die "Authenticated /generate returned $CODE: $(head -c 400 "$OUT/BNZ_Boarder_cloudrun.pdf")"
 ok "authenticated /generate: 200, $(grep -i -E '^x-fields-filled|^x-fill-warnings|^content-type' "$OUT/generate.headers" | tr -d '\r' | tr '\n' ' ')"
+UI_UNAUTH=$(curl -s -o /dev/null -w '%{http_code}' "$URL/")
+[ "$UI_UNAUTH" = 403 ] || [ "$UI_UNAUTH" = 401 ] || die "Unauthenticated demo UI returned $UI_UNAUTH (expected 401/403)."
+CODE=$(curl -s -o "$OUT/ui.html" -w '%{http_code}' -H "Authorization: Bearer $ID_TOKEN" "$URL/")
+[ "$CODE" = 200 ] && grep -q 'RSFA End Forms Engine' "$OUT/ui.html" || die "Authenticated demo UI returned $CODE."
+ok "demo UI: rejected without a token ($UI_UNAUTH), served with one (open it via gcloud run services proxy)"
 [ -d "$OUT/venv" ] || python3 -m venv "$OUT/venv"
 "$OUT/venv/bin/pip" -q install 'pypdf==6.17.0' >/dev/null
 "$OUT/venv/bin/python" "$VERIFY" "$OUT/BNZ_Boarder_cloudrun.pdf" "$HERE/expected_pdf_sha256.txt" | tee "$OUT/pdf-verification.json"
@@ -257,7 +262,7 @@ PY
 cat "$OUT/log-check.json"
 grep -q '"ok": true' "$OUT/log-check.json" || die "Log check failed (no entries, or payload values in logs): $OUT/log-check.json"
 rec logCheck "$(cat "$OUT/log-check.json")"
-rec tests "{\"unauthenticatedHealth\": $UNAUTH, \"authenticatedHealth\": 200, \"authenticatedGenerate\": 200}"
+rec tests "{\"unauthenticatedHealth\": $UNAUTH, \"authenticatedHealth\": 200, \"authenticatedGenerate\": 200, \"unauthenticatedUi\": $UI_UNAUTH, \"authenticatedUi\": 200}"
 rec finishedAt "\"$(date -u +%FT%TZ)\""
 
 step "DONE"
@@ -265,4 +270,5 @@ echo "  Service URL : $URL"
 echo "  Revision    : $REV"
 echo "  Image       : $DIGEST_REF"
 echo "  Record      : $RECORD   (send this file and $OUT/BNZ_Boarder_cloudrun.pdf back for the repo docs)"
+echo "  Demo UI     : gcloud run services proxy $SERVICE --region=$REGION --project=$PROJECT_ID --port=8080, then open localhost:8080 (docs/05)"
 echo "  Rollback    : gcloud run services delete $SERVICE --region=$REGION --project=$PROJECT_ID"

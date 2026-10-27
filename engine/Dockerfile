@@ -50,11 +50,12 @@ RUN --mount=type=secret,id=build_ca \
         /etc/apt/sources.list.d/*.sources /etc/apt/sources.list 2>/dev/null || true; \
     fi; \
     if [ -f /run/secrets/build_ca ]; then \
-      echo 'Acquire::https::CAInfo "/run/secrets/build_ca";' > /etc/apt/apt.conf.d/99build-ca; \
+      install -m 0644 /run/secrets/build_ca /tmp/build-ca.crt; \
+      echo 'Acquire::https::CAInfo "/tmp/build-ca.crt";' > /etc/apt/apt.conf.d/99build-ca; \
     fi; \
     apt-get update \
     && apt-get install -y --no-install-recommends fontconfig fonts-urw-base35 \
-    && rm -rf /var/lib/apt/lists/* /etc/apt/apt.conf.d/99build-ca \
+    && rm -rf /var/lib/apt/lists/* /etc/apt/apt.conf.d/99build-ca /tmp/build-ca.crt \
     && useradd --system --uid 10001 engine
 WORKDIR /app
 COPY mappings /app/mappings

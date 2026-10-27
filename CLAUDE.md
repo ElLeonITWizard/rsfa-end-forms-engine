@@ -14,7 +14,10 @@ SharePoint filing are **out of scope**.
 
 - **Engine (this repo):** Java 21 + Apache PDFBox 3. It takes already-prepared JSON (`data`) plus a
   version-controlled mapping manifest and fills one AcroForm template. It returns a PDF or structured
-  issues. There is no LLM at runtime, no database and no UI.
+  issues. There is no LLM at runtime and no database.
+- **Demo page (`engine/src/main/resources/ui/`):** static HTML/CSS/vanilla JS served by the engine at `/`. It only
+  collects values and calls `POST /generate`. It holds no mapping logic, no CDN, no data, and has the same
+  authentication as the API (D-020). Not a product: no template upload, mapping editor, user management or multi-lender scope.
 - **Importer (`tools/import_mforge.py`):** a one-off Python CLI. It converts the legacy `.mforge`
   export into manifests and inventories, and extracts embedded PDFs into `.local/`.
 - **Make** (scenario `8731317`) stays the orchestrator. Future cutover means Make calls
@@ -29,15 +32,17 @@ docs/01-context-and-architecture.md   RSFA/Make/Monday/MacroForge context, data 
 docs/02-poc-guide-and-tests.md        manifest schema, POC steps, what is supported, tests, gaps
 docs/03-migration-inventory.md        evidence-based inventory of the legacy .mforge
 docs/04-cloud-run-deployment.md       Cloud Run runbook (prepared, not executed), rollback
+docs/05-demo-script.md                demo page: secure access (gcloud run services proxy) + what to click
 docs/decisions.md                     decision log (ADR-lite)
 tools/import_mforge.py    legacy importer (inventory | extract | manifest)
 tools/stage_deploy.py     builds the minimal, approved build context for Cloud Run (allowlist + SHA + blank check)
 deploy/                   poc-allowlist.json (approved templates), cloudbuild.yaml, deploy_poc.sh (end-to-end deployment),
                           make_bundle.sh (Cloud Shell bundle), verify_pdf.py (post-deploy PDF checks), bucket lifecycle
-engine/                   Maven project: library, CLI (inspect | fill | serve), HTTP API, Dockerfile
+engine/                   Maven project: library, CLI (inspect | fill | render | serve), HTTP API, demo page, Dockerfile
 mappings/<lender>/<TEMPLATE_ID>@<version>.json   imported manifests (no client data; reviewed)
 tests/fixtures/           synthetic requests (fictional "Jane Example" data only)
-tests/importer/           importer unit tests (synthetic .mforge)
+tests/importer/           importer + staging unit tests (synthetic .mforge)
+tests/ui/                 browser smoke test of the demo page (Playwright from the machine) + PDF checker
 .local/                   GIT-IGNORED: reference exports, lender PDFs, generated output
 ```
 
@@ -55,6 +60,8 @@ java -jar engine/target/end-forms-engine.jar fill --manifest "mappings/bnz/BNZ_B
   --data tests/fixtures/bnz-boarder.request.json --out .local/output/BNZ_BoarderForm_POC.pdf
 java -jar engine/target/end-forms-engine.jar render --pdf .local/output/BNZ_BoarderForm_POC.pdf --out-dir .local/output
 docker build --network host -f engine/Dockerfile --target runtime-prebuilt -t end-forms-engine:prebuilt .   # see docs/02
+ENGINE_AUTH=NONE java -jar engine/target/end-forms-engine.jar serve                 # demo page on http://localhost:8080/ (loopback only)
+node tests/ui/demo_smoke.js http://127.0.0.1:8080/ .local/output/ui-smoke          # browser smoke test (server must be running)
 ```
 
 The legacy-template tests (`LegacyTemplatesTest`) are **skipped** unless the templates have been
@@ -81,7 +88,7 @@ extracted to `.local/generated/templates/`. A green build without them proves on
 8. Nothing is deployed or changed in Google Cloud without RSFA's explicit approval of the exact commands (docs/04).
    Never build from the repo root for deployment: only from the staged context.
 
-## Current status (2026-10-27, iteration 3)
+## Current status (2026-10-27, iteration 5)
 
 - **BNZ Boarder is complete**, including Customer name(s):
   - 7 imported fields + 2 legacy overlays (`rect / 1.2`, docs/03);
@@ -92,9 +99,15 @@ extracted to `.local/generated/templates/`. A green build without them proves on
 - **LineItems:** BNZ Handover fills 3 synthetic facilities into rows 1–3.
 - **Coverage, Flow C:** 1,013 mappings = 804 imported + 19 unsupported + 138 unresolved + 52 inert. Only 3 templates
   are tested end-to-end. **Equivalence with MacroForge is not proven.**
+- **Demo page (iteration 5):** BNZ Boarder only, synthetic sample, preview + download + provenance.
+  - Browser-tested (20 checks) on the host, in the POC image, and behind an emulated IAM layer + `gcloud run services proxy`.
+  - The unedited sample gives the fixture's exact SHA-256.
+  - Demo script: docs/05.
 - **Cloud Run: approved by RSFA, NOT yet deployed.**
   - The allowlist entry for the blank BNZ Boarder template is approved (packaging and testing only).
-  - `deploy/deploy_poc.sh` is ready and tested against a stubbed `gcloud`.
+  - `deploy/deploy_poc.sh` is ready and tested against a stubbed `gcloud`. It now also checks the demo page (403 without a token, 200 with one).
+  - Rebuild the bundle (`stage_deploy.py` + `make_bundle.sh`) so that it contains the page.
+  - Replacing an already-deployed revision needs RSFA's explicit approval.
   - Blocker: this environment has no Google Cloud credentials. Run the script in Cloud Shell (docs/04, option A),
     then record the results in docs/04 "Deployment record".
 - **Open decisions** (docs/02 "Known gaps"):

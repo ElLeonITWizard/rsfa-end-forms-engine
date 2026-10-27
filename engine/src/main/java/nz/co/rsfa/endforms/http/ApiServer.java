@@ -27,7 +27,7 @@ import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
 /**
- * Minimal HTTP boundary: {@code GET /health} and {@code POST /generate}.
+ * Minimal HTTP boundary: {@code GET /health}, {@code POST /generate} and the static demo page ({@code GET /}, D-020).
  *
  * <p>Never logs request bodies, data values or PDFs: one line per request with ids, codes and counts.
  */
@@ -35,6 +35,8 @@ public final class ApiServer {
 
     private static final Logger LOG = Logger.getLogger(ApiServer.class.getName());
     static final int MAX_BODY_BYTES = 1024 * 1024;
+    /** Identifies how PDFs are produced: version-controlled field mappings, PDFBox, no AI/LLM at runtime. */
+    static final String ENGINE_ID = "rsfa-end-forms-engine; deterministic-mapping; pdfbox; no-ai";
     private static final Pattern REQUEST_ID = Pattern.compile("[A-Za-z0-9._-]{1,64}");
     private static final Pattern TEMPLATE_PART = Pattern.compile("[A-Za-z0-9._-]{1,80}");
 
@@ -84,6 +86,7 @@ public final class ApiServer {
         server = HttpServer.create(addr, 0);
         server.createContext("/health", this::health);
         server.createContext("/generate", this::generate);
+        server.createContext("/", this::ui);
         server.setExecutor(Executors.newVirtualThreadPerTaskExecutor());
         server.start();
         return server.getAddress().getPort();
@@ -92,6 +95,50 @@ public final class ApiServer {
     public void stop() {
         if (server != null) {
             server.stop(0);
+        }
+    }
+
+    /** Demo UI: a fixed allowlist of bundled static files. Same authentication as the API; no data, no secrets. */
+    private static final java.util.Map<String, String[]> UI_FILES = java.util.Map.of(
+            "/", new String[] {"/ui/index.html", "text/html; charset=utf-8"},
+            "/ui/app.css", new String[] {"/ui/app.css", "text/css; charset=utf-8"},
+            "/ui/app.js", new String[] {"/ui/app.js", "text/javascript; charset=utf-8"},
+            "/ui/forms.json", new String[] {"/ui/forms.json", "application/json; charset=utf-8"});
+
+    private void ui(HttpExchange ex) throws IOException {
+        try (ex) {
+            String[] file = UI_FILES.get(ex.getRequestURI().getPath());
+            if (file == null) {
+                sendJson(ex, 404, error(null, "NOT_FOUND", List.of()));
+                return;
+            }
+            if (!"GET".equals(ex.getRequestMethod())) {
+                sendJson(ex, 405, error(null, "METHOD_NOT_ALLOWED", List.of()));
+                return;
+            }
+            if (!authorised(ex)) {
+                sendJson(ex, 401, error(null, "UNAUTHORISED", List.of()));
+                return;
+            }
+            byte[] body;
+            try (InputStream in = ApiServer.class.getResourceAsStream(file[0])) {
+                if (in == null) {
+                    sendJson(ex, 404, error(null, "NOT_FOUND", List.of()));
+                    return;
+                }
+                body = in.readAllBytes();
+            }
+            var h = ex.getResponseHeaders();
+            h.set("Content-Type", file[1]);
+            h.set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; "
+                    + "frame-src blob:; object-src blob:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'");
+            h.set("X-Content-Type-Options", "nosniff");
+            h.set("Referrer-Policy", "no-referrer");
+            h.set("Cache-Control", "no-store");
+            ex.sendResponseHeaders(200, body.length);
+            try (OutputStream os = ex.getResponseBody()) {
+                os.write(body);
+            }
         }
     }
 
@@ -192,6 +239,8 @@ public final class ApiServer {
             ex.getResponseHeaders().set("X-Request-Id", requestId);
             ex.getResponseHeaders().set("X-Fields-Filled", Integer.toString(filled));
             ex.getResponseHeaders().set("X-Fill-Warnings", Integer.toString(warnings));
+            ex.getResponseHeaders().set("X-Template", templateKey);
+            ex.getResponseHeaders().set("X-Engine", ENGINE_ID);
             ex.sendResponseHeaders(200, result.pdf().length);
             try (OutputStream os = ex.getResponseBody()) {
                 os.write(result.pdf());

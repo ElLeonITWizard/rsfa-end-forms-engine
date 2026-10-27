@@ -62,7 +62,8 @@ curl -s -o out.pdf -D - -H "Authorization: Bearer $ENGINE_API_KEY" \
 ```
 
 Responses:
-- `200 application/pdf` with headers `X-Request-Id`, `X-Fields-Filled` and `X-Fill-Warnings`.
+- `200 application/pdf` with headers `X-Request-Id`, `X-Fields-Filled`, `X-Fill-Warnings`, `X-Template` and
+  `X-Engine` (`rsfa-end-forms-engine; deterministic-mapping; pdfbox; no-ai`).
 - Otherwise JSON `{"status":"error","code":…,"issues":[…]}`:
   - 400 invalid request
   - 401 unauthorised
@@ -70,6 +71,23 @@ Responses:
   - 413 body over 1 MiB
   - 422 validation failed
   - 503 template file unavailable
+
+## Demo web page
+
+The engine also serves a small demo page at `/`. It is plain HTML, CSS and JavaScript bundled in the jar, with no CDN
+and no framework. The page shows a form for BNZ Boarder with Load Sample Data (synthetic), Generate PDF, a preview, a
+download link, and the engine's provenance (deterministic mapping, not AI; fields filled; SHA-256). It calls the same
+`POST /generate`; no mapping logic lives in the browser.
+
+```bash
+ENGINE_AUTH=NONE java -jar engine/target/end-forms-engine.jar serve    # loopback only; open http://localhost:8080/
+```
+
+- On Cloud Run, the page is private like the API. Open it through `gcloud run services proxy` (see `docs/05-demo-script.md`).
+- In `API_KEY` mode, the page also requires the bearer key, so a browser cannot use it there.
+- Browser smoke test (uses the machine's Playwright, not a project dependency):
+  `node tests/ui/demo_smoke.js http://127.0.0.1:8080/ .local/output/ui-smoke`.
+- What to click during a demo: [`docs/05-demo-script.md`](docs/05-demo-script.md).
 
 ## Docker (local only, nothing deployed)
 

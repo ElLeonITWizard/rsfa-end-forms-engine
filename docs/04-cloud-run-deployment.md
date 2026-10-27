@@ -45,6 +45,25 @@ It was tested end-to-end (2026-10-27) in this environment:
   token can therefore create and deploy, but the authenticated `/health` and `/generate` checks must then be run by the
   deployer: `gcloud run services proxy` or the curl commands in section 4.
 
+## Demo page access (iteration 5)
+
+The image now also serves the demo page at `/` (D-020). Cloud Run IAM protects it exactly like `/health` and
+`/generate`, and no public endpoint is added. To open it, run the following as an identity that has `run.invoker`
+(after deployment, only the deployer):
+
+```bash
+gcloud run services proxy rsfa-end-forms-engine --region=australia-southeast1 --project=rsfa-end-forms-engine --port=8080
+# then open http://localhost:8080/  (Cloud Shell: Web Preview -> port 8080)
+```
+
+- `deploy_poc.sh` step 8 checks the page: 401/403 without a token, 200 with one.
+- Rebuild the bundle before running the script, so that the staged context contains the page.
+- A service deployed before iteration 5 has no page. Replacing its revision (`UPDATE_EXISTING=1`) needs RSFA's
+  explicit approval.
+- Status: **not exercised against real Cloud Run** (no credentials here). The flow was tested with the POC image behind
+  an IAM stand-in plus a `gcloud run services proxy` emulator (docs/02). The meeting walk-through is in
+  `docs/05-demo-script.md`.
+
 ## Deployment record
 
 | Item | Value |

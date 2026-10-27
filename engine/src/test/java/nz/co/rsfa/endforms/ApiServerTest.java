@@ -85,6 +85,9 @@ class ApiServerTest {
         assertEquals(200, r.statusCode());
         assertEquals("application/pdf", r.headers().firstValue("Content-Type").orElse(""));
         assertEquals("2", r.headers().firstValue("X-Fields-Filled").orElse(""));
+        assertEquals("SYNTH@1", r.headers().firstValue("X-Template").orElse(""));
+        assertTrue(r.headers().firstValue("X-Engine").orElse("").contains("deterministic-mapping"));
+        assertTrue(r.headers().firstValue("X-Engine").orElse("").contains("no-ai"));
         try (PDDocument d = Loader.loadPDF(r.body())) {
             assertEquals("Jane Example", d.getDocumentCatalog().getAcroForm().getField("Full name").getValueAsString());
             assertEquals("020126", d.getDocumentCatalog().getAcroForm().getField("Date").getValueAsString());
@@ -122,6 +125,48 @@ class ApiServerTest {
         assertEquals(400, post("{\"templateId\":\"../etc\",\"templateVersion\":\"1\",\"data\":{}}", KEY).statusCode());
         assertEquals(400, post("{\"requestId\":\"bad id/..\",\"templateId\":\"SYNTH\",\"templateVersion\":\"1\",\"data\":{}}", KEY).statusCode());
         assertEquals(413, post("{\"pad\":\"" + "x".repeat(1024 * 1024) + "\"}", KEY).statusCode());
+    }
+
+    static HttpResponse<String> get(String path, String key) throws Exception {
+        HttpRequest.Builder b = HttpRequest.newBuilder(URI.create(base + path));
+        if (key != null) {
+            b.header("Authorization", "Bearer " + key);
+        }
+        return HTTP.send(b.build(), HttpResponse.BodyHandlers.ofString());
+    }
+
+    @Test
+    void servesDemoUiWithSecurityHeaders() throws Exception {
+        HttpResponse<String> page = get("/", KEY);
+        assertEquals(200, page.statusCode());
+        assertTrue(page.headers().firstValue("Content-Type").orElse("").startsWith("text/html"));
+        assertTrue(page.body().contains("RSFA End Forms Engine"));
+        String csp = page.headers().firstValue("Content-Security-Policy").orElse("");
+        assertTrue(csp.contains("default-src 'self'") && csp.contains("script-src 'self'") && csp.contains("frame-ancestors 'none'"));
+        assertEquals("nosniff", page.headers().firstValue("X-Content-Type-Options").orElse(""));
+        // Only same-origin assets: no CDN or other third-party URLs.
+        assertFalse(page.body().contains("http://") || page.body().contains("https://"));
+        for (String asset : List.of("/ui/app.js", "/ui/app.css", "/ui/forms.json")) {
+            HttpResponse<String> r = get(asset, KEY);
+            assertEquals(200, r.statusCode(), asset);
+            assertFalse(r.body().contains("http://") || r.body().contains("https://"), asset);
+        }
+        assertEquals("text/javascript; charset=utf-8", get("/ui/app.js", KEY).headers().firstValue("Content-Type").orElse(""));
+    }
+
+    @Test
+    void demoUiServesOnlyAllowlistedFilesAndKeepsAuth() throws Exception {
+        assertEquals(404, get("/ui/", KEY).statusCode());
+        assertEquals(404, get("/ui/../ApiServer.class", KEY).statusCode());
+        assertEquals(404, get("/nz/co/rsfa/endforms/Main.class", KEY).statusCode());
+        assertEquals(404, get("/favicon.ico", KEY).statusCode());
+        // In API_KEY mode the UI is protected like the API (on Cloud Run, IAM protects everything).
+        assertEquals(401, get("/", null).statusCode());
+        assertEquals(401, get("/ui/app.js", null).statusCode());
+        HttpResponse<String> post = HTTP.send(HttpRequest.newBuilder(URI.create(base + "/"))
+                .POST(HttpRequest.BodyPublishers.ofString("x")).header("Authorization", "Bearer " + KEY).build(),
+                HttpResponse.BodyHandlers.ofString());
+        assertEquals(405, post.statusCode());
     }
 
     @Test

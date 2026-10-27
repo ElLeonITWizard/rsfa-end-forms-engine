@@ -3,7 +3,8 @@
 
 Only these files are copied into the context (everything else, including .local/reference and the .mforge,
 stays out of the upload):
-  engine/pom.xml, engine/src/**, engine/Dockerfile   source + tests (tests run inside the image build)
+  engine/pom.xml, engine/src/**, engine/Dockerfile   source + tests (tests run inside the image build), including the
+                                                      demo UI assets in engine/src/main/resources/ui/
   deploy/cloudbuild.yaml                              Cloud Build config
   mappings/<...>.json                                 only manifests of allowlisted templates
   poc-templates/<file>.pdf                            only allowlisted, SHA-256 verified, BLANK templates
@@ -14,6 +15,7 @@ Safety checks (any failure aborts and leaves no context behind):
   * template SHA-256 == allowlist == manifest templateSha256;
   * templates are blank: no text/choice field has a value (a filled client PDF can never be staged by mistake);
   * no staged file is an export (.mforge/.xlsx/blueprint) or contains webhook URLs;
+  * the demo UI assets are present, load nothing from another origin (no CDN), and only offer allowlisted templates;
   * the output directory must be inside <repo>/.local/.
 
 Usage:
@@ -33,6 +35,10 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 FORBIDDEN_SUFFIXES = {".mforge", ".xlsx", ".xls"}
 FORBIDDEN_TEXT = re.compile(r"hook\.[a-z0-9]+\.make\.com|webhook_url|sample_payload|__raw_webhook_payload", re.I)
+TEXT_SUFFIXES = {".json", ".java", ".xml", ".yaml", ".txt", ".html", ".js", ".css", ".md", ".properties", ""}
+UI_DIR = "engine/src/main/resources/ui"
+UI_ASSETS = ("index.html", "app.css", "app.js", "forms.json")
+EXTERNAL_URL = re.compile(r"https?://", re.I)
 
 
 class StageError(Exception):
@@ -63,6 +69,29 @@ def blank_problem(pdf: Path) -> str | None:
         v = f.get("/V")
         if f.get("/FT") in ("/Tx", "/Ch") and v not in (None, "", []):
             return f"field {name!r} already has a value: not a blank template"
+    return None
+
+
+def ui_problem(ui_dir: Path, allowed: set[str]) -> str | None:
+    """The demo UI must be complete, self-contained (no CDN/third-party URLs) and offer only allowlisted templates."""
+    for name in UI_ASSETS:
+        p = ui_dir / name
+        if not p.is_file():
+            return f"demo UI asset missing: {name}"
+        if EXTERNAL_URL.search(p.read_text(encoding="utf-8", errors="ignore")):
+            return f"demo UI asset references another origin: {name}"
+    for t in json.loads((ui_dir / "forms.json").read_text(encoding="utf-8")).get("templates", []):
+        key = f"{t.get('templateId')}@{t.get('templateVersion')}"
+        if key not in allowed:
+            return f"demo UI offers a template that is not allowlisted: {key}"
+    return None
+
+
+def content_problem(p: Path) -> str | None:
+    if p.suffix.lower() in FORBIDDEN_SUFFIXES or "blueprint" in p.name.lower():
+        return "forbidden file staged"
+    if p.suffix.lower() in TEXT_SUFFIXES and FORBIDDEN_TEXT.search(p.read_text(encoding="utf-8", errors="ignore")):
+        return "forbidden content (webhook/payload marker)"
     return None
 
 
@@ -117,6 +146,9 @@ def stage(allowlist: Path, mappings: Path, templates: Path, out: Path, local_tes
         copy(REPO / "engine" / "Dockerfile", out / "engine" / "Dockerfile")
         copy(REPO / "deploy" / "cloudbuild.yaml", out / "cloudbuild.yaml")
         shutil.copytree(REPO / "engine" / "src", out / "engine" / "src")
+        problem = ui_problem(out / UI_DIR, {f"{e['templateId']}@{e['templateVersion']}" for e in entries})
+        if problem:
+            raise StageError(problem)
         (out / ".gcloudignore").write_text("# Staged by tools/stage_deploy.py: upload exactly these files.\n"
                                            ".gcloudignore\nSTAGED_FILES.txt\n", encoding="utf-8")
         if local_test:
@@ -125,11 +157,9 @@ def stage(allowlist: Path, mappings: Path, templates: Path, out: Path, local_tes
         listing = []
         for p in sorted(x for x in out.rglob("*") if x.is_file()):
             rel = p.relative_to(out).as_posix()
-            if p.suffix.lower() in FORBIDDEN_SUFFIXES or "blueprint" in p.name.lower():
-                raise StageError(f"forbidden file staged: {rel}")
-            if p.suffix.lower() in (".json", ".java", ".xml", ".yaml", ".txt", "") and FORBIDDEN_TEXT.search(
-                    p.read_text(encoding="utf-8", errors="ignore")):
-                raise StageError(f"forbidden content (webhook/payload marker) in {rel}")
+            problem = content_problem(p)
+            if problem:
+                raise StageError(f"{problem}: {rel}")
             listing.append(f"{sha256(p)}  {p.stat().st_size:>9}  {rel}")
         (out / "STAGED_FILES.txt").write_text("\n".join(listing) + "\n", encoding="utf-8")
         return notes + [f"{len(listing)} files staged in {out}"]

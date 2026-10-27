@@ -111,14 +111,21 @@ Unresolved items (138) are listed per manifest in `unresolvedLegacyMappings`.
 
 | Suite | Command | Count |
 |---|---|---|
-| Importer (synthetic .mforge) + deployment staging (`tools/stage_deploy.py`) | `python3 -m unittest discover -s tests/importer -v` | 8 + 5 |
+| Importer (synthetic .mforge) + deployment staging (`tools/stage_deploy.py`, incl. demo UI asset checks) | `python3 -m unittest discover -s tests/importer -v` | 8 + 7 |
 | Engine unit (synthetic AcroForm): widget kinds, errors, normalisation, line items, overlays, fonts, approval validation, template presets, comb appearance, rendering, no value echo | `cd engine && mvn -B test` | 26 |
-| HTTP API (incl. PLATFORM_IAM only with `K_SERVICE`) | (same) | 7 |
+| HTTP API (incl. PLATFORM_IAM only with `K_SERVICE`, `X-Engine`/`X-Template`, demo page allowlist, CSP and auth) | (same) | 9 |
+| Demo page form keys = BNZ Boarder manifest keys; sample = fixture. **Skipped without `mappings/`** | (same) | 1 |
 | Legacy templates: BNZ Boarder (+ macrons), BNZ Handover (line items, `Confirmation` cleared, `Date 3`), the DDMMYYYY gap, GHL, manifest resolution. **Skipped without `.local` templates** | (same) | 6 |
+| Demo page in a real browser (needs a running server and the machine's Playwright) | `node tests/ui/demo_smoke.js <base-url> <out-dir>` | 20 checks |
 
-Last full run (2026-10-27, iteration 3):
-- Host: 52 passed (13 Python + 39 Java, none skipped).
-- Inside the Docker build (official pinned Maven image): 33 Java passed, 6 skipped by design.
+Last full run (2026-10-27, iteration 5):
+- Host: 57 passed (15 Python + 42 Java, none skipped).
+- Inside the POC image build (official pinned Maven image, staged context): build and tests passed.
+- Browser smoke test: passed in 3 setups:
+  - on the host;
+  - in the POC image (`PLATFORM_IAM` + `K_SERVICE`);
+  - in the POC image behind a test-only IAM stand-in (403 without a token) plus a `gcloud run services proxy` emulator.
+- The PDF preview renders in headed Chromium. Headless Chromium shows no preview, by design.
 - Cloud Run deployment preparation and its local emulation: `docs/04-cloud-run-deployment.md`.
 
 ## Docker verification (2026-10-27)
@@ -130,7 +137,8 @@ Last full run (2026-10-27, iteration 3):
 | Fill in the container (4 fixtures, read-only `/templates` mount) | all OK; 3 of 4 outputs **byte-identical** to the host. GHL differs only in the encrypted appended revision (random AES IV) |
 | Render in the container (PDFBox) | macrons in overlays and fallback field correct; bank ZapfDingbats ✔ renders via URW |
 | HTTP in the container | `$PORT` honoured; `/health` 200; `/generate` 200 PDF; 401 without key; `NONE` on 0.0.0.0 refuses to start; `PLATFORM_IAM` starts; 0 data values in logs |
-| Proxy / CA handling | optional BuildKit secret `build_ca` + `APT_MIRROR`/`MAVEN_EXTRA_OPTS` build args; no CA or secret left in the image |
+| Proxy / CA handling | optional BuildKit secret `build_ca` + `APT_MIRROR`/`MAVEN_EXTRA_OPTS` build args; no CA or secret left in the image. Iteration 5: apt reads a temporary 0644 copy of the CA (D-021) |
+| Demo page in the POC image (iteration 5) | `/` served with CSP; browser smoke test passed; generated PDF byte-identical to the host fixture output |
 
 Reproduce:
 ```bash

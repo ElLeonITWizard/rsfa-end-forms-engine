@@ -203,3 +203,54 @@ Lightweight ADR log, newest last. Status: `proposed` | `accepted` | `superseded`
     Docker 20.10 + BuildKit builder.
 - **Validation:** run end-to-end in this environment with a recording `gcloud` stub, the real POC image and an authenticating
   front proxy. All checks passed, 0 forbidden commands, and the rerun stopped safely.
+
+### D-020 Demo page: static files served by the engine, same authentication, no browser-side mapping
+- **Date:** 2026-10-27 · **Status:** accepted (POC demo)
+- **Context:** RSFA needs a visual demo for Rod. Constraints:
+  - no framework, npm, CDN, extra cloud service or paid dependency;
+  - no new public endpoint;
+  - Cloud Run IAM stays the only gate;
+  - no mapping logic in the browser;
+  - synthetic data only.
+- **Decision:**
+  - `ApiServer` serves a fixed allowlist of 4 classpath files (`/`, `/ui/app.css`, `/ui/app.js`, `/ui/forms.json`).
+    Any other path returns 404, and only `GET` is accepted.
+  - The files carry a strict CSP (`'self'` only, `frame-src blob:` for the preview), `nosniff`, `no-referrer` and `no-store`.
+  - The page uses the same `authorised()` check as `/generate`. On Cloud Run, IAM protects page and API alike.
+  - `forms.json` lists the UI fields. Its keys must equal the manifest's data keys (`DemoUiFormsTest`).
+    Its sample is the synthetic fixture.
+  - The browser sends the existing `/generate` schema. Empty fields are omitted, so the engine reports
+    `SOURCE_KEY_ABSENT` warnings and leaves those boxes blank.
+  - `/generate` successes add `X-Template` and `X-Engine` (`…; deterministic-mapping; pdfbox; no-ai`). The page shows
+    them with the SHA-256 it computes.
+  - Demo access to Cloud Run is `gcloud run services proxy`. It signs requests with the caller's own login and serves
+    page and API from one localhost origin. No tokens are handled.
+  - `tools/stage_deploy.py` refuses a context if:
+    - a UI asset is missing;
+    - an asset references another origin;
+    - `forms.json` offers a template that is not allowlisted;
+    - a staged `.html`, `.js` or `.css` file contains webhook/payload markers.
+  - `deploy_poc.sh` checks that the page is rejected without a token and served with one.
+- **Trade-offs:**
+  - In `API_KEY` mode, a browser cannot load the page (no way to send the header). The local demo therefore uses
+    `ENGINE_AUTH=NONE`, which is loopback-only.
+  - Health is still unauthenticated in non-Cloud-Run modes (unchanged).
+  - Headless browsers do not render the PDF preview. Real Chrome/Edge do (verified with headed Chromium under Xvfb).
+- **Validation:**
+  - `tests/ui/demo_smoke.js` (20 checks: sample → edit → generate → download → field/overlay values, no ticks, no
+    signatures, SHA shown = file SHA, unedited sample = fixture SHA `2ae7bfac…`, visible `UNENCODABLE_TEXT` error that
+    does not echo the value, no horizontal scroll at 390 px, no console errors).
+  - Passed on the host (`ENGINE_AUTH=NONE`), in the POC image (`PLATFORM_IAM` + `K_SERVICE`), and through a test-only
+    IAM stand-in plus a `gcloud run services proxy` emulator.
+  - The real `gcloud` proxy and Cloud Run were **not** exercised: no Google Cloud credentials here.
+
+### D-021 Docker build behind a TLS-intercepting proxy: apt reads a world-readable copy of the CA
+- **Date:** 2026-10-27 · **Status:** accepted
+- **Context:**
+  - BuildKit mounts secrets as root-only `0400`. apt downloads as the unprivileged `_apt` user, so it could not read
+    `/run/secrets/build_ca` ("Could not load certificates … Permission denied").
+  - Earlier local images had come from cached layers.
+- **Decision:**
+  - When the `build_ca` secret is present, copy it to `/tmp/build-ca.crt` with mode 0644 for that single `RUN`.
+  - Delete the copy and the apt config in the same `RUN`, so no CA is left in any layer (checked: none in `/tmp` or `apt.conf.d`).
+  - Builds without the secret (Cloud Build) are unchanged.
