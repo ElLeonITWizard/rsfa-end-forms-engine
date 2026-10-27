@@ -68,6 +68,10 @@ public record FieldRule(
     public record Condition(String key, Operator operator, String value) {
     }
 
-    /** Legacy MacroForge operators. Matching is exact and case-sensitive (legacy semantics unverified). */
-    public enum Operator { equals, contains }
+    /**
+     * Legacy MacroForge operators {@code equals} and {@code contains}: exact and case-sensitive (legacy semantics
+     * unverified). {@code present} (engine, used only by reviewed {@code validation.requires}): the key has a
+     * non-blank value; {@code value} is ignored.
+     */
+    public enum Operator { equals, contains, present }
 }

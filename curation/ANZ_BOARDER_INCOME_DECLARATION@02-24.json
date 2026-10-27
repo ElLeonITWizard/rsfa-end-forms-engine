@@ -1,0 +1,38 @@
+{
+  "templateId": "ANZ_BOARDER_INCOME_DECLARATION",
+  "templateVersion": "02-24",
+  "templateSha256": "6b0efad0aca6052c4885d4f7a61729ef3dd4f50ae43c956a623710e80fb77c74",
+  "validation": {
+    "requires": [
+      {
+        "id": "ANZ-BOARDER-WEEKLY-1",
+        "ifPresent": "Boarders - Board amount 1",
+        "require": {
+          "key": "Boarders - Board amount 1 frequency",
+          "operator": "equals",
+          "value": "Weekly"
+        },
+        "reason": "the ANZ form only has a 'Weekly board amount' box; a fortnightly or monthly amount would be misstated"
+      },
+      {
+        "id": "ANZ-BOARDER-WEEKLY-2",
+        "ifPresent": "Boarders - Board amount 2",
+        "require": {
+          "key": "Boarders - Board amount 2 frequency",
+          "operator": "equals",
+          "value": "Weekly"
+        },
+        "reason": "the ANZ form only has a 'Weekly board amount' box; a fortnightly or monthly amount would be misstated"
+      }
+    ]
+  },
+  "review": {
+    "status": "candidate",
+    "meaning": "synthetic tests pass and every rule was checked against the printed label and the live Monday labels; not approved by RSFA, not compared with a MacroForge output",
+    "openQuestions": [
+      "Property address is the legacy key Applicant 1 Physical Address (whole address); it may differ from the property where the boarders live.",
+      "The 'inclusive of food and/or bills' Yes/No boxes and the signature dates are not mapped in the legacy configuration and stay blank for the customer.",
+      "Customer name(s) are drawn as legacy overlays (rect / 1.2, inferred; docs/03)."
+    ]
+  }
+}

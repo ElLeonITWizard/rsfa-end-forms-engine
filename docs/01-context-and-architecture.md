@@ -48,7 +48,13 @@ Facts and caveats:
     so `8731317` continues only for the intended label (e.g. `Reviewed`).
 - **[export]** `module-3-output-bundles.json` is only the HTTP *response* envelope: `200 {"status":"routed","success":true}`.
   It proves dispatch, **not completion**, and contains no request body.
-- **[live]** Labels on `status`: `Filled`, `Reviewed`, `Reviewing`, `Cancelled`.
+- **[live]** Labels on `status`: `Filled`, `Reviewed`, `Reviewing`, `Cancelled`, and (seen 2026-10-27 in the board
+  schema) `Historical`.
+- **[live, board schema 2026-10-27, read-only, columns only]** Board `5026186805` is titled "SOP Masterboard" (401 columns).
+  - Column `dropdown_mkzvfgeg`, which the Make contract and MacroForge call "Banks to Send", is now titled **"Selected Banks"**.
+    Its labels are `ASB, ANZ, BNZ, KiwiBank, WBC`.
+  - Some dropdown labels differ from the values that MacroForge rules test (docs/06).
+  - Subitem titles are e.g. `Fixed term (months)`, `Loan term (years)`.
 - **[live]** Error handling: GetItem/HTTP retry 3× every 5 min (incomplete-executions queue on). An OpenAI failure resumes
   with `{}` (address parts silently missing). A Code-module failure emails via `8732008`.
 
@@ -71,6 +77,9 @@ Facts and caveats:
 - Renaming a Monday column silently changes the contract. The engine reports `SOURCE_KEY_ABSENT` warnings so drift is visible.
 
 ## Target architecture (POC → later)
+
+The Make integration contract and proposal (auth, filing, Monday status without recursion, test plan) are in
+docs/07. The sketch below is the original target.
 
 ```text
 Make 8731317 (unchanged trigger + preprocessing)

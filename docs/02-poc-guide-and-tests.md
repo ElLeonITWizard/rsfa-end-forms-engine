@@ -33,6 +33,13 @@ and review the diff. Every `reviewRequired` entry needs a human decision before 
     `Main purpose for each facility` (combo), `First repayment date`;
   - 18 more (`Loan term`, `Fixed term`, `Interest only period`) are unresolved name conflicts (docs/03).
 
+## Additional forms (iteration 6)
+
+ASB Boarder, ANZ Boarder, GHL N&P Individual (candidates) and GHL N&P Trust (blocked):
+- selection and open questions: docs/06;
+- per-form coverage: `docs/generated/template-coverage.md`;
+- fixtures: `tests/fixtures/{asb-boarder,anz-boarder,ghl-np-individual,ghl-np-trust-live-labels}.request.json`.
+
 ## Manifest schema (v1)
 
 ```jsonc
@@ -60,9 +67,19 @@ and review the diff. Every `reviewRequired` entry needs a human decision before 
      "source": {"key": "Applicant 1 Full Name"}, "required": false, "fontSize": 10}            // fontSize optional (max)
   ],
   "unsupported": [ … ], "unresolvedLegacyMappings": [ … ], "inertLegacyMappings": [ … ],
-  "importErrors": [ … ], "importWarnings": [ … ]
+  "importErrors": [ … ], "importWarnings": [ … ],
+  // optional, merged from curation/<ID>@<version>.json by the importer (D-023):
+  "validation": {
+    "closedOptions": [{"key": "Boarders - Board amount 1 frequency", "multiSelect": false, "onUnmapped": "error"}],
+    "requires": [{"id": "ANZ-BOARDER-WEEKLY-1", "ifPresent": "Boarders - Board amount 1",
+                  "require": {"key": "Boarders - Board amount 1 frequency", "operator": "equals", "value": "Weekly"},
+                  "reason": "the ANZ form only has a 'Weekly board amount' box"}]},
+  "review": {"status": "candidate", "openQuestions": ["…"]}       // informational; never an approval
 }
 ```
+
+Condition operators: `equals`, `contains` (legacy), `present` (engine, `validation.requires` only).
+Validation codes: `UNMAPPED_OPTION`, `UNMAPPED_OPTION_LEFT_BLANK`, `MULTI_SELECT_NOT_REPRESENTABLE`, `PRECONDITION_FAILED`.
 
 Kinds: `text`, `checkbox`, `radio`, `combo`, `list`. Sources: `key` | `constant` | `generated:"today"` | `when` | `lineItem`.
 
@@ -111,23 +128,22 @@ Unresolved items (138) are listed per manifest in `unresolvedLegacyMappings`.
 
 | Suite | Command | Count |
 |---|---|---|
-| Importer (synthetic .mforge) + deployment staging (`tools/stage_deploy.py`, incl. demo UI asset checks) | `python3 -m unittest discover -s tests/importer -v` | 8 + 7 |
-| Engine unit (synthetic AcroForm): widget kinds, errors, normalisation, line items, overlays, fonts, approval validation, template presets, comb appearance, rendering, no value echo | `cd engine && mvn -B test` | 26 |
-| HTTP API (incl. PLATFORM_IAM only with `K_SERVICE`, `X-Engine`/`X-Template`, demo page allowlist, CSP and auth, `/health` counts only usable templates) | (same) | 9 |
-| Demo page form keys = BNZ Boarder manifest keys; sample = fixture. **Skipped without `mappings/`** | (same) | 1 |
-| Legacy templates: BNZ Boarder (+ macrons), BNZ Handover (line items, `Confirmation` cleared, `Date 3`), the DDMMYYYY gap, GHL, manifest resolution. **Skipped without `.local` templates** | (same) | 6 |
-| Demo page in a real browser (needs a running server and the machine's Playwright) | `node tests/ui/demo_smoke.js <base-url> <out-dir>` | 20 checks |
-| `deploy_poc.sh` update mode (`UPDATE_EXISTING=1`): candidate without traffic, promotion, negative cases | recording `gcloud` stub + containers behind IAM stand-ins (docs/04 "Revision 2") | manual harness |
+| Importer (synthetic .mforge, incl. `--curation`) + deployment staging + coverage report + contract examples vs JSON Schema | `python3 -m unittest discover -s tests/importer -v` | 10 + 7 + 1 + 2 |
+| Engine unit (synthetic AcroForm): widget kinds, errors, normalisation, line items, overlays, fonts, approval validation, template presets, comb appearance, rendering, no value echo, **closed options and preconditions** | `cd engine && mvn -B test` | 30 |
+| HTTP API (PLATFORM_IAM only with `K_SERVICE`, `X-Engine`/`X-Template`, demo page allowlist, CSP and auth, `/health` usable templates) | (same) | 9 |
+| Make contract `/v1/masterboard/documents` (several forms per record, determinism, all-or-nothing/per-document, bank routing + `notMigrated`, invalid contracts, HMAC) | (same) | 5 |
+| Demo page forms = manifest keys; samples = fixtures. **Skipped without `mappings/`** | (same) | 1 |
+| Legacy templates: BNZ Boarder (+ macrons), BNZ Handover, the DDMMYYYY gap, GHL Trust (2 fixtures), **ASB Boarder, ANZ Boarder, GHL Individual**, no unruled ticks, manifest resolution. **Skipped without `.local` templates** | (same) | 11 |
+| Demo page in a real browser (needs a running server and the machine's Playwright) | `node tests/ui/demo_smoke.js <base-url> <out-dir> <forms>` | 27 checks with 5 forms; 21 with 1 |
 
-Last full run (2026-10-27, iteration 5):
-- Host: 57 passed (15 Python + 42 Java, none skipped).
-- Inside the POC image build (official pinned Maven image, staged context): build and tests passed.
-- Browser smoke test: passed in 3 setups:
-  - on the host;
-  - in the POC image (`PLATFORM_IAM` + `K_SERVICE`);
-  - in the POC image behind a test-only IAM stand-in (403 without a token) plus a `gcloud run services proxy` emulator.
-- The PDF preview renders in headed Chromium. Headless Chromium shows no preview, by design.
-- Cloud Run deployment preparation and its local emulation: `docs/04-cloud-run-deployment.md`.
+Last full run (2026-10-27, iteration 6):
+- Host: **76 passed** (20 Python + 56 Java, none skipped).
+- BNZ Boarder regression: the PDF SHA-256 is still `2ae7bfac…3269d6f6` (CLI and UI).
+- Browser smoke test passed:
+  - locally with 5 forms (each sample generated and checked; `UNMAPPED_OPTION` and `PRECONDITION_FAILED` refusals shown);
+  - on a server built from the staged (allowlisted) context with 1 form.
+- The POC image was built locally from the staged (allowlisted) context, with the tests passing inside the build. It was **not** pushed or deployed.
+- In that container, `/health` lists BNZ only, and `/v1/masterboard/documents` with `request.bank-bnz.json` returns the BNZ PDF with SHA-256 `2ae7bfac…`. The log line holds no data.
 
 ## Docker verification (2026-10-27)
 
@@ -159,5 +175,7 @@ docker build -f engine/Dockerfile -t end-forms-engine:dev .     # full build, wh
 3. Decide on a reviewed transform for Make's `DDMMYYYY` subitem dates into 6-cell `DDMMYY` comb fields (BNZ Handover).
 4. Approve or reject the 36 constant ticks: record an `approval` per rule, or leave them unapplied.
 5. Confirm the legacy `[TODAY]` format and the `equals`/`contains` semantics in a parallel run.
-6. Verify that the Monday labels match the PDF combo options exactly (BNZ product and purpose).
+6. Verify that the Monday labels match the PDF combo options exactly (BNZ product and purpose). For checkbox and radio
+   conditions this is now checked against the live board (`tools/coverage_report.py`; drift found on GHL, docs/06).
 7. Re-run the full Docker build with the official Maven base image where Docker Hub is reachable.
+8. RSFA decisions on the candidate forms' open questions (docs/06) and on the Make authentication option (docs/07).

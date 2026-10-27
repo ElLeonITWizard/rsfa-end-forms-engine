@@ -18,8 +18,12 @@ def main() -> int:
     ap.add_argument("pdf")
     ap.add_argument("--expect", action="append", default=[])
     ap.add_argument("--sha")
+    ap.add_argument("--allow-ticks", action="store_true",
+                    help="forms whose rules tick boxes (radio/checkbox questions); unruled ticks are covered by Java tests")
     a = ap.parse_args()
     reader = PdfReader(a.pdf)
+    if reader.is_encrypted:  # bank owner-password templates (ASB, GHL): empty user password
+        reader.decrypt("")
     fields = reader.get_fields() or {}
     values = [str(v.get("/V")) for v in fields.values() if v.get("/V") is not None]
     text = " ".join(page.extract_text() or "" for page in reader.pages)
@@ -29,7 +33,8 @@ def main() -> int:
     sha = hashlib.sha256(Path(a.pdf).read_bytes()).hexdigest()
     result = {"found": found, "tickedButtons": ticked, "signatureFieldsWithValue": signed,
               "sha256MatchesPage": (sha == a.sha) if a.sha else "not compared"}
-    result["ok"] = all(found.values()) and not ticked and not signed and result["sha256MatchesPage"] is not False
+    result["ok"] = (all(found.values()) and (a.allow_ticks or not ticked) and not signed
+                    and result["sha256MatchesPage"] is not False)
     print(json.dumps(result, ensure_ascii=True))
     return 0 if result["ok"] else 1
 

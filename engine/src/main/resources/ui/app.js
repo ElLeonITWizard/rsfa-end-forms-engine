@@ -29,7 +29,9 @@
     UNENCODABLE_TEXT: 'contains characters the form font cannot print (for example emoji)',
     MULTILINE_NOT_ALLOWED: 'must be a single line',
     INVALID_DATA: 'has an invalid value',
-    MISSING_REQUIRED_VALUE: 'is required'
+    MISSING_REQUIRED_VALUE: 'is required',
+    UNMAPPED_OPTION: 'has a value that matches no box on this form (renamed Monday label?); nothing was generated',
+    MULTI_SELECT_NOT_REPRESENTABLE: 'has several selections, but this form can show only one'
   };
 
   function escapeHtml(s) {
@@ -60,8 +62,8 @@
   }
 
   // The badge counts the forms this page offers that the engine can actually generate right now (manifest loaded
-  // and blank PDF present with the expected SHA-256, as reported by /health). Offered forms that are not usable on
-  // this server are disabled in the selector.
+  // and blank PDF present with the expected SHA-256, as reported by /health). Forms that are not usable on this
+  // server (e.g. not in the Cloud Run allowlist) are not offered in the selector at all.
   async function checkHealth() {
     const box = $('engine-status');
     try {
@@ -69,17 +71,9 @@
       const j = await r.json();
       if (!(r.ok && j.status === 'ok')) throw new Error('status ' + r.status);
       const available = new Set(Array.isArray(j.available) ? j.available : []);
-      const opts = Array.from($('template').options);
-      let ready = 0;
-      state.templates.forEach((t, idx) => {
-        const ok = available.has(t.templateId + '@' + t.templateVersion);
-        t.available = ok;
-        if (ok) ready++;
-        if (opts[idx]) {
-          opts[idx].disabled = !ok;
-          opts[idx].textContent = t.label + (ok ? '' : ' (not available on this server)');
-        }
-      });
+      state.templates.forEach((t) => { t.available = available.has(t.templateId + '@' + t.templateVersion); });
+      const ready = state.templates.filter((t) => t.available).length;
+      fillSelector();
       box.className = 'engine-status ' + (ready > 0 ? 'ok' : 'bad');
       $('engine-status-text').textContent = 'Engine online · ' + (ready === 0 ? 'no forms ready' :
         ready + ' form' + (ready === 1 ? '' : 's') + ' ready');
@@ -89,9 +83,30 @@
     }
   }
 
+  const STATUS_TEXT = { tested: 'Tested', candidate: 'Candidate — awaiting RSFA review' };
+
+  // Lists the usable forms (all forms until /health has answered); keeps the current one when still usable.
+  function fillSelector() {
+    const sel = $('template');
+    const usable = state.templates.map((t, idx) => ({ t, idx })).filter((x) => x.t.available !== false);
+    sel.textContent = '';
+    usable.forEach(({ t, idx }) => {
+      const o = document.createElement('option');
+      o.value = String(idx);
+      o.textContent = t.label + (t.status === 'candidate' ? ' (candidate)' : '');
+      sel.appendChild(o);
+    });
+    sel.disabled = usable.length === 0;
+    const keep = usable.find((x) => x.t === state.current);
+    const next = keep || usable[0];
+    if (!next) return;
+    sel.value = String(next.idx);
+    if (next.t !== state.current) { renderTemplate(next.t); resetResult(); }
+  }
+
   function renderTemplate(t) {
     state.current = t;
-    $('template-desc').textContent = t.description || '';
+    $('template-desc').textContent = (STATUS_TEXT[t.status] ? STATUS_TEXT[t.status] + ' · ' : '') + (t.description || '');
     $('notice').textContent = t.notice || '';
     $('date-label').textContent = (t.date && t.date.label) || 'Form date';
     $('date-hint').textContent = (t.date && t.date.hint) || '';
@@ -113,18 +128,35 @@
         const span = document.createElement('span');
         span.className = 'label';
         span.textContent = f.label;
-        const input = document.createElement('input');
-        input.type = 'text';
+        let input;
+        if (f.type === 'select') {
+          input = document.createElement('select');
+          const none = document.createElement('option');
+          none.value = '';
+          none.textContent = '—';
+          input.appendChild(none);
+          (f.options || []).forEach((v) => {
+            const o = document.createElement('option');
+            o.value = v;
+            o.textContent = v;
+            input.appendChild(o);
+          });
+        } else {
+          input = document.createElement('input');
+          input.type = 'text';
+          input.spellcheck = false;
+        }
         input.id = id;
         input.dataset.key = f.key;
         input.autocomplete = 'off';
-        input.spellcheck = false;
         if (f.inputmode) input.inputMode = f.inputmode;
         if (f.maxlength) input.maxLength = f.maxlength;
-        input.addEventListener('input', () => {
+        const markChanged = () => {
           const sample = (state.current.sample && state.current.sample.data) || {};
           input.classList.toggle('changed', input.dataset.sampled === '1' && input.value !== (sample[f.key] || ''));
-        });
+        };
+        input.addEventListener('input', markChanged);
+        input.addEventListener('change', markChanged);
         lab.append(span, input);
         if (f.hint) {
           const h = document.createElement('span');
@@ -140,7 +172,7 @@
   }
 
   function inputs() {
-    return Array.from(document.querySelectorAll('#sections input[data-key]'));
+    return Array.from(document.querySelectorAll('#sections [data-key]'));
   }
 
   function loadSample() {
@@ -196,6 +228,9 @@
 
   function describeIssue(i) {
     const what = i.sourceKey ? labelForKey(i.sourceKey) : (i.pdfField || 'Form');
+    if (i.code === 'PRECONDITION_FAILED') { // the message names the reviewed rule and its business reason only
+      return '<li>' + escapeHtml(what) + ': ' + escapeHtml(i.message || '') + ' <code>' + escapeHtml(i.code) + '</code></li>';
+    }
     const help = ISSUE_HELP[i.code];
     const text = help ? escapeHtml(what) + ' ' + help : escapeHtml(what) + ': ' + escapeHtml(i.message || '');
     return '<li>' + text + ' <code>' + escapeHtml(i.code) + '</code></li>';
@@ -278,16 +313,8 @@
       if (!r.ok) throw new Error('HTTP ' + r.status);
       state.templates = (await r.json()).templates;
       const sel = $('template');
-      sel.textContent = '';
-      state.templates.forEach((t, idx) => {
-        const o = document.createElement('option');
-        o.value = String(idx);
-        o.textContent = t.label;
-        sel.appendChild(o);
-      });
-      sel.disabled = false;
       sel.addEventListener('change', () => { renderTemplate(state.templates[Number(sel.value)]); resetResult(); });
-      renderTemplate(state.templates[0]);
+      fillSelector();
     } catch (e) {
       showMessage('error', '<strong>Could not load the form list</strong>' + escapeHtml(e.message));
     }

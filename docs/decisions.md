@@ -285,3 +285,87 @@ Lightweight ADR log, newest last. Status: `proposed` | `accepted` | `superseded`
   - Browser smoke test: the badge reads "1 form ready".
   - Update path: run against a recording `gcloud` stub plus the old and new containers behind IAM stand-ins. It passed,
     and the 4 negative cases stopped safely (docs/04 "Revision 2").
+
+### D-023 Reviewed manifest validation: closed options and business preconditions
+- **Date:** 2026-10-27 · **Status:** accepted (POC)
+- **Context:** Checking the candidate forms against the live Monday schema (read-only) showed two kinds of silent
+  failure, and the ANZ form exposed a third:
+  - **Label drift:** renamed labels, e.g. `$150,001-$250,000` and `Occasionally (monthly / quarterly)`. No legacy rule
+    matches them, so MacroForge leaves the boxes blank.
+  - **Multi-select columns** compared with `equals`.
+  - **ANZ "Weekly board amount":** any frequency could be printed in it.
+- **Decision:**
+  - An optional manifest block `validation`, applied before planning:
+    - **`closedOptions`:** `{key, multiSelect, onUnmapped: error|blank}`. A non-blank value must match a `when` rule of
+      that key, otherwise `UNMAPPED_OPTION` (or `UNMAPPED_OPTION_LEFT_BLANK`). A multi-select value with several labels
+      gives `MULTI_SELECT_NOT_REPRESENTABLE`.
+    - **`requires`:** `{id, ifPresent, require{key, operator, value}, reason}`. When `ifPresent` has a value, `require`
+      must hold, otherwise `PRECONDITION_FAILED` with the rule id and business reason (no data).
+  - A new condition operator `present`, used only by `requires`.
+  - Curations live in `curation/<ID>@<version>.json` (version-controlled). The importer merges them
+    (`--curation`). The importer refuses a curation that names another template or SHA, a closed-option key without a
+    `when` rule, or keys other than `validation`/`review`. So a re-import never loses them and a curation can never
+    invent rules.
+  - `review` records the readiness status and the open questions per form. It is not an approval.
+- **Trade-offs:**
+  - Refusing a drifted label is stricter than MacroForge, which leaves the box blank. That is intended: no silently
+    incomplete document. The obvious rule fixes are not applied without RSFA's decision.
+  - `blank` exists for non-essential questions (e.g. a title) but is not used yet.
+- **Validation:** FormFillerTest (+4), LegacyTemplatesTest (refusals on the real ASB/ANZ/GHL templates), importer
+  tests (+2).
+
+### D-024 Additional forms are local candidates; the demo page lists only usable forms
+- **Date:** 2026-10-27 · **Status:** accepted
+- **Decision:**
+  - ASB Boarder, ANZ Boarder and GHL Individual are `candidate`; GHL Trust is `blocked` (docs/06).
+  - They are in `mappings/`, `forms.json` and the tests, but **not** in `deploy/poc-allowlist.json`.
+  - The demo page shows only templates that `/health` reports as usable. A Cloud Run image staged from the allowlist
+    therefore still offers BNZ Boarder only (verified with a staged-context server: "1 form ready").
+  - `tools/stage_deploy.py` now requires that at least one offered template is allowlisted, instead of all of them.
+  - Field labels in the demo are the Monday column titles. Select options are the live labels, including drifted ones,
+    so refusals can be demonstrated.
+- **Validation:** DemoUiFormsTest (all offered forms vs manifests and fixtures), browser smoke test (5 forms locally,
+  1 on the staged context), stage_deploy tests.
+
+### D-025 Make integration contract `masterboard.v1`: stateless, deterministic, all-or-nothing by default
+- **Date:** 2026-10-27 · **Status:** accepted (engine side); Make side proposed (docs/07)
+- **Context:**
+  - One Masterboard record needs several bank forms.
+  - Make must retry safely.
+  - The engine has no database and must not store client payloads.
+- **Decision:** `POST /v1/masterboard/documents` (JSON in, JSON with base64 PDFs out).
+  - **Selection:** explicit, by `banks` (routing table = MacroForge Flow C bank → forms, version-controlled in the jar)
+    or by `templates`.
+    - `tested` forms only, plus candidates on explicit opt-in.
+    - Everything else is returned in `notMigrated`, so MacroForge keeps those forms during the parallel run.
+  - **Required fields:** `correlationId`, `idempotencyKey` and `today`.
+  - **`requestDigest`** over the canonical request content gives deterministic file names. Idempotency of side effects
+    is Make's job, keyed on `idempotencyKey`.
+  - **Failure policy:** `all-or-nothing` by default (no partial filing); `per-document` on request.
+  - **Errors:** every error has a `retryable` flag.
+  - **Limits:** 1 MiB request, 12 documents, 10 MiB per PDF, 20 MiB raw per response.
+  - `/generate` is unchanged.
+- **Trade-offs:**
+  - base64 inflates the response by 33%, but it is the simplest shape for Make (`toBinary`) and keeps one call per record.
+  - Encrypted bank templates produce different bytes per call (random AES IV), so idempotency compares `requestDigest`.
+- **Validation:** MasterboardApiTest (5), local calls with the real templates and the `contracts/examples` payloads.
+
+### D-026 Make → Cloud Run authentication: keep IAM; recommend an authenticated intermediary; optional HMAC
+- **Date:** 2026-10-27 · **Status:** proposed (needs RSFA decision; nothing created)
+- **Context:**
+  - Cloud Run IAM needs a Google-signed ID token.
+  - Make cannot mint one without a service-account key, and keys are forbidden.
+  - Weakening Cloud Run authentication is not acceptable.
+- **Decision:**
+  - Recommend **Google API Gateway** for the first isolated test: an API key in Make, and a gateway service account with
+    `run.invoker` on this service only.
+  - Alternatively, a small **relay** service with Secret-Manager-backed HMAC and optional Make egress-IP allowlisting.
+  - Rejected: `--allow-unauthenticated` with the engine API key, and SA JSON keys.
+  - The engine supports an **optional HMAC request signature** on `/v1` (`ENGINE_HMAC_SECRET`; timestamp ±300 s;
+    constant-time check). It is off by default and never replaces IAM.
+- **Unverified:**
+  - whether Make can compute HMAC-SHA256 natively;
+  - Make plan limits for file size;
+  - API Gateway payload limits.
+
+  These must be checked before Phase 1 (docs/07).

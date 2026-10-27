@@ -1,0 +1,625 @@
+{
+  "schemaVersion": 1,
+  "templateId": "GHL_NP_INDIVIDUAL_FORM",
+  "templateVersion": "8-19",
+  "templateFile": "f256b95d6ecf__GHL_N_P_Individual_8_19.pdf",
+  "templateSha256": "f256b95d6ecf4bd580644780fa11d6a600d69dff01d61945d01fd850e79fdca4",
+  "encryption": "preserve",
+  "sourceKeyNormalization": "macroforge-v1",
+  "fontFallback": "unicode",
+  "provenance": {
+    "importer": "tools/import_mforge.py 0.3.0",
+    "sourceFile": "RSFA End Forms Filling BluePrint 271026.mforge",
+    "sourceSha256": "8052c17b374b551272e17f5036de1ebfa9a295328eb8a6d079d30eec788b9a51",
+    "flow": "Flow C",
+    "flowDisplayName": "End Forms Flow Filling",
+    "node": 3,
+    "legacyPdfName": "GHL_N&P Individual_8 19.pdf",
+    "lenderCondition": "Banks to Send Contains ASB",
+    "importedOn": "2026-10-27",
+    "curation": "curation/GHL_NP_INDIVIDUAL_FORM@8-19.json sha256 5ab602ae3b3e"
+  },
+  "pdf": {
+    "pages": 2,
+    "acroform": true,
+    "xfa": false,
+    "fields": {
+      "Check Box84": {
+        "kind": "checkbox",
+        "states": [
+          "Yes",
+          "No"
+        ],
+        "widgets": 2
+      },
+      "Check Box85": {
+        "kind": "checkbox",
+        "states": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "widgets": 4
+      },
+      "Check Box86": {
+        "kind": "checkbox",
+        "states": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "widgets": 4
+      },
+      "Check Box87": {
+        "kind": "checkbox",
+        "states": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "widgets": 4
+      },
+      "Check Box88": {
+        "kind": "checkbox",
+        "states": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "widgets": 4
+      },
+      "Check Box89": {
+        "kind": "checkbox",
+        "states": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "widgets": 4
+      },
+      "Check Box90": {
+        "kind": "checkbox",
+        "states": [
+          "Yes",
+          "No"
+        ],
+        "widgets": 2
+      },
+      "Check Box92": {
+        "kind": "checkbox",
+        "states": [
+          "Yes"
+        ]
+      },
+      "Customer internal number": {
+        "kind": "text"
+      },
+      "D": {
+        "kind": "text"
+      },
+      "Date": {
+        "kind": "text"
+      },
+      "M": {
+        "kind": "text"
+      },
+      "M_2": {
+        "kind": "text"
+      },
+      "Please specify your full name": {
+        "kind": "text"
+      },
+      "Text81": {
+        "kind": "text"
+      },
+      "Text82": {
+        "kind": "text"
+      },
+      "Text83": {
+        "kind": "text"
+      },
+      "What is your primary occupation": {
+        "kind": "text"
+      },
+      "Y": {
+        "kind": "text"
+      },
+      "Y_2": {
+        "kind": "text"
+      },
+      "Y_3": {
+        "kind": "text"
+      },
+      "Y_4": {
+        "kind": "text"
+      }
+    }
+  },
+  "fields": [
+    {
+      "pdfField": "Check Box84",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "What do you intend to use your accounts for? (GHL Individual)",
+          "operator": "equals",
+          "value": "To borrow money"
+        }
+      },
+      "legacy": {
+        "field": "Check Box84#No",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "No"
+    },
+    {
+      "pdfField": "Check Box84",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "What do you intend to use your accounts for? (GHL Individual)",
+          "operator": "equals",
+          "value": "Everyday personal banking"
+        }
+      },
+      "legacy": {
+        "field": "Check Box84#Yes",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "Yes"
+    },
+    {
+      "pdfField": "Check Box85",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "Total credits or deposits (next 12 months) (ASB)",
+          "operator": "equals",
+          "value": "Less than $50,000"
+        }
+      },
+      "legacy": {
+        "field": "Check Box85#1",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "1"
+    },
+    {
+      "pdfField": "Check Box85",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "Total credits or deposits (next 12 months) (ASB)",
+          "operator": "equals",
+          "value": "$50,000-$150,000"
+        }
+      },
+      "legacy": {
+        "field": "Check Box85#2",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "2"
+    },
+    {
+      "pdfField": "Check Box85",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "Total credits or deposits (next 12 months) (ASB)",
+          "operator": "equals",
+          "value": "$150,000-$250,000"
+        }
+      },
+      "legacy": {
+        "field": "Check Box85#3",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "3"
+    },
+    {
+      "pdfField": "Check Box85",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "Total credits or deposits (next 12 months) (ASB)",
+          "operator": "equals",
+          "value": "More than $250,000"
+        }
+      },
+      "legacy": {
+        "field": "Check Box85#4",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "4"
+    },
+    {
+      "pdfField": "Check Box86",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "Cash deposits frequency (ASB)",
+          "operator": "equals",
+          "value": "Frequently (weekly / fortnightly)"
+        }
+      },
+      "legacy": {
+        "field": "Check Box86#1",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "1"
+    },
+    {
+      "pdfField": "Check Box86",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "Cash deposits frequency (ASB)",
+          "operator": "equals",
+          "value": "Infrequently"
+        }
+      },
+      "legacy": {
+        "field": "Check Box86#2",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "2"
+    },
+    {
+      "pdfField": "Check Box86",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "Cash deposits frequency (ASB)",
+          "operator": "equals",
+          "value": "Occasionally (monthly/quarterly)"
+        }
+      },
+      "legacy": {
+        "field": "Check Box86#3",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "3"
+    },
+    {
+      "pdfField": "Check Box86",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "Cash deposits frequency (ASB)",
+          "operator": "equals",
+          "value": "Never"
+        }
+      },
+      "legacy": {
+        "field": "Check Box86#4",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "4"
+    },
+    {
+      "pdfField": "Check Box87",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "Cash deposits average value per deposit (ASB)",
+          "operator": "equals",
+          "value": "Less than $500"
+        }
+      },
+      "legacy": {
+        "field": "Check Box87#1",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "1"
+    },
+    {
+      "pdfField": "Check Box87",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "Cash deposits average value per deposit (ASB)",
+          "operator": "equals",
+          "value": "$500-$1,000"
+        }
+      },
+      "legacy": {
+        "field": "Check Box87#2",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "2"
+    },
+    {
+      "pdfField": "Check Box87",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "Cash deposits average value per deposit (ASB)",
+          "operator": "equals",
+          "value": "$1,001-$2,500"
+        }
+      },
+      "legacy": {
+        "field": "Check Box87#3",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "3"
+    },
+    {
+      "pdfField": "Check Box87",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "Cash deposits average value per deposit (ASB)",
+          "operator": "equals",
+          "value": "More than $2,500"
+        }
+      },
+      "legacy": {
+        "field": "Check Box87#4",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "4"
+    },
+    {
+      "pdfField": "Check Box88",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "International payments frequency (ASB)",
+          "operator": "equals",
+          "value": "Frequently (weekly / fortnightly)"
+        }
+      },
+      "legacy": {
+        "field": "Check Box88#1",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "1"
+    },
+    {
+      "pdfField": "Check Box88",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "International payments frequency (ASB)",
+          "operator": "equals",
+          "value": "Infrequently"
+        }
+      },
+      "legacy": {
+        "field": "Check Box88#2",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "2"
+    },
+    {
+      "pdfField": "Check Box88",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "International payments frequency (ASB)",
+          "operator": "equals",
+          "value": "Occasionally (monthly/quarterly)"
+        }
+      },
+      "legacy": {
+        "field": "Check Box88#3",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "3"
+    },
+    {
+      "pdfField": "Check Box88",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "International payments frequency (ASB)",
+          "operator": "equals",
+          "value": "Never"
+        }
+      },
+      "legacy": {
+        "field": "Check Box88#4",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "4"
+    },
+    {
+      "pdfField": "Check Box89",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "International payments average value per payment (ASB)",
+          "operator": "equals",
+          "value": "Less than $500"
+        }
+      },
+      "legacy": {
+        "field": "Check Box89#1",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "1"
+    },
+    {
+      "pdfField": "Check Box89",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "International payments average value per payment (ASB)",
+          "operator": "equals",
+          "value": "$500-$1,000"
+        }
+      },
+      "legacy": {
+        "field": "Check Box89#2",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "2"
+    },
+    {
+      "pdfField": "Check Box89",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "International payments average value per payment (ASB)",
+          "operator": "equals",
+          "value": "$1,001-$2,500"
+        }
+      },
+      "legacy": {
+        "field": "Check Box89#3",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "3"
+    },
+    {
+      "pdfField": "Check Box89",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "International payments average value per payment (ASB)",
+          "operator": "equals",
+          "value": "More than $2,500"
+        }
+      },
+      "legacy": {
+        "field": "Check Box89#4",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "4"
+    },
+    {
+      "pdfField": "Please specify your full name",
+      "kind": "text",
+      "source": {
+        "key": "Applicant 1 Full Name"
+      },
+      "legacy": {
+        "field": "Please specify your full name",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "Text81",
+      "kind": "text",
+      "source": {
+        "key": "Cash deposits activity details"
+      },
+      "legacy": {
+        "field": "Text81",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "Text82",
+      "kind": "text",
+      "source": {
+        "key": "International payments activity details (including countries involved)"
+      },
+      "legacy": {
+        "field": "Text82",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "What is your primary occupation",
+      "kind": "text",
+      "source": {
+        "key": "Applicant 1 Current Occupation"
+      },
+      "legacy": {
+        "field": "What is your primary occupation",
+        "mapping": "source_key"
+      }
+    }
+  ],
+  "overlays": [],
+  "unsupported": [],
+  "unresolvedLegacyMappings": [],
+  "inertLegacyMappings": [],
+  "importErrors": [],
+  "importWarnings": [],
+  "unmappedPdfFields": [
+    "Check Box90",
+    "Check Box92",
+    "Customer internal number",
+    "D",
+    "Date",
+    "M",
+    "M_2",
+    "Text83",
+    "Y",
+    "Y_2",
+    "Y_3",
+    "Y_4"
+  ],
+  "validation": {
+    "closedOptions": [
+      {
+        "key": "What do you intend to use your accounts for? (GHL Individual)",
+        "multiSelect": true,
+        "onUnmapped": "error"
+      },
+      {
+        "key": "Total credits or deposits (next 12 months) (ASB)",
+        "multiSelect": false,
+        "onUnmapped": "error"
+      },
+      {
+        "key": "Cash deposits frequency (ASB)",
+        "multiSelect": false,
+        "onUnmapped": "error"
+      },
+      {
+        "key": "Cash deposits average value per deposit (ASB)",
+        "multiSelect": false,
+        "onUnmapped": "error"
+      },
+      {
+        "key": "International payments frequency (ASB)",
+        "multiSelect": false,
+        "onUnmapped": "error"
+      },
+      {
+        "key": "International payments average value per payment (ASB)",
+        "multiSelect": false,
+        "onUnmapped": "error"
+      }
+    ]
+  },
+  "review": {
+    "status": "candidate",
+    "meaning": "synthetic tests pass and every rule was checked against the printed label and the live Monday labels; not approved by RSFA, not compared with a MacroForge output",
+    "openQuestions": [
+      "Live Monday labels with no rule (label drift since the legacy configuration): '$150,001-$250,000' and 'Occasionally (monthly / quarterly)' (cash deposits and international payments). The engine refuses these values (UNMAPPED_OPTION) until RSFA decides whether to update the rules; MacroForge would leave the boxes blank.",
+      "'What do you intend to use your accounts for?' is multi-select on Monday; the legacy equals rules represent one label only, so two labels are refused (MULTI_SELECT_NOT_REPRESENTABLE)."
+    ]
+  }
+}

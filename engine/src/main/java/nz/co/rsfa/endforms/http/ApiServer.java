@@ -54,10 +54,25 @@ public final class ApiServer {
     private final FormFiller filler;
     private final AuthMode auth;
     private final byte[] apiKey;
+    private final byte[] hmacSecret;
     private final ObjectMapper json = TemplateCatalog.json();
+    private final MasterboardApi masterboard;
+    private final java.time.Clock clock;
     private HttpServer server;
 
+    /** Maximum age (either direction) of a signed request's timestamp, in seconds. */
+    static final long HMAC_MAX_SKEW_SECONDS = 300;
+
     public ApiServer(TemplateCatalog catalog, FormFiller filler, AuthMode auth, String apiKey) {
+        this(catalog, filler, auth, apiKey, null, java.time.Clock.systemUTC());
+    }
+
+    /**
+     * @param hmacSecret optional (ENGINE_HMAC_SECRET, from a secret manager): when set, {@code /v1/*} requests must be
+     *                   signed (D-026). It adds to, and never replaces, the platform/IAM authentication.
+     */
+    public ApiServer(TemplateCatalog catalog, FormFiller filler, AuthMode auth, String apiKey, String hmacSecret,
+                     java.time.Clock clock) {
         this.catalog = catalog;
         this.filler = filler;
         this.auth = auth;
@@ -65,6 +80,12 @@ public final class ApiServer {
         if (auth == AuthMode.API_KEY && (apiKey == null || apiKey.length() < 32)) {
             throw new IllegalArgumentException("API_KEY auth requires ENGINE_API_KEY of at least 32 characters");
         }
+        if (hmacSecret != null && hmacSecret.length() < 32) {
+            throw new IllegalArgumentException("ENGINE_HMAC_SECRET must have at least 32 characters");
+        }
+        this.hmacSecret = hmacSecret == null ? null : hmacSecret.getBytes(StandardCharsets.UTF_8);
+        this.clock = clock;
+        this.masterboard = new MasterboardApi(catalog, json);
     }
 
     /**
@@ -86,6 +107,7 @@ public final class ApiServer {
         server = HttpServer.create(addr, 0);
         server.createContext("/health", this::health);
         server.createContext("/generate", this::generate);
+        server.createContext("/v1/masterboard/documents", this::masterboardDocuments);
         server.createContext("/", this::ui);
         server.setExecutor(Executors.newVirtualThreadPerTaskExecutor());
         server.start();
@@ -264,6 +286,93 @@ public final class ApiServer {
         } finally {
             LOG.info(String.format("generate requestId=%s template=%s status=%d filled=%d warnings=%d ms=%d",
                     requestId, templateKey, status, filled, warnings, (System.nanoTime() - started) / 1_000_000));
+        }
+    }
+
+    /** Make integration contract (docs/07). Same authentication as /generate, plus the optional request signature. */
+    private void masterboardDocuments(HttpExchange ex) throws IOException {
+        long started = System.nanoTime();
+        MasterboardApi.Outcome out = null;
+        int status = 500;
+        try (ex) {
+            if (!"/v1/masterboard/documents".equals(ex.getRequestURI().getPath())) {
+                status = 404;
+                sendJson(ex, status, error(null, "NOT_FOUND", List.of()));
+                return;
+            }
+            if (!"POST".equals(ex.getRequestMethod())) {
+                status = 405;
+                sendJson(ex, status, error(null, "METHOD_NOT_ALLOWED", List.of()));
+                return;
+            }
+            if (!authorised(ex)) {
+                status = 401;
+                sendJson(ex, status, error(null, "UNAUTHORISED", List.of()));
+                return;
+            }
+            Optional<byte[]> body = readLimited(ex.getRequestBody());
+            if (body.isEmpty()) {
+                status = 413;
+                sendJson(ex, status, error(null, "PAYLOAD_TOO_LARGE", List.of()));
+                return;
+            }
+            if (hmacSecret != null && !signatureValid(ex, body.get())) {
+                status = 401;
+                sendJson(ex, status, error(null, "INVALID_SIGNATURE", List.of()));
+                return;
+            }
+            JsonNode req;
+            try {
+                req = json.readTree(body.get());
+            } catch (IOException e) {
+                status = 400;
+                sendJson(ex, status, error(null, "INVALID_JSON", List.of()));
+                return;
+            }
+            out = masterboard.handle(req);
+            status = out.status();
+            if (out.correlationId() != null) {
+                ex.getResponseHeaders().set("X-Correlation-Id", out.correlationId());
+            }
+            ex.getResponseHeaders().set("X-Engine", ENGINE_ID);
+            ex.getResponseHeaders().set("Cache-Control", "no-store");
+            sendJson(ex, status, out.body());
+        } catch (RuntimeException e) {
+            status = 500;
+            LOG.warning("masterboard failed error=" + e.getClass().getSimpleName());
+            sendJson(ex, status, error(null, "INTERNAL_ERROR", List.of()).put("retryable", true));
+        } finally {
+            LOG.info(String.format("masterboard correlationId=%s status=%d generated=%d failed=%d ms=%d",
+                    out == null ? null : out.correlationId(), status, out == null ? 0 : out.generated(),
+                    out == null ? 0 : out.failed(), (System.nanoTime() - started) / 1_000_000));
+        }
+    }
+
+    /**
+     * {@code X-RSFA-Timestamp: <unix seconds>} and {@code X-RSFA-Signature: v1=<hex HMAC-SHA256(secret, timestamp + "." + body)>},
+     * timestamp within {@link #HMAC_MAX_SKEW_SECONDS}. Constant-time comparison.
+     */
+    private boolean signatureValid(HttpExchange ex, byte[] body) {
+        String ts = ex.getRequestHeaders().getFirst("X-RSFA-Timestamp");
+        String sig = ex.getRequestHeaders().getFirst("X-RSFA-Signature");
+        if (ts == null || sig == null || !ts.matches("[0-9]{1,12}") || !sig.startsWith("v1=")) {
+            return false;
+        }
+        if (Math.abs(clock.instant().getEpochSecond() - Long.parseLong(ts)) > HMAC_MAX_SKEW_SECONDS) {
+            return false;
+        }
+        byte[] expected = hmacHex(hmacSecret, ts, body).getBytes(StandardCharsets.UTF_8);
+        return MessageDigest.isEqual(expected, sig.substring(3).toLowerCase(java.util.Locale.ROOT).getBytes(StandardCharsets.UTF_8));
+    }
+
+    static String hmacHex(byte[] secret, String timestamp, byte[] body) {
+        try {
+            javax.crypto.Mac mac = javax.crypto.Mac.getInstance("HmacSHA256");
+            mac.init(new javax.crypto.spec.SecretKeySpec(secret, "HmacSHA256"));
+            mac.update((timestamp + ".").getBytes(StandardCharsets.UTF_8));
+            return java.util.HexFormat.of().formatHex(mac.doFinal(body));
+        } catch (java.security.GeneralSecurityException e) {
+            throw new IllegalStateException(e);
         }
     }
 

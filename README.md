@@ -2,7 +2,10 @@
 
 A deterministic PDF form-filling engine that will replace the MacroForge desktop filler for RSFA
 bank end forms. Mappings are version-controlled and the service can run on Cloud Run.
-**Status: proof of concept. A private Cloud Run service (BNZ Boarder only) is deployed by RSFA; the demo-page revision is prepared (docs/04).** See `CLAUDE.md` for the rules and the current status.
+**Status: proof of concept.**
+- A private Cloud Run service is deployed by RSFA: BNZ Boarder only, demo page, revision `00002-nan` (docs/04).
+- Four more forms are *candidates* locally (docs/06).
+- The Make integration contract is implemented but not connected (docs/07). See `CLAUDE.md` for the rules and the current status.
 
 ## Prerequisites
 
@@ -41,6 +44,49 @@ Other fixtures:
 - `ghl-np-trust.request.json`: checkboxes on an encrypted template.
 
 To view the output without poppler, run `java -jar engine/target/end-forms-engine.jar render --pdf <file> --out-dir <dir>`.
+
+## Forms and their status
+
+| Form | Template key | Status |
+|---|---|---|
+| BNZ Boarder | `BNZ_BOARDER_FORM@2.0_8-24` | tested; deployed |
+| ASB Boarder | `ASB_BOARDER_DECLARATION@12-22` | candidate (local) |
+| ANZ Boarder | `ANZ_BOARDER_INCOME_DECLARATION@02-24` | candidate (local) |
+| GHL Account Use, Individual | `GHL_NP_INDIVIDUAL_FORM@8-19` | candidate (local) |
+| GHL Account Use, Trust | `GHL_NP_TRUST_FORM@8-19` | blocked (open mapping question) |
+
+"Candidate" means the following:
+- synthetic tests pass and every rule was checked against the printed label and the live Monday labels;
+- it is **not** approved by RSFA and **not** compared with MacroForge output.
+
+Selection, open questions and the forms not chosen are in [`docs/06`](docs/06-template-coverage.md). The per-form
+report is generated:
+
+```bash
+python3 tools/coverage_report.py --board .local/reference/masterboard-columns-<date>.json \
+  --contract .local/reference/8731317_result_key_contract.tsv --date <YYYY-MM-DD> --out docs/generated/template-coverage.md
+```
+
+Reviewed checks per form (closed options, business preconditions) live in `curation/<ID>@<version>.json`. They are
+merged with `import_mforge.py manifest … --curation curation/<file>`.
+
+## Make integration contract (not connected)
+
+`POST /v1/masterboard/documents` takes Make's `result` object for one Masterboard item, plus a bank or template
+selection. It returns every selected form as base64 PDFs in one JSON response:
+- correlation id;
+- deterministic `requestDigest` and file names;
+- all-or-nothing by default;
+- `retryable` errors;
+- `notMigrated` lists the forms MacroForge must still produce.
+
+Schema and examples: `contracts/`. Design, authentication options, filing, Monday status and test plan:
+[`docs/07`](docs/07-make-integration.md).
+
+```bash
+curl -s -H 'Content-Type: application/json' --data @contracts/examples/request.bank-bnz.json \
+  localhost:8080/v1/masterboard/documents | head -c 600
+```
 
 ## Run the HTTP API locally
 
@@ -120,7 +166,8 @@ Authentication modes:
 
 ## Current limitations
 
-- Three real templates are tested end-to-end (BNZ Boarder, BNZ Handover partially, GHL N&P Trust). The other 22 are imported but untested.
+- Six real templates are tested end-to-end: BNZ Boarder, ASB Boarder, ANZ Boarder, GHL Individual, GHL Trust, and BNZ
+  Handover partially. Only BNZ Boarder is deployed. The others are listed in docs/06.
 - 138 legacy mappings are unresolved and 19 are unsupported (docs/03). Notable cases:
   - LineItems term/period name conflicts;
   - BNZ Gifting has no form fields;
@@ -130,4 +177,5 @@ Authentication modes:
 - No declaration is certified by default: template-preset ticks are cleared, and constant ticks need a validated
   `approval` record in the manifest (D-016).
 - The legacy `[TODAY]` format and `equals`/`contains` semantics are inferred, not confirmed.
-- There is no flattening, no SharePoint upload and no Make integration yet.
+- There is no flattening and no SharePoint upload. The Make contract exists, but no Make scenario uses it (docs/07).
+- Equivalence with MacroForge is not proven for any form.

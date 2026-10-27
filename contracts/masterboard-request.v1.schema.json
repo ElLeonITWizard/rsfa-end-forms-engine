@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:rsfa:end-forms-engine:masterboard-request:v1",
+  "title": "RSFA End Forms Engine: Masterboard documents request (masterboard.v1)",
+  "description": "Body of POST /v1/masterboard/documents (docs/07). 'data' is Make's existing 'result' object for one Masterboard item (keys are Monday column titles). Max body 1 MiB.",
+  "type": "object",
+  "required": [
+    "contractVersion",
+    "correlationId",
+    "idempotencyKey",
+    "source",
+    "today",
+    "selection",
+    "data"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "contractVersion": {
+      "const": "masterboard.v1"
+    },
+    "correlationId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._:-]{8,128}$",
+      "description": "Unique per Make execution, e.g. mb-<boardId>-<itemId>-<executionId>. Echoed in X-Correlation-Id and logs."
+    },
+    "idempotencyKey": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._:-]{8,128}$",
+      "description": "Stable per business request (same item + same trigger event), e.g. <itemId>-<status change timestamp>. Make uses it to de-duplicate filing and Monday updates."
+    },
+    "source": {
+      "type": "object",
+      "required": [
+        "boardId",
+        "itemId"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "boardId": {
+          "type": "string",
+          "pattern": "^[0-9]{1,20}$"
+        },
+        "itemId": {
+          "type": "string",
+          "pattern": "^[0-9]{1,20}$"
+        }
+      }
+    },
+    "today": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the run was requested (Pacific/Auckland). Pinned so retries across midnight give identical documents."
+    },
+    "selection": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "maxProperties": 1,
+      "properties": {
+        "banks": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "enum": [
+              "ASB",
+              "ANZ",
+              "BNZ",
+              "KiwiBank",
+              "WBC"
+            ]
+          },
+          "description": "Labels of the 'Selected Banks' dropdown (dropdown_mkzvfgeg), split on ', '."
+        },
+        "templates": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 12,
+          "items": {
+            "type": "object",
+            "required": [
+              "templateId",
+              "templateVersion"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "templateId": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9._-]{1,80}$"
+              },
+              "templateVersion": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9._-]{1,80}$"
+              }
+            }
+          }
+        }
+      }
+    },
+    "options": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "failurePolicy": {
+          "enum": [
+            "all-or-nothing",
+            "per-document"
+          ],
+          "default": "all-or-nothing"
+        },
+        "includePdf": {
+          "type": "boolean",
+          "default": true,
+          "description": "false = validate and return metadata/SHA-256 only (dry run)."
+        },
+        "includeCandidates": {
+          "type": "boolean",
+          "default": false,
+          "description": "Bank selection: also generate 'candidate' forms (testing only)."
+        }
+      }
+    },
+    "data": {
+      "type": "object",
+      "description": "Make 'result' object: text columns as strings or null, checkboxes as booleans, dates DDMMYYYY. Keys are normalised by the engine ('/' and '.' -> '_')."
+    }
+  }
+}

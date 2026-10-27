@@ -43,6 +43,16 @@ ENGINE_AUTH=NONE java -jar engine/target/end-forms-engine.jar serve
 **Checklist.** The top-right badge says **"Engine online · 1 form ready"**. This counts the forms the page offers that
 the engine can actually generate. Then do one Generate with the sample data.
 
+**Local demo with more forms (iteration 6).** Option 2 on a machine with the extracted templates also offers four
+*candidate* forms: ASB Boarder, ANZ Boarder, GHL Individual, GHL Trust. They are marked "candidate" and are not
+approved by RSFA. Two refusals are worth showing:
+- **ANZ:** set a boarder frequency to Fortnightly. The form only has a weekly box, so the engine refuses
+  (`PRECONDITION_FAILED`).
+- **GHL Individual:** choose `$150,001-$250,000`. That Monday label has no box rule, so the engine refuses
+  (`UNMAPPED_OPTION`); MacroForge would leave it blank.
+
+The Cloud Run demo still shows BNZ Boarder only.
+
 ## During the meeting — what to click
 
 | # | Click / do | Say |

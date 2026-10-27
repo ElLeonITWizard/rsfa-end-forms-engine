@@ -1,0 +1,297 @@
+{
+  "schemaVersion": 1,
+  "templateId": "ANZ_BOARDER_INCOME_DECLARATION",
+  "templateVersion": "02-24",
+  "templateFile": "6b0efad0aca6__Boarder-Income-Declaration_12.02.24.pdf",
+  "templateSha256": "6b0efad0aca6052c4885d4f7a61729ef3dd4f50ae43c956a623710e80fb77c74",
+  "encryption": "reject",
+  "sourceKeyNormalization": "macroforge-v1",
+  "fontFallback": "unicode",
+  "provenance": {
+    "importer": "tools/import_mforge.py 0.3.0",
+    "sourceFile": "RSFA End Forms Filling BluePrint 271026.mforge",
+    "sourceSha256": "8052c17b374b551272e17f5036de1ebfa9a295328eb8a6d079d30eec788b9a51",
+    "flow": "Flow C",
+    "flowDisplayName": "End Forms Flow Filling",
+    "node": 12,
+    "legacyPdfName": "Boarder-Income-Declaration 12.02.24.pdf",
+    "lenderCondition": "Banks to Send Contains ANZ",
+    "importedOn": "2026-10-27",
+    "curation": "curation/ANZ_BOARDER_INCOME_DECLARATION@02-24.json sha256 9e55ffd97bbd"
+  },
+  "pdf": {
+    "pages": 1,
+    "acroform": true,
+    "xfa": false,
+    "fields": {
+      "B1 Inclusive": {
+        "kind": "radio",
+        "states": [
+          "0",
+          "1"
+        ],
+        "widgets": 2
+      },
+      "B1 Name": {
+        "kind": "text"
+      },
+      "B1 Weekly Board": {
+        "kind": "text"
+      },
+      "B2 Inclusive": {
+        "kind": "radio",
+        "states": [
+          "0",
+          "1"
+        ],
+        "widgets": 2
+      },
+      "B2 Name": {
+        "kind": "text"
+      },
+      "B2 Weekly Board": {
+        "kind": "text"
+      },
+      "Cust Name": {
+        "kind": "text"
+      },
+      "Cust Number": {
+        "kind": "text"
+      },
+      "Postcode": {
+        "kind": "text"
+      },
+      "Property address": {
+        "kind": "text"
+      },
+      "Signature p1": {
+        "kind": "text"
+      },
+      "Signature1-Date-DD": {
+        "kind": "text",
+        "maxLen": 2,
+        "comb": true
+      },
+      "Signature1-Date-MM": {
+        "kind": "text",
+        "maxLen": 2,
+        "comb": true
+      },
+      "Signature1-Date-YY": {
+        "kind": "text",
+        "maxLen": 2,
+        "comb": true
+      },
+      "Signature2-Date-DD": {
+        "kind": "text",
+        "maxLen": 2,
+        "comb": true
+      },
+      "Signature2-Date-MM": {
+        "kind": "text",
+        "maxLen": 2,
+        "comb": true
+      },
+      "Signature2-Date-YY": {
+        "kind": "text",
+        "maxLen": 2,
+        "comb": true
+      },
+      "Town City": {
+        "kind": "text"
+      },
+      "signature p2": {
+        "kind": "text"
+      }
+    }
+  },
+  "fields": [
+    {
+      "pdfField": "B1 Name",
+      "kind": "text",
+      "source": {
+        "key": "Boarders - Boarder one name (if known)"
+      },
+      "legacy": {
+        "field": "B1 Name",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "B1 Weekly Board",
+      "kind": "text",
+      "source": {
+        "key": "Boarders - Board amount 1"
+      },
+      "legacy": {
+        "field": "B1 Weekly Board",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "B2 Name",
+      "kind": "text",
+      "source": {
+        "key": "Boarders - Boarder two name (if known)"
+      },
+      "legacy": {
+        "field": "B2 Name",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "B2 Weekly Board",
+      "kind": "text",
+      "source": {
+        "key": "Boarders - Board amount 2"
+      },
+      "legacy": {
+        "field": "B2 Weekly Board",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "Cust Number",
+      "kind": "text",
+      "source": {
+        "key": "ANZ Customer Number (if known)"
+      },
+      "legacy": {
+        "field": "Cust Number",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "Postcode",
+      "kind": "text",
+      "source": {
+        "key": "Applicant 1 Residential Postcode_Zip"
+      },
+      "legacy": {
+        "field": "Postcode",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "Property address",
+      "kind": "text",
+      "source": {
+        "key": "Applicant 1 Physical Address"
+      },
+      "legacy": {
+        "field": "Property address",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "Town City",
+      "kind": "text",
+      "source": {
+        "key": "Applicant 1 Residential City_Town"
+      },
+      "legacy": {
+        "field": "Town City",
+        "mapping": "source_key"
+      }
+    }
+  ],
+  "overlays": [
+    {
+      "id": "custom_text_1_1777386834",
+      "page": 0,
+      "rect": [
+        105.0,
+        693.56,
+        364.17,
+        710.22
+      ],
+      "source": {
+        "key": "Applicant 1 Full Name"
+      },
+      "legacy": {
+        "rect": [
+          126.0,
+          158.0,
+          437.0,
+          178.0
+        ],
+        "transform": "pdf = rect / 1.2, top-left origin"
+      },
+      "reviewRequired": "overlay position derived from the evidenced 1.2 preview scale; font/size are engine policy (legacy font not recorded)"
+    },
+    {
+      "id": "custom_text_2_1777386846",
+      "page": 0,
+      "rect": [
+        366.67,
+        693.56,
+        562.5,
+        711.06
+      ],
+      "source": {
+        "key": "Applicant 2 Full Name"
+      },
+      "legacy": {
+        "rect": [
+          440.0,
+          157.0,
+          675.0,
+          178.0
+        ],
+        "transform": "pdf = rect / 1.2, top-left origin"
+      },
+      "reviewRequired": "overlay position derived from the evidenced 1.2 preview scale; font/size are engine policy (legacy font not recorded)"
+    }
+  ],
+  "unsupported": [],
+  "unresolvedLegacyMappings": [],
+  "inertLegacyMappings": [],
+  "importErrors": [],
+  "importWarnings": [],
+  "unmappedPdfFields": [
+    "B1 Inclusive",
+    "B2 Inclusive",
+    "Cust Name",
+    "Signature p1",
+    "Signature1-Date-DD",
+    "Signature1-Date-MM",
+    "Signature1-Date-YY",
+    "Signature2-Date-DD",
+    "Signature2-Date-MM",
+    "Signature2-Date-YY",
+    "signature p2"
+  ],
+  "validation": {
+    "requires": [
+      {
+        "id": "ANZ-BOARDER-WEEKLY-1",
+        "ifPresent": "Boarders - Board amount 1",
+        "require": {
+          "key": "Boarders - Board amount 1 frequency",
+          "operator": "equals",
+          "value": "Weekly"
+        },
+        "reason": "the ANZ form only has a 'Weekly board amount' box; a fortnightly or monthly amount would be misstated"
+      },
+      {
+        "id": "ANZ-BOARDER-WEEKLY-2",
+        "ifPresent": "Boarders - Board amount 2",
+        "require": {
+          "key": "Boarders - Board amount 2 frequency",
+          "operator": "equals",
+          "value": "Weekly"
+        },
+        "reason": "the ANZ form only has a 'Weekly board amount' box; a fortnightly or monthly amount would be misstated"
+      }
+    ]
+  },
+  "review": {
+    "status": "candidate",
+    "meaning": "synthetic tests pass and every rule was checked against the printed label and the live Monday labels; not approved by RSFA, not compared with a MacroForge output",
+    "openQuestions": [
+      "Property address is the legacy key Applicant 1 Physical Address (whole address); it may differ from the property where the boarders live.",
+      "The 'inclusive of food and/or bills' Yes/No boxes and the signature dates are not mapped in the legacy configuration and stay blank for the customer.",
+      "Customer name(s) are drawn as legacy overlays (rect / 1.2, inferred; docs/03)."
+    ]
+  }
+}

@@ -180,6 +180,38 @@ class ImporterTest(unittest.TestCase):
         self.assertEqual(unresolved["Freq"]["category"], "ambiguous_checked_state")
         self.assertFalse([w for w in m["importWarnings"] if w["code"] == "LINE_ITEM_INSTANCE_MISMATCH"])
 
+    def curation(self, **over):
+        c = {"templateId": "T", "templateVersion": "1", "templateSha256": im.sha256(self.pdf),
+             "validation": {"closedOptions": [{"key": "Frequency", "multiSelect": False, "onUnmapped": "error"}],
+                            "requires": [{"id": "T-1", "ifPresent": "Applicant 1 Full Name",
+                                          "require": {"key": "Frequency", "operator": "present"}, "reason": "test"}]},
+             "review": {"status": "candidate", "openQuestions": ["q"]}}
+        c.update(over)
+        path = self.dir / "cur.json"
+        path.write_text(json.dumps(c))
+        return path
+
+    def manifest_with(self, cur):
+        out = self.dir / "cm.json"
+        r = self.run_cli("manifest", self.mforge, "--pdf", "Test Form.pdf", "--template-id", "T",
+                         "--template-version", "1", "--curation", cur, "--out", out)
+        return r, (json.loads(out.read_text()) if r.returncode == 0 else None)
+
+    def test_curation_merges_reviewed_validation_and_review(self):
+        r, m = self.manifest_with(self.curation())
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(m["validation"]["closedOptions"][0]["key"], "Frequency")
+        self.assertEqual(m["validation"]["requires"][0]["id"], "T-1")
+        self.assertEqual(m["review"]["status"], "candidate")
+        self.assertIn("curation/cur.json", m["provenance"]["curation"])
+
+    def test_curation_for_another_template_or_unknown_key_is_refused(self):
+        self.assertNotEqual(self.manifest_with(self.curation(templateSha256="0" * 64))[0].returncode, 0)
+        self.assertNotEqual(self.manifest_with(self.curation(
+            validation={"closedOptions": [{"key": "Not a when key"}]}))[0].returncode, 0)
+        self.assertNotEqual(self.manifest_with(self.curation(fields=[]))[0].returncode, 0, "only validation/review merge")
+        self.assertNotEqual(self.manifest_with(self.curation(validation={"requires": [{"id": "x"}]}))[0].returncode, 0)
+
     def test_strict_mode_fails_on_import_errors(self):
         r = self.run_cli("manifest", self.mforge, "--pdf", "Test Form.pdf", "--template-id", "T",
                          "--template-version", "1", "--strict", "--out", self.dir / "s.json")

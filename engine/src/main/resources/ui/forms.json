@@ -1,5 +1,5 @@
 {
-  "_comment": "Demo form definitions. Each field 'key' is a data key read by the template's manifest (checked by ApiServerTest). The UI only collects values; mapping and filling happen in the engine. Sample data is synthetic.",
+  "_comment": "Demo form definitions. Each field 'key' is a data key read by the template's manifest (checked by ApiServerTest). The UI only collects values; mapping and filling happen in the engine. Sample data is synthetic. Field labels are the Monday column titles; select options are the live Monday labels (board 5026186805, read 2026-10-27), deliberately including labels with no box on the form so refusals can be demonstrated.",
   "templates": [
     {
       "templateId": "BNZ_BOARDER_FORM",
@@ -10,23 +10,51 @@
         {
           "title": "Applicants",
           "fields": [
-            {"key": "Applicant 1 Full Name", "label": "Applicant 1 — full name", "autocomplete": "off"},
-            {"key": "Applicant 2 Full Name", "label": "Applicant 2 — full name", "hint": "Optional"}
+            {
+              "key": "Applicant 1 Full Name",
+              "label": "Applicant 1 — full name",
+              "autocomplete": "off"
+            },
+            {
+              "key": "Applicant 2 Full Name",
+              "label": "Applicant 2 — full name",
+              "hint": "Optional"
+            }
           ]
         },
         {
           "title": "Property",
           "fields": [
-            {"key": "1st Property Address Street", "label": "Street address", "wide": true},
-            {"key": "1st Property Address City", "label": "Town / City"},
-            {"key": "1st Property Address Postcode", "label": "Postcode", "inputmode": "numeric", "maxlength": 4}
+            {
+              "key": "1st Property Address Street",
+              "label": "Street address",
+              "wide": true
+            },
+            {
+              "key": "1st Property Address City",
+              "label": "Town / City"
+            },
+            {
+              "key": "1st Property Address Postcode",
+              "label": "Postcode",
+              "inputmode": "numeric",
+              "maxlength": 4
+            }
           ]
         },
         {
           "title": "Boarders",
           "fields": [
-            {"key": "Number of rooms proposed to be rented", "label": "Rooms to be rented", "inputmode": "numeric"},
-            {"key": "Proposed weekly amount(s) per room", "label": "Weekly board per room (NZ$)", "inputmode": "decimal"}
+            {
+              "key": "Number of rooms proposed to be rented",
+              "label": "Rooms to be rented",
+              "inputmode": "numeric"
+            },
+            {
+              "key": "Proposed weekly amount(s) per room",
+              "label": "Weekly board per room (NZ$)",
+              "inputmode": "decimal"
+            }
           ]
         }
       ],
@@ -45,6 +73,548 @@
           "1st Property Address Postcode": "0999",
           "Number of rooms proposed to be rented": "2",
           "Proposed weekly amount(s) per room": "250.00"
+        }
+      },
+      "status": "tested"
+    },
+    {
+      "templateId": "ASB_BOARDER_DECLARATION",
+      "templateVersion": "12-22",
+      "label": "ASB — Boarder Income Declaration",
+      "status": "candidate",
+      "description": "ASB boarder income declaration (blank ASB form 56140 25905 1222). Candidate: synthetic tests pass; awaiting RSFA review.",
+      "sections": [
+        {
+          "title": "Borrowers",
+          "fields": [
+            {
+              "key": "Applicant 1 Full Name",
+              "label": "Applicant 1 Full Name"
+            },
+            {
+              "key": "Applicant 2 Full Name",
+              "label": "Applicant 2 Full Name",
+              "hint": "Optional"
+            }
+          ]
+        },
+        {
+          "title": "Property address (legacy: applicant physical address)",
+          "fields": [
+            {
+              "key": "Applicant 1 Physical Address Street",
+              "label": "Applicant 1 Physical Address Street",
+              "wide": true
+            },
+            {
+              "key": "Applicant 1 Physical Address Province",
+              "label": "Applicant 1 Physical Address Province"
+            },
+            {
+              "key": "Applicant 1 Physical Address Country",
+              "label": "Applicant 1 Physical Address Country"
+            },
+            {
+              "key": "Applicant 1 Physical Address Postcode",
+              "label": "Applicant 1 Physical Address Postcode",
+              "inputmode": "numeric"
+            }
+          ]
+        },
+        {
+          "title": "Household",
+          "fields": [
+            {
+              "key": "1st Property Number of adults living in the property (excluding boarders)",
+              "label": "1st Property Number of adults living in the property (excluding boarders)",
+              "inputmode": "numeric"
+            },
+            {
+              "key": "1st Property Number of dependents living in the property",
+              "label": "1st Property Number of dependents living in the property",
+              "inputmode": "numeric"
+            },
+            {
+              "key": "1st Property Number of bedrooms",
+              "label": "1st Property Number of bedrooms",
+              "inputmode": "numeric"
+            }
+          ]
+        },
+        {
+          "title": "Boarders",
+          "fields": [
+            {
+              "key": "Boarders - Boarder one name (if known)",
+              "label": "Boarders - Boarder one name (if known)"
+            },
+            {
+              "key": "Boarders - Board amount 1",
+              "label": "Boarders - Board amount 1",
+              "inputmode": "decimal"
+            },
+            {
+              "key": "Boarders - Board amount 1 frequency",
+              "label": "Boarders - Board amount 1 frequency",
+              "type": "select",
+              "options": [
+                "Weekly",
+                "Fortnightly",
+                "Monthly"
+              ]
+            },
+            {
+              "key": "Boarders - Boarder two name (if known)",
+              "label": "Boarders - Boarder two name (if known)"
+            },
+            {
+              "key": "Boarders - Board amount 2",
+              "label": "Boarders - Board amount 2",
+              "inputmode": "decimal"
+            },
+            {
+              "key": "Boarders - Board amount 2 frequency",
+              "label": "Boarders - Board amount 2 frequency",
+              "type": "select",
+              "options": [
+                "Weekly",
+                "Fortnightly",
+                "Monthly"
+              ]
+            }
+          ]
+        }
+      ],
+      "date": {
+        "label": "Form date",
+        "hint": "Printed in both DD MM YYYY signature-date boxes"
+      },
+      "notice": "Signature boxes and declarations are left blank for the customer to complete. The engine never signs, ticks or certifies on anyone's behalf.",
+      "sample": {
+        "today": "2026-10-27",
+        "data": {
+          "Applicant 1 Full Name": "Jane Example",
+          "Applicant 2 Full Name": "John Sample",
+          "Applicant 1 Physical Address Street": "12 Example Street",
+          "Applicant 1 Physical Address Province": "Testville Region",
+          "Applicant 1 Physical Address Country": "New Zealand",
+          "Applicant 1 Physical Address Postcode": "0999",
+          "1st Property Number of adults living in the property (excluding boarders)": "2",
+          "1st Property Number of dependents living in the property": "1",
+          "1st Property Number of bedrooms": "4",
+          "Boarders - Boarder one name (if known)": "Alex Boarder",
+          "Boarders - Board amount 1": "250",
+          "Boarders - Board amount 1 frequency": "Weekly",
+          "Boarders - Boarder two name (if known)": "Sam Lodger",
+          "Boarders - Board amount 2": "520",
+          "Boarders - Board amount 2 frequency": "Fortnightly"
+        }
+      }
+    },
+    {
+      "templateId": "ANZ_BOARDER_INCOME_DECLARATION",
+      "templateVersion": "02-24",
+      "label": "ANZ — Boarder Income Declaration",
+      "status": "candidate",
+      "description": "ANZ boarder income declaration (02/24). Candidate. The form only has weekly amounts: other frequencies are refused.",
+      "sections": [
+        {
+          "title": "Customers",
+          "fields": [
+            {
+              "key": "Applicant 1 Full Name",
+              "label": "Applicant 1 Full Name"
+            },
+            {
+              "key": "Applicant 2 Full Name",
+              "label": "Applicant 2 Full Name",
+              "hint": "Optional"
+            },
+            {
+              "key": "ANZ Customer Number (if known)",
+              "label": "ANZ Customer Number (if known)"
+            }
+          ]
+        },
+        {
+          "title": "Property (legacy: applicant physical address)",
+          "fields": [
+            {
+              "key": "Applicant 1 Physical Address",
+              "label": "Applicant 1 Physical Address",
+              "wide": true
+            },
+            {
+              "key": "Applicant 1 Residential City/Town",
+              "label": "Applicant 1 Residential City/Town"
+            },
+            {
+              "key": "Applicant 1 Residential Postcode/Zip",
+              "label": "Applicant 1 Residential Postcode/Zip",
+              "inputmode": "numeric"
+            }
+          ]
+        },
+        {
+          "title": "Boarders",
+          "fields": [
+            {
+              "key": "Boarders - Boarder one name (if known)",
+              "label": "Boarders - Boarder one name (if known)"
+            },
+            {
+              "key": "Boarders - Board amount 1",
+              "label": "Boarders - Board amount 1",
+              "inputmode": "decimal"
+            },
+            {
+              "key": "Boarders - Board amount 1 frequency",
+              "label": "Boarders - Board amount 1 frequency",
+              "type": "select",
+              "options": [
+                "Weekly",
+                "Fortnightly",
+                "Monthly"
+              ]
+            },
+            {
+              "key": "Boarders - Boarder two name (if known)",
+              "label": "Boarders - Boarder two name (if known)"
+            },
+            {
+              "key": "Boarders - Board amount 2",
+              "label": "Boarders - Board amount 2",
+              "inputmode": "decimal"
+            },
+            {
+              "key": "Boarders - Board amount 2 frequency",
+              "label": "Boarders - Board amount 2 frequency",
+              "type": "select",
+              "options": [
+                "Weekly",
+                "Fortnightly",
+                "Monthly"
+              ]
+            }
+          ]
+        }
+      ],
+      "date": {
+        "label": "Request date",
+        "hint": "Not printed (signature dates stay blank on this form)"
+      },
+      "notice": "Signature boxes and declarations are left blank for the customer to complete. The engine never signs, ticks or certifies on anyone's behalf.",
+      "sample": {
+        "today": "2026-10-27",
+        "data": {
+          "Applicant 1 Full Name": "Jane Example",
+          "Applicant 2 Full Name": "John Sample",
+          "Applicant 1 Physical Address": "12 Example Street, Testville",
+          "Applicant 1 Residential City/Town": "Auckland",
+          "Applicant 1 Residential Postcode/Zip": "0999",
+          "ANZ Customer Number (if known)": "100200300",
+          "Boarders - Boarder one name (if known)": "Alex Boarder",
+          "Boarders - Board amount 1": "250",
+          "Boarders - Board amount 1 frequency": "Weekly",
+          "Boarders - Boarder two name (if known)": "Sam Lodger",
+          "Boarders - Board amount 2": "230",
+          "Boarders - Board amount 2 frequency": "Weekly"
+        }
+      }
+    },
+    {
+      "templateId": "GHL_NP_INDIVIDUAL_FORM",
+      "templateVersion": "8-19",
+      "label": "GHL — Account Use Questionnaire (Individual)",
+      "status": "candidate",
+      "description": "Sovereign / GO Home Loans nature & purpose questionnaire (08/19). Candidate. Options whose Monday label has no box are refused.",
+      "sections": [
+        {
+          "title": "Customer",
+          "fields": [
+            {
+              "key": "Applicant 1 Full Name",
+              "label": "Applicant 1 Full Name"
+            },
+            {
+              "key": "Applicant 1 Current Occupation",
+              "label": "Applicant 1 Current Occupation"
+            }
+          ]
+        },
+        {
+          "title": "Relationship and deposits",
+          "fields": [
+            {
+              "key": "What do you intend to use your accounts for? (GHL Individual)",
+              "label": "What do you intend to use your accounts for? (GHL Individual)",
+              "type": "select",
+              "options": [
+                "Everyday personal banking",
+                "To borrow money"
+              ]
+            },
+            {
+              "key": "Total credits or deposits (next 12 months) (ASB)",
+              "label": "Total credits or deposits (next 12 months) (ASB)",
+              "type": "select",
+              "options": [
+                "Less than $50,000",
+                "$50,000-$150,000",
+                "$150,001-$250,000",
+                "More than $250,000"
+              ]
+            },
+            {
+              "key": "Cash deposits frequency (ASB)",
+              "label": "Cash deposits frequency (ASB)",
+              "type": "select",
+              "options": [
+                "Frequently (weekly / fortnightly)",
+                "Occasionally (monthly / quarterly)",
+                "Infrequently",
+                "Never"
+              ]
+            },
+            {
+              "key": "Cash deposits average value per deposit (ASB)",
+              "label": "Cash deposits average value per deposit (ASB)",
+              "type": "select",
+              "options": [
+                "Less than $500",
+                "$500-$1,000",
+                "$1,001-$2,500",
+                "More than $2,500"
+              ]
+            },
+            {
+              "key": "Cash deposits activity details",
+              "label": "Cash deposits activity details",
+              "wide": true
+            }
+          ]
+        },
+        {
+          "title": "International payments",
+          "fields": [
+            {
+              "key": "International payments frequency (ASB)",
+              "label": "International payments frequency (ASB)",
+              "type": "select",
+              "options": [
+                "Frequently (weekly / fortnightly)",
+                "Occasionally (monthly / quarterly)",
+                "Infrequently",
+                "Never"
+              ]
+            },
+            {
+              "key": "International payments average value per payment (ASB)",
+              "label": "International payments average value per payment (ASB)",
+              "type": "select",
+              "options": [
+                "Less than $500",
+                "$500-$1,000",
+                "$1,001-$2,500",
+                "More than $2,500"
+              ]
+            },
+            {
+              "key": "International payments activity details (including countries involved)",
+              "label": "International payments activity details (including countries involved)",
+              "wide": true
+            }
+          ]
+        }
+      ],
+      "date": {
+        "label": "Request date",
+        "hint": "Not printed on this form"
+      },
+      "notice": "Signature boxes and declarations are left blank for the customer to complete. The engine never signs, ticks or certifies on anyone's behalf.",
+      "sample": {
+        "today": "2026-10-27",
+        "data": {
+          "Applicant 1 Full Name": "Jane Example",
+          "Applicant 1 Current Occupation": "Fictional Test Analyst",
+          "What do you intend to use your accounts for? (GHL Individual)": "Everyday personal banking",
+          "Total credits or deposits (next 12 months) (ASB)": "$50,000-$150,000",
+          "Cash deposits frequency (ASB)": "Infrequently",
+          "Cash deposits average value per deposit (ASB)": "$500-$1,000",
+          "Cash deposits activity details": "Occasional cash from a fictional weekend market stall",
+          "International payments frequency (ASB)": "Never",
+          "International payments average value per payment (ASB)": "Less than $500",
+          "International payments activity details (including countries involved)": "None expected (fictional test data)"
+        }
+      }
+    },
+    {
+      "templateId": "GHL_NP_TRUST_FORM",
+      "templateVersion": "8-19",
+      "label": "GHL — Account Use Questionnaire (Trust)",
+      "status": "candidate",
+      "description": "Sovereign / GO Home Loans nature & purpose questionnaire for trusts (08/19). Candidate with a BLOCKING open question (activity details boxes, docs/06).",
+      "sections": [
+        {
+          "title": "Trust",
+          "fields": [
+            {
+              "key": "Applicant 1 Organisation legal name (entity/company/trust/branch)",
+              "label": "Applicant 1 Organisation legal name (entity/company/trust/branch)",
+              "wide": true
+            },
+            {
+              "key": "What is the objective of your trust/organisation?",
+              "label": "What is the objective of your trust/organisation?",
+              "wide": true
+            }
+          ]
+        },
+        {
+          "title": "Relationship",
+          "fields": [
+            {
+              "key": "GHL Why have you come to Sovereign Home Loans?",
+              "label": "GHL Why have you come to Sovereign Home Loans?",
+              "type": "select",
+              "options": [
+                "Everyday banking",
+                "Other (please specify)"
+              ]
+            },
+            {
+              "key": "GHL Other reasons to come",
+              "label": "GHL Other reasons to come"
+            }
+          ]
+        },
+        {
+          "title": "Expected account behaviour",
+          "fields": [
+            {
+              "key": "Total credits or deposits (next 12 months) (GHL Trust)",
+              "label": "Total credits or deposits (next 12 months) (GHL Trust)",
+              "type": "select",
+              "options": [
+                "Less than $250K",
+                "$250K-$1M",
+                "$1M-$5M",
+                "$5M-$10M",
+                "More than $10M"
+              ]
+            },
+            {
+              "key": "Sources of credits",
+              "label": "Sources of credits",
+              "type": "select",
+              "options": [
+                "Donations",
+                "Dividends from investments",
+                "Other (please specify)"
+              ]
+            },
+            {
+              "key": "GHL Other sources of credits",
+              "label": "GHL Other sources of credits"
+            },
+            {
+              "key": "Cash deposits frequency (GHL Trust)",
+              "label": "Cash deposits frequency (GHL Trust)",
+              "type": "select",
+              "options": [
+                "Frequently (daily / weekly / fortnightly)",
+                "Occasionally (monthly / quarterly)",
+                "Infrequently",
+                "Never"
+              ]
+            },
+            {
+              "key": "International Money Transfers – In frequency",
+              "label": "International Money Transfers – In frequency",
+              "type": "select",
+              "options": [
+                "Frequently (daily / weekly / fortnightly)",
+                "Occasionally (monthly / quarterly)",
+                "Infrequently",
+                "Never"
+              ]
+            },
+            {
+              "key": "Int Transfers IN - Average Value per Payment (GHL Trust)",
+              "label": "Int Transfers IN - Average Value per Payment (GHL Trust)",
+              "type": "select",
+              "options": [
+                "Less than $1,000",
+                "$1,000-$10,000",
+                "More than $10,000"
+              ]
+            },
+            {
+              "key": "International Money Transfers – Out frequency",
+              "label": "International Money Transfers – Out frequency",
+              "type": "select",
+              "options": [
+                "Frequently (daily / weekly / fortnightly)",
+                "Occasionally (monthly / quarterly)",
+                "Infrequently",
+                "Never"
+              ]
+            },
+            {
+              "key": "Int Transfers OUT - Average Value per Payment (GHL Trust)",
+              "label": "Int Transfers OUT - Average Value per Payment (GHL Trust)",
+              "type": "select",
+              "options": [
+                "Less than $1,000",
+                "$1,000-$10,000",
+                "More than $10,000"
+              ]
+            },
+            {
+              "key": "International payments activity details (including countries involved)",
+              "label": "International payments activity details (including countries involved)",
+              "wide": true
+            },
+            {
+              "key": "Receive transactions/funds from third parties?",
+              "label": "Receive transactions/funds from third parties?",
+              "type": "select",
+              "options": [
+                "Yes",
+                "No"
+              ]
+            },
+            {
+              "key": "If yes, purpose",
+              "label": "If yes, purpose",
+              "wide": true
+            }
+          ]
+        }
+      ],
+      "date": {
+        "label": "Request date",
+        "hint": "Not printed on this form"
+      },
+      "notice": "Signature boxes and declarations are left blank for the customer to complete. The engine never signs, ticks or certifies on anyone's behalf.",
+      "sample": {
+        "today": "2026-10-27",
+        "data": {
+          "Applicant 1 Organisation legal name (entity/company/trust/branch)": "Example Family Trust",
+          "What is the objective of your trust/organisation?": "Hold the family home for fictional beneficiaries",
+          "GHL Why have you come to Sovereign Home Loans?": "Other (please specify)",
+          "GHL Other reasons to come": "Fictional: refinance from another lender",
+          "Total credits or deposits (next 12 months) (GHL Trust)": "Less than $250K",
+          "Sources of credits": "Dividends from investments",
+          "GHL Other sources of credits": "",
+          "Cash deposits frequency (GHL Trust)": "Occasionally (monthly / quarterly)",
+          "International Money Transfers – In frequency": "Frequently (daily / weekly / fortnightly)",
+          "Int Transfers IN - Average Value per Payment (GHL Trust)": "More than $10,000",
+          "International Money Transfers – Out frequency": "Never",
+          "Int Transfers OUT - Average Value per Payment (GHL Trust)": "Less than $1,000",
+          "International payments activity details (including countries involved)": "Fictional rental income from Australia",
+          "Receive transactions/funds from third parties?": "Yes",
+          "If yes, purpose": "Fictional: family contributions to the mortgage"
         }
       }
     }

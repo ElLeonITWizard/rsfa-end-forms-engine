@@ -1,0 +1,31 @@
+{
+  "contractVersion": "masterboard.v1",
+  "source": {
+    "boardId": "5026186805",
+    "itemId": "1000000003"
+  },
+  "today": "2026-10-27",
+  "correlationId": "mb-5026186805-1000000003-exec0003",
+  "idempotencyKey": "1000000003-20261027T030000Z",
+  "selection": {
+    "templates": [
+      {
+        "templateId": "BNZ_BOARDER_FORM",
+        "templateVersion": "2.0_8-24"
+      }
+    ]
+  },
+  "options": {
+    "includePdf": true
+  },
+  "data": {
+    "Applicant 1 Full Name": "Jane Example",
+    "Applicant 2 Full Name": "John Sample",
+    "1st Property Address Street": "12 Example Street, Testville",
+    "1st Property Address City": "Auckland",
+    "1st Property Address Postcode": "0999",
+    "Number of rooms proposed to be rented": "2",
+    "Proposed weekly amount(s) per room": "250.00",
+    "Banks to Send": "BNZ"
+  }
+}

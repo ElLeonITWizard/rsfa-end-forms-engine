@@ -147,9 +147,16 @@ Flow D (test flow) holds a second copy of `ANZ_Entity_FACTA_8 25.pdf` with 2 map
 |---|---|---|
 | `BNZ_BoarderForm_2.0_8 24.pdf` | `mappings/bnz/BNZ_BOARDER_FORM@2.0_8-24.json` | **yes**: 7 fields + 2 overlays, plus a macron variant |
 | `BNZ_Handover_8 24.pdf` | `mappings/bnz/BNZ_HANDOVER_FORM@8-24.json` | **partially**: line items for 3 facilities (product, amount, rate, frequency, purpose), rows 4–6 empty, approval gate; other fields not exercised |
-| `GHL_N&P Trust_8 19.pdf` | `mappings/ghl/GHL_NP_TRUST_FORM@8-19.json` | **partially**: 3 text fields + 9 checkbox groups |
+| `GHL_N&P Trust_8 19.pdf` | `mappings/ghl/GHL_NP_TRUST_FORM@8-19.json` | **yes** (2 fixtures, live labels, refusals); **blocked** by an open mapping question (docs/06) |
 | `KB_Handover Form_May25.pdf` | `mappings/kiwibank/KB_HANDOVER_FORM@May25.json` | no: resolution check only |
-| other 21 Flow C templates | not generated | no |
+| `ASB Home Loan Boarder Declaration Form.pdf` | `mappings/asb/ASB_BOARDER_DECLARATION@12-22.json` | **yes** (candidate): all 19 fields, radios, comb dates, encryption, precondition |
+| `Boarder-Income-Declaration 12.02.24.pdf` (ANZ) | `mappings/anz/ANZ_BOARDER_INCOME_DECLARATION@02-24.json` | **yes** (candidate): 8 fields + 2 overlays, weekly-amount precondition |
+| `GHL_N&P Individual_8 19.pdf` | `mappings/ghl/GHL_NP_INDIVIDUAL_FORM@8-19.json` | **yes** (candidate): 6 checkbox groups, closed options |
+| other 18 Flow C templates | not generated | no (reasons per form in docs/06) |
+
+Iteration 6 also checked every condition against the **live** Monday labels (read-only schema). The results are in
+`docs/generated/template-coverage.md` and docs/06: label drift on GHL forms, multi-select columns, and the
+"Banks to Send" column now titled "Selected Banks".
 
 ## Supplied files vs embedded copies
 

@@ -1,0 +1,23 @@
+{
+  "requestId": "poc-ghl-np-trust-live-labels",
+  "templateId": "GHL_NP_TRUST_FORM",
+  "templateVersion": "8-19",
+  "today": "2026-10-27",
+  "data": {
+    "Applicant 1 Organisation legal name (entity/company/trust/branch)": "Example Family Trust",
+    "What is the objective of your trust/organisation?": "Hold the family home for fictional beneficiaries",
+    "GHL Why have you come to Sovereign Home Loans?": "Other (please specify)",
+    "GHL Other reasons to come": "Fictional: refinance from another lender",
+    "Total credits or deposits (next 12 months) (GHL Trust)": "Less than $250K",
+    "Sources of credits": "Dividends from investments",
+    "GHL Other sources of credits": "",
+    "Cash deposits frequency (GHL Trust)": "Occasionally (monthly / quarterly)",
+    "International Money Transfers – In frequency": "Frequently (daily / weekly / fortnightly)",
+    "Int Transfers IN - Average Value per Payment (GHL Trust)": "More than $10,000",
+    "International Money Transfers – Out frequency": "Never",
+    "Int Transfers OUT - Average Value per Payment (GHL Trust)": "Less than $1,000",
+    "International payments activity details (including countries involved)": "Fictional rental income from Australia",
+    "Receive transactions/funds from third parties?": "Yes",
+    "If yes, purpose": "Fictional: family contributions to the mortgage"
+  }
+}

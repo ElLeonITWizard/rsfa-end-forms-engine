@@ -1,0 +1,20 @@
+{
+  "requestId": "poc-anz-boarder",
+  "templateId": "ANZ_BOARDER_INCOME_DECLARATION",
+  "templateVersion": "02-24",
+  "today": "2026-10-27",
+  "data": {
+    "Applicant 1 Full Name": "Jane Example",
+    "Applicant 2 Full Name": "John Sample",
+    "Applicant 1 Physical Address": "12 Example Street, Testville",
+    "Applicant 1 Residential City/Town": "Auckland",
+    "Applicant 1 Residential Postcode/Zip": "0999",
+    "ANZ Customer Number (if known)": "100200300",
+    "Boarders - Boarder one name (if known)": "Alex Boarder",
+    "Boarders - Board amount 1": "250",
+    "Boarders - Board amount 1 frequency": "Weekly",
+    "Boarders - Boarder two name (if known)": "Sam Lodger",
+    "Boarders - Board amount 2": "230",
+    "Boarders - Board amount 2 frequency": "Weekly"
+  }
+}

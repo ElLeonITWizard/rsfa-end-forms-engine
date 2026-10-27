@@ -1,0 +1,458 @@
+{
+  "schemaVersion": 1,
+  "templateId": "ASB_BOARDER_DECLARATION",
+  "templateVersion": "12-22",
+  "templateFile": "923b43b8f3fb__ASB_Home_Loan_Boarder_Declaration_Form.pdf",
+  "templateSha256": "923b43b8f3fbc2a89712b0dc531b3d7c9435ca60d44a085e69b356325b0c7a97",
+  "encryption": "preserve",
+  "sourceKeyNormalization": "macroforge-v1",
+  "fontFallback": "unicode",
+  "provenance": {
+    "importer": "tools/import_mforge.py 0.3.0",
+    "sourceFile": "RSFA End Forms Filling BluePrint 271026.mforge",
+    "sourceSha256": "8052c17b374b551272e17f5036de1ebfa9a295328eb8a6d079d30eec788b9a51",
+    "flow": "Flow C",
+    "flowDisplayName": "End Forms Flow Filling",
+    "node": 2,
+    "legacyPdfName": "ASB Home Loan Boarder Declaration Form.pdf",
+    "lenderCondition": "Banks to Send Contains ASB",
+    "importedOn": "2026-10-27",
+    "curation": "curation/ASB_BOARDER_DECLARATION@12-22.json sha256 e7e7f8afc816"
+  },
+  "pdf": {
+    "pages": 1,
+    "acroform": true,
+    "xfa": false,
+    "fields": {
+      "1": {
+        "kind": "text"
+      },
+      "2": {
+        "kind": "text"
+      },
+      "3": {
+        "kind": "text"
+      },
+      "Board amount excluding utilities and food": {
+        "kind": "text"
+      },
+      "Board amount excluding utilities and food_2": {
+        "kind": "text"
+      },
+      "Boarder Name if known": {
+        "kind": "text"
+      },
+      "Boarder Name if known_2": {
+        "kind": "text"
+      },
+      "Borrowers or Guarantors names": {
+        "kind": "text"
+      },
+      "Borrowers or Guarantors names 2": {
+        "kind": "text"
+      },
+      "Full Name": {
+        "kind": "text"
+      },
+      "Full Name_2": {
+        "kind": "text"
+      },
+      "Number of adults living in the property": {
+        "kind": "text"
+      },
+      "Number of bedrooms": {
+        "kind": "text"
+      },
+      "Number of dependents living in the property": {
+        "kind": "text"
+      },
+      "date 1": {
+        "kind": "text",
+        "maxLen": 8,
+        "comb": true
+      },
+      "date 2": {
+        "kind": "text",
+        "maxLen": 8,
+        "comb": true
+      },
+      "frequency 1": {
+        "kind": "radio",
+        "states": [
+          "weekly",
+          "fortnight",
+          "monthly"
+        ],
+        "widgets": 3
+      },
+      "frequency 2": {
+        "kind": "radio",
+        "states": [
+          "weekly",
+          "fortnight",
+          "monthly"
+        ],
+        "widgets": 3
+      },
+      "postcode": {
+        "kind": "text"
+      }
+    }
+  },
+  "fields": [
+    {
+      "pdfField": "1",
+      "kind": "text",
+      "source": {
+        "key": "Applicant 1 Physical Address Street"
+      },
+      "legacy": {
+        "field": "1",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "2",
+      "kind": "text",
+      "source": {
+        "key": "Applicant 1 Physical Address Province"
+      },
+      "legacy": {
+        "field": "2",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "3",
+      "kind": "text",
+      "source": {
+        "key": "Applicant 1 Physical Address Country"
+      },
+      "legacy": {
+        "field": "3",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "Board amount excluding utilities and food",
+      "kind": "text",
+      "source": {
+        "key": "Boarders - Board amount 1"
+      },
+      "legacy": {
+        "field": "Board amount excluding utilities and food",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "Board amount excluding utilities and food_2",
+      "kind": "text",
+      "source": {
+        "key": "Boarders - Board amount 2"
+      },
+      "legacy": {
+        "field": "Board amount excluding utilities and food_2",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "Boarder Name if known",
+      "kind": "text",
+      "source": {
+        "key": "Boarders - Boarder one name (if known)"
+      },
+      "legacy": {
+        "field": "Boarder Name if known",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "Boarder Name if known_2",
+      "kind": "text",
+      "source": {
+        "key": "Boarders - Boarder two name (if known)"
+      },
+      "legacy": {
+        "field": "Boarder Name if known_2",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "Borrowers or Guarantors names",
+      "kind": "text",
+      "source": {
+        "key": "Applicant 1 Full Name"
+      },
+      "legacy": {
+        "field": "Borrowers or Guarantors names",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "Borrowers or Guarantors names 2",
+      "kind": "text",
+      "source": {
+        "key": "Applicant 2 Full Name"
+      },
+      "legacy": {
+        "field": "Borrowers or Guarantors names 2",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "Full Name",
+      "kind": "text",
+      "source": {
+        "key": "Applicant 1 Full Name"
+      },
+      "legacy": {
+        "field": "Full Name",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "Full Name_2",
+      "kind": "text",
+      "source": {
+        "key": "Applicant 2 Full Name"
+      },
+      "legacy": {
+        "field": "Full Name_2",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "Number of adults living in the property",
+      "kind": "text",
+      "source": {
+        "key": "1st Property Number of adults living in the property (excluding boarders)"
+      },
+      "legacy": {
+        "field": "Number of adults living in the property",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "Number of bedrooms",
+      "kind": "text",
+      "source": {
+        "key": "1st Property Number of bedrooms"
+      },
+      "legacy": {
+        "field": "Number of bedrooms",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "Number of dependents living in the property",
+      "kind": "text",
+      "source": {
+        "key": "1st Property Number of dependents living in the property"
+      },
+      "legacy": {
+        "field": "Number of dependents living in the property",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "date 1",
+      "kind": "text",
+      "source": {
+        "generated": "today",
+        "format": "ddMMyyyy",
+        "zone": "Pacific/Auckland"
+      },
+      "legacy": {
+        "field": "date 1",
+        "mapping": "direct_text"
+      },
+      "reviewRequired": "MacroForge '[TODAY]' output format is not documented in the export; format derived from comb MaxLen"
+    },
+    {
+      "pdfField": "date 2",
+      "kind": "text",
+      "source": {
+        "generated": "today",
+        "format": "ddMMyyyy",
+        "zone": "Pacific/Auckland"
+      },
+      "legacy": {
+        "field": "date 2",
+        "mapping": "direct_text"
+      },
+      "reviewRequired": "MacroForge '[TODAY]' output format is not documented in the export; format derived from comb MaxLen"
+    },
+    {
+      "pdfField": "frequency 1",
+      "kind": "radio",
+      "source": {
+        "when": {
+          "key": "Boarders - Board amount 1 frequency",
+          "operator": "equals",
+          "value": "Fortnightly"
+        }
+      },
+      "legacy": {
+        "field": "frequency 1#fortnight",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "fortnight"
+    },
+    {
+      "pdfField": "frequency 1",
+      "kind": "radio",
+      "source": {
+        "when": {
+          "key": "Boarders - Board amount 1 frequency",
+          "operator": "equals",
+          "value": "Monthly"
+        }
+      },
+      "legacy": {
+        "field": "frequency 1#monthly",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "monthly"
+    },
+    {
+      "pdfField": "frequency 1",
+      "kind": "radio",
+      "source": {
+        "when": {
+          "key": "Boarders - Board amount 1 frequency",
+          "operator": "equals",
+          "value": "Weekly"
+        }
+      },
+      "legacy": {
+        "field": "frequency 1#weekly",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "weekly"
+    },
+    {
+      "pdfField": "frequency 2",
+      "kind": "radio",
+      "source": {
+        "when": {
+          "key": "Boarders - Board amount 2 frequency",
+          "operator": "equals",
+          "value": "Fortnightly"
+        }
+      },
+      "legacy": {
+        "field": "frequency 2#fortnight",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "fortnight"
+    },
+    {
+      "pdfField": "frequency 2",
+      "kind": "radio",
+      "source": {
+        "when": {
+          "key": "Boarders - Board amount 2 frequency",
+          "operator": "equals",
+          "value": "Monthly"
+        }
+      },
+      "legacy": {
+        "field": "frequency 2#monthly",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "monthly"
+    },
+    {
+      "pdfField": "frequency 2",
+      "kind": "radio",
+      "source": {
+        "when": {
+          "key": "Boarders - Board amount 2 frequency",
+          "operator": "equals",
+          "value": "Weekly"
+        }
+      },
+      "legacy": {
+        "field": "frequency 2#weekly",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "weekly"
+    },
+    {
+      "pdfField": "postcode",
+      "kind": "text",
+      "source": {
+        "key": "Applicant 1 Physical Address Postcode"
+      },
+      "legacy": {
+        "field": "postcode",
+        "mapping": "source_key"
+      }
+    }
+  ],
+  "overlays": [],
+  "unsupported": [],
+  "unresolvedLegacyMappings": [],
+  "inertLegacyMappings": [],
+  "importErrors": [],
+  "importWarnings": [
+    {
+      "code": "TODAY_FORMAT_UNVERIFIED",
+      "pdfField": "date 1"
+    },
+    {
+      "code": "TODAY_FORMAT_UNVERIFIED",
+      "pdfField": "date 2"
+    }
+  ],
+  "unmappedPdfFields": [],
+  "validation": {
+    "closedOptions": [
+      {
+        "key": "Boarders - Board amount 1 frequency",
+        "multiSelect": false,
+        "onUnmapped": "error"
+      },
+      {
+        "key": "Boarders - Board amount 2 frequency",
+        "multiSelect": false,
+        "onUnmapped": "error"
+      }
+    ],
+    "requires": [
+      {
+        "id": "ASB-BOARDER-FREQ-1",
+        "ifPresent": "Boarders - Board amount 1",
+        "require": {
+          "key": "Boarders - Board amount 1 frequency",
+          "operator": "present"
+        },
+        "reason": "the ASB form asks for the frequency (weekly/fortnightly/monthly) of each board amount"
+      },
+      {
+        "id": "ASB-BOARDER-FREQ-2",
+        "ifPresent": "Boarders - Board amount 2",
+        "require": {
+          "key": "Boarders - Board amount 2 frequency",
+          "operator": "present"
+        },
+        "reason": "the ASB form asks for the frequency (weekly/fortnightly/monthly) of each board amount"
+      }
+    ]
+  },
+  "review": {
+    "status": "candidate",
+    "meaning": "synthetic tests pass and every rule was checked against the printed label and the live Monday labels; not approved by RSFA, not compared with a MacroForge output",
+    "openQuestions": [
+      "Property address lines use the legacy keys Applicant 1 Physical Address Street / Province / Country: Suburb and City are not mapped, and the applicant's physical address may differ from the property where the boarders live.",
+      "date 1 and date 2 (beside the customer signatures) are pre-filled with today, as MacroForge [TODAY] does; the DDMMYYYY format is taken from the 8-cell comb, not from a MacroForge output.",
+      "The template is owner-encrypted by ASB; it is filled with an incremental save that keeps ASB's encryption (same policy as GHL N&P Trust, D-007)."
+    ]
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "templateId": "ASB_BOARDER_DECLARATION",
+  "templateVersion": "12-22",
+  "templateSha256": "923b43b8f3fbc2a89712b0dc531b3d7c9435ca60d44a085e69b356325b0c7a97",
+  "validation": {
+    "closedOptions": [
+      {
+        "key": "Boarders - Board amount 1 frequency",
+        "multiSelect": false,
+        "onUnmapped": "error"
+      },
+      {
+        "key": "Boarders - Board amount 2 frequency",
+        "multiSelect": false,
+        "onUnmapped": "error"
+      }
+    ],
+    "requires": [
+      {
+        "id": "ASB-BOARDER-FREQ-1",
+        "ifPresent": "Boarders - Board amount 1",
+        "require": {
+          "key": "Boarders - Board amount 1 frequency",
+          "operator": "present"
+        },
+        "reason": "the ASB form asks for the frequency (weekly/fortnightly/monthly) of each board amount"
+      },
+      {
+        "id": "ASB-BOARDER-FREQ-2",
+        "ifPresent": "Boarders - Board amount 2",
+        "require": {
+          "key": "Boarders - Board amount 2 frequency",
+          "operator": "present"
+        },
+        "reason": "the ASB form asks for the frequency (weekly/fortnightly/monthly) of each board amount"
+      }
+    ]
+  },
+  "review": {
+    "status": "candidate",
+    "meaning": "synthetic tests pass and every rule was checked against the printed label and the live Monday labels; not approved by RSFA, not compared with a MacroForge output",
+    "openQuestions": [
+      "Property address lines use the legacy keys Applicant 1 Physical Address Street / Province / Country: Suburb and City are not mapped, and the applicant's physical address may differ from the property where the boarders live.",
+      "date 1 and date 2 (beside the customer signatures) are pre-filled with today, as MacroForge [TODAY] does; the DDMMYYYY format is taken from the 8-cell comb, not from a MacroForge output.",
+      "The template is owner-encrypted by ASB; it is filled with an incremental save that keeps ASB's encryption (same policy as GHL N&P Trust, D-007)."
+    ]
+  }
+}

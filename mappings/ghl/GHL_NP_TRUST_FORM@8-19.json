@@ -8,7 +8,7 @@
   "sourceKeyNormalization": "macroforge-v1",
   "fontFallback": "unicode",
   "provenance": {
-    "importer": "tools/import_mforge.py 0.2.0",
+    "importer": "tools/import_mforge.py 0.3.0",
     "sourceFile": "RSFA End Forms Filling BluePrint 271026.mforge",
     "sourceSha256": "8052c17b374b551272e17f5036de1ebfa9a295328eb8a6d079d30eec788b9a51",
     "flow": "Flow C",
@@ -16,7 +16,8 @@
     "node": 3,
     "legacyPdfName": "GHL_N&P Trust_8 19.pdf",
     "lenderCondition": "Banks to Send Contains ASB",
-    "importedOn": "2026-10-27"
+    "importedOn": "2026-10-27",
+    "curation": "curation/GHL_NP_TRUST_FORM@8-19.json sha256 566736619617"
   },
   "pdf": {
     "pages": 2,
@@ -789,5 +790,63 @@
     "Y_2",
     "Y_3",
     "Y_4"
-  ]
+  ],
+  "validation": {
+    "closedOptions": [
+      {
+        "key": "International Money Transfers – In frequency",
+        "multiSelect": false,
+        "onUnmapped": "error"
+      },
+      {
+        "key": "Int Transfers IN - Average Value per Payment (GHL Trust)",
+        "multiSelect": false,
+        "onUnmapped": "error"
+      },
+      {
+        "key": "International Money Transfers – Out frequency",
+        "multiSelect": false,
+        "onUnmapped": "error"
+      },
+      {
+        "key": "Int Transfers OUT - Average Value per Payment (GHL Trust)",
+        "multiSelect": false,
+        "onUnmapped": "error"
+      },
+      {
+        "key": "Receive transactions_funds from third parties?",
+        "multiSelect": false,
+        "onUnmapped": "error"
+      },
+      {
+        "key": "GHL Why have you come to Sovereign Home Loans?",
+        "multiSelect": true,
+        "onUnmapped": "error"
+      },
+      {
+        "key": "Total credits or deposits (next 12 months) (GHL Trust)",
+        "multiSelect": false,
+        "onUnmapped": "error"
+      },
+      {
+        "key": "Sources of credits",
+        "multiSelect": true,
+        "onUnmapped": "error"
+      },
+      {
+        "key": "Cash deposits frequency (GHL Trust)",
+        "multiSelect": false,
+        "onUnmapped": "error"
+      }
+    ]
+  },
+  "review": {
+    "status": "candidate",
+    "meaning": "synthetic tests pass and every rule was checked against the printed label and the live Monday labels; not approved by RSFA, not compared with a MacroForge output",
+    "openQuestions": [
+      "BLOCKING for RSFA review: the legacy configuration writes the same key, 'International payments activity details (including countries involved)', into BOTH the 3d (transfers IN) and 3e (transfers OUT) detail boxes, so details appear under OUT even when OUT is 'Never'; the 3c cash-deposit details box and average value are not mapped. The engine reproduces the legacy rules; RSFA must decide the intended keys before this form is used.",
+      "Live label '$1,000-$10,000' (international transfers in and out, average value) has no rule; the legacy rule tests '$1,000-$5,000' for the box printed '$1,000-$10,000'. Refused (UNMAPPED_OPTION) until RSFA decides.",
+      "'Sources of credits' and 'GHL Why have you come to Sovereign Home Loans?' are multi-select on Monday; only one label can be represented by the legacy equals rules (two are refused)."
+    ]
+  }
 }

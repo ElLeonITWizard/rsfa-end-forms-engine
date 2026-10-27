@@ -1,10 +1,12 @@
 // Browser smoke test for the demo UI (synthetic data only). Uses the Playwright + Chromium already installed on the
 // machine; it is not a project dependency. Usage:
-//   node tests/ui/demo_smoke.js <base-url> <out-dir>
-// e.g. node tests/ui/demo_smoke.js http://127.0.0.1:8080/ .local/output/ui-smoke
+//   node tests/ui/demo_smoke.js <base-url> <out-dir> [expected-form-count]
+// e.g. node tests/ui/demo_smoke.js http://127.0.0.1:8080/ .local/output/ui-smoke 5   (local: 5 forms; Cloud Run image: 1)
 // Steps: open the page, check the engine status, Load Sample Data, edit Applicant 1 and the street, Generate PDF,
 // download it, verify it with tests/ui/check_demo_pdf.py (edited values present, no ticks, no signatures), then check
-// that an invalid value produces a visible, useful error. Exits non-zero on any failure.
+// that an invalid value produces a visible, useful error. When more forms are offered (local candidates), each one is
+// generated from its sample and checked, and the closed-option and weekly-amount refusals are shown. Exits non-zero on
+// any failure.
 const { chromium } = require('playwright');
 const { execFileSync } = require('child_process');
 const fs = require('fs');
@@ -16,6 +18,7 @@ const out = process.argv[3] || '.local/output/ui-smoke';
 const FIXTURE_SHA = '2ae7bfacf48b8ee8e63aaf9ce28997650abd2c07b59ddbeade9928ce3269d6f6';
 const EDITED_NAME = 'Aroha Tēst-Example';
 const EDITED_STREET = '34 Demo Road, Sampleton';
+const EXPECTED_FORMS = Number(process.argv[4] || 1);
 
 function check(cond, msg) {
   if (!cond) throw new Error('FAILED: ' + msg);
@@ -34,8 +37,9 @@ function check(cond, msg) {
     await page.goto(base);
     check((await page.title()) === 'RSFA End Forms Engine', 'page title');
     await page.waitForSelector('#engine-status.ok', { timeout: 10000 });
-    check((await page.textContent('#engine-status-text')) === 'Engine online · 1 form ready',
-      'engine status counts usable forms offered by the page (1)');
+    const badge = 'Engine online · ' + EXPECTED_FORMS + ' form' + (EXPECTED_FORMS === 1 ? '' : 's') + ' ready';
+    check((await page.textContent('#engine-status-text')) === badge, 'engine status: ' + badge);
+    check((await page.locator('#template option').count()) === EXPECTED_FORMS, 'selector lists only usable forms');
     check((await page.textContent('#template option')).includes('BNZ — Boarder Income Declaration'), 'template selector');
     await page.screenshot({ path: path.join(out, '1-empty.png'), fullPage: true });
 
@@ -81,6 +85,48 @@ function check(cond, msg) {
     check(!msg.includes('🙂'), 'error does not echo the value');
     check(await page.locator('#download').isHidden(), 'no download offered after an error');
     await page.screenshot({ path: path.join(out, '3-error.png'), fullPage: true });
+
+    // Every other offered form: sample -> generate -> download -> sample text values present, no unruled ticks/signatures.
+    const forms = await page.$$eval('#template option', (os) => os.map((o) => ({ value: o.value, label: o.textContent })));
+    for (const f of forms.slice(1)) {
+      await page.selectOption('#template', f.value);
+      await page.click('#load-sample');
+      const texts = await page.$$eval('#sections input[data-key]', (is) => is.map((i) => i.value).filter((v) => /[A-Za-z]{3}/.test(v)));
+      await page.click('#generate');
+      await page.waitForSelector('#download:not([hidden])', { timeout: 30000 });
+      const slug = (await page.textContent('#p-template')).replace(/[^A-Za-z0-9]+/g, '_');
+      await page.waitForTimeout(500);
+      await page.screenshot({ path: path.join(out, '5-' + slug + '.png'), fullPage: true });
+      const [dl] = await Promise.all([page.waitForEvent('download'), page.click('#download')]);
+      const file = path.join(out, slug + '.pdf');
+      await dl.saveAs(file);
+      const args = [path.join(__dirname, 'check_demo_pdf.py'), file, '--sha', await page.textContent('#p-sha'), '--allow-ticks'];
+      texts.forEach((t) => args.push('--expect', t));
+      const rep = JSON.parse(execFileSync('python3', args).toString());
+      check(rep.ok, f.label + ': generated, ' + texts.length + ' sample text values found, no signatures, SHA matches');
+    }
+    if (forms.length > 1) {
+      // A live Monday label with no box on the GHL form is refused instead of leaving the boxes blank.
+      const ghl = forms.find((f) => f.label.startsWith('GHL — Account Use Questionnaire (Individual)'));
+      await page.selectOption('#template', ghl.value);
+      await page.click('#load-sample');
+      await page.selectOption('select[data-key="Total credits or deposits (next 12 months) (ASB)"]', '$150,001-$250,000');
+      await page.click('#generate');
+      await page.waitForSelector('#message.error', { timeout: 30000 });
+      check(/UNMAPPED_OPTION/.test(await page.textContent('#message')), 'GHL: unmapped Monday label refused with UNMAPPED_OPTION');
+      await page.screenshot({ path: path.join(out, '6-unmapped-option.png'), fullPage: true });
+      // The ANZ form only has weekly amounts.
+      const anz = forms.find((f) => f.label.startsWith('ANZ'));
+      await page.selectOption('#template', anz.value);
+      await page.click('#load-sample');
+      await page.selectOption('select[data-key="Boarders - Board amount 2 frequency"]', 'Fortnightly');
+      await page.click('#generate');
+      await page.waitForSelector('#message.error', { timeout: 30000 });
+      const m2 = await page.textContent('#message');
+      check(/PRECONDITION_FAILED/.test(m2) && /Weekly board amount/.test(m2), 'ANZ: fortnightly amount refused with the business reason');
+      await page.screenshot({ path: path.join(out, '7-precondition.png'), fullPage: true });
+      await page.selectOption('#template', forms[0].value);
+    }
 
     // Mobile layout renders without horizontal scrolling.
     await page.setViewportSize({ width: 390, height: 844 });

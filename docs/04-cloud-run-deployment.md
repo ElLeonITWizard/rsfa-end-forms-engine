@@ -1,6 +1,17 @@
 # 04 — First Cloud Run deployment (POC), runbook
 
-**Status (2026-10-27): revision 1 DEPLOYED by RSFA; revision 2 (demo page) PREPARED, not deployed.**
+**Status (2026-10-27, iteration 6): revision `rsfa-end-forms-engine-00002-nan` (demo page) is LIVE.** RSFA deployed it
+with the revision-2 bundle; this is reported by RSFA and not re-checked from this repository. Its deployment record is
+still to be handed back. Revision 1 (`00001-6qm`) remains the rollback target.
+
+**Iteration 6 changes nothing in Google Cloud.**
+- The new forms are local candidates.
+- `deploy/poc-allowlist.json` still approves only BNZ Boarder.
+- The `/v1/masterboard/documents` endpoint exists only in the source tree, not in the live revision.
+- A future revision follows the same `UPDATE_EXISTING=1` no-traffic candidate procedure below, after RSFA approves the
+  exact bundle, and adding any template to the allowlist needs RSFA's approval record.
+
+History:
 - RSFA approved the deployment and the template allowlist entry (Leonardo Melman, 2026-10-27, `RSFA-END-FORMS-POC-2026-10-27`).
 - RSFA ran `deploy_poc.sh` from Cloud Shell. See "Deployment record" below; it is taken from the deployer's
   `deployment-record.json`.
@@ -82,7 +93,7 @@ re-checked from this repository.
 | Verification | **Passed**: unauthenticated `/health` 403; authenticated `/health` 200; `/generate` 200; PDF SHA-256 `2ae7bfacf48b8ee8e63aaf9ce28997650abd2c07b59ddbeade9928ce3269d6f6` = local build; 7 fields + 2 overlays; no ticks, no signature values; logs: 16 entries, 0 fixture values |
 | Demo page | not in revision 1 (it predates commit `900187f`) |
 
-## Revision 2: add the demo page (prepared 2026-10-27, NOT deployed)
+## Revision 2: add the demo page (prepared 2026-10-27; deployed by RSFA as `00002-nan`, reported)
 
 **What changes:** only the image. The new image contains:
 - the demo page (`900187f`);

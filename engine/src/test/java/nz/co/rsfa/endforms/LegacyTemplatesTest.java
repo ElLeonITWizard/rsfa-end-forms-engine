@@ -191,6 +191,154 @@ class LegacyTemplatesTest {
         writeOutput("GHL_NP_Trust_POC.pdf", r.pdf());
     }
 
+    // ------------------------------------------------------------------ iteration 6: additional forms (candidates)
+
+    static final String ASB_BOARDER = "mappings/asb/ASB_BOARDER_DECLARATION@12-22.json";
+    static final String ANZ_BOARDER = "mappings/anz/ANZ_BOARDER_INCOME_DECLARATION@02-24.json";
+    static final String GHL_INDIVIDUAL = "mappings/ghl/GHL_NP_INDIVIDUAL_FORM@8-19.json";
+    static final String GHL_TRUST = "mappings/ghl/GHL_NP_TRUST_FORM@8-19.json";
+
+    @Test
+    void asbBoarderDeclarationOnEncryptedTemplate() throws IOException {
+        Case k = require(ASB_BOARDER, "tests/fixtures/asb-boarder.request.json");
+        FillResult r = FILLER.fill(k.template(), k.manifest(), k.data());
+        assertTrue(r.ok(), () -> r.issues().toString());
+        assertTrue(r.issues().isEmpty(), () -> r.issues().toString());
+        Map<String, String> expected = new TreeMap<>(Map.ofEntries(
+                Map.entry("Borrowers or Guarantors names", "Jane Example"),
+                Map.entry("Borrowers or Guarantors names 2", "John Sample"),
+                Map.entry("1", "12 Example Street"), Map.entry("2", "Testville Region"), Map.entry("3", "New Zealand"),
+                Map.entry("postcode", "0999"),
+                Map.entry("Number of adults living in the property", "2"),
+                Map.entry("Number of dependents living in the property", "1"),
+                Map.entry("Number of bedrooms", "4"),
+                Map.entry("Boarder Name if known", "Alex Boarder"),
+                Map.entry("Board amount excluding utilities and food", "250"),
+                Map.entry("frequency 1", "weekly"),
+                Map.entry("Boarder Name if known_2", "Sam Lodger"),
+                Map.entry("Board amount excluding utilities and food_2", "520"),
+                Map.entry("frequency 2", "fortnight"),
+                Map.entry("Full Name", "Jane Example"), Map.entry("Full Name_2", "John Sample"),
+                Map.entry("date 1", "27102026"), Map.entry("date 2", "27102026")));
+        assertEquals(expected, fieldValues(r.pdf(), expected.keySet()));
+        assertVisible(r.pdf(), k.template(), List.of("1", "Boarder Name if known", "frequency 1", "frequency 2", "date 1"));
+        try (PDDocument d = Loader.loadPDF(r.pdf())) {
+            assertTrue(d.isEncrypted(), "ASB's encryption must be preserved");
+        }
+        assertEquals(expected, fieldValues(FILLER.fill(k.template(), k.manifest(), k.data()).pdf(), expected.keySet()));
+
+        ObjectNode noFreq = k.data().deepCopy();
+        noFreq.remove("Boarders - Board amount 2 frequency");
+        FillResult missing = FILLER.fill(k.template(), k.manifest(), noFreq);
+        assertNull(missing.pdf(), "an amount without its frequency is incomplete");
+        assertTrue(missing.errors().stream().anyMatch(i -> i.code().equals("PRECONDITION_FAILED")
+                && i.message().contains("ASB-BOARDER-FREQ-2")), () -> missing.issues().toString());
+        writeOutput("ASB_Boarder_Declaration_POC.pdf", r.pdf());
+    }
+
+    @Test
+    void anzBoarderDeclarationWithOverlaysAndWeeklyGuard() throws IOException {
+        Case k = require(ANZ_BOARDER, "tests/fixtures/anz-boarder.request.json");
+        FillResult r = FILLER.fill(k.template(), k.manifest(), k.data());
+        assertTrue(r.ok(), () -> r.issues().toString());
+        assertTrue(r.issues().isEmpty(), () -> r.issues().toString());
+        Map<String, String> expected = new TreeMap<>(Map.of(
+                "Property address", "12 Example Street, Testville", "Town City", "Auckland", "Postcode", "0999",
+                "Cust Number", "100200300", "B1 Name", "Alex Boarder", "B1 Weekly Board", "250",
+                "B2 Name", "Sam Lodger", "B2 Weekly Board", "230"));
+        assertEquals(expected, fieldValues(r.pdf(), expected.keySet()));
+        assertVisible(r.pdf(), k.template(), expected.keySet());
+        assertOverlayText(r.pdf(), k.manifest(), Map.of("Applicant 1 Full Name", "Jane Example",
+                "Applicant 2 Full Name", "John Sample"));
+        assertEquals(Map.of("B1 Inclusive", "Off", "B2 Inclusive", "Off"),
+                fieldValues(r.pdf(), List.of("B1 Inclusive", "B2 Inclusive")), "not mapped: left for the customer");
+        byte[] again = FILLER.fill(k.template(), k.manifest(), k.data()).pdf();
+        assertTrue(java.util.Arrays.equals(r.pdf(), again), "unencrypted template: identical bytes for identical input");
+
+        ObjectNode fortnightly = k.data().deepCopy();
+        fortnightly.put("Boarders - Board amount 2 frequency", "Fortnightly");
+        FillResult refused = FILLER.fill(k.template(), k.manifest(), fortnightly);
+        assertNull(refused.pdf(), "a fortnightly amount must not be printed in the 'Weekly board amount' box");
+        assertEquals(List.of("PRECONDITION_FAILED"), refused.errors().stream().map(Issue::code).toList());
+        assertTrue(refused.errors().getFirst().message().contains("ANZ-BOARDER-WEEKLY-2"));
+        writeOutput("ANZ_Boarder_Income_Declaration_POC.pdf", r.pdf());
+    }
+
+    @Test
+    void ghlIndividualQuestionnaireWithClosedOptions() throws IOException {
+        Case k = require(GHL_INDIVIDUAL, "tests/fixtures/ghl-np-individual.request.json");
+        FillResult r = FILLER.fill(k.template(), k.manifest(), k.data());
+        assertTrue(r.ok(), () -> r.issues().toString());
+        assertTrue(r.issues().isEmpty(), () -> r.issues().toString());
+        Map<String, String> expected = new TreeMap<>(Map.of(
+                "Please specify your full name", "Jane Example",
+                "What is your primary occupation", "Fictional Test Analyst",
+                "Check Box84", "Yes", "Check Box85", "2", "Check Box86", "2", "Check Box87", "2",
+                "Check Box88", "4", "Check Box89", "1"));
+        assertEquals(expected, fieldValues(r.pdf(), expected.keySet()));
+        assertVisible(r.pdf(), k.template(), List.of("Check Box85", "Check Box88", "Text81"));
+
+        // live Monday label drift: '$150,001-$250,000' exists on the board and on the PDF, but the legacy rule tests
+        // '$150,000-$250,000'; MacroForge would leave 3a blank, the engine refuses
+        ObjectNode drift = k.data().deepCopy();
+        drift.put("Total credits or deposits (next 12 months) (ASB)", "$150,001-$250,000");
+        FillResult refused = FILLER.fill(k.template(), k.manifest(), drift);
+        assertNull(refused.pdf());
+        assertEquals(List.of("UNMAPPED_OPTION:Total credits or deposits (next 12 months) (ASB)"),
+                refused.errors().stream().map(i -> i.code() + ":" + i.sourceKey()).toList());
+
+        ObjectNode both = k.data().deepCopy();
+        both.put("What do you intend to use your accounts for? (GHL Individual)", "Everyday personal banking, To borrow money");
+        assertEquals(List.of("MULTI_SELECT_NOT_REPRESENTABLE"),
+                FILLER.fill(k.template(), k.manifest(), both).errors().stream().map(Issue::code).toList());
+        writeOutput("GHL_NP_Individual_POC.pdf", r.pdf());
+    }
+
+    @Test
+    void ghlTrustQuestionnaireWithLiveMondayLabels() throws IOException {
+        Case k = require(GHL_TRUST, "tests/fixtures/ghl-np-trust-live-labels.request.json");
+        FillResult r = FILLER.fill(k.template(), k.manifest(), k.data());
+        assertTrue(r.ok(), () -> r.issues().toString());
+        Map<String, String> expected = new TreeMap<>(Map.of(
+                "Full trustorganisation name", "Example Family Trust",
+                "Check Box94", "No", "undefined", "Fictional: refinance from another lender",
+                "Check Box95", "1", "Check Box96", "1", "Check Box99", "3",
+                "Check Box101", "1", "Check Box102", "3", "Check Box103", "4", "Check Box104", "1"));
+        assertEquals(expected, fieldValues(r.pdf(), expected.keySet()));
+        assertEquals("Yes", fieldValues(r.pdf(), List.of("Check Box105")).get("Check Box105"));
+        ObjectNode drift = k.data().deepCopy();
+        drift.put("Int Transfers OUT - Average Value per Payment (GHL Trust)", "$1,000-$10,000");
+        assertEquals(List.of("UNMAPPED_OPTION:Int Transfers OUT - Average Value per Payment (GHL Trust)"),
+                FILLER.fill(k.template(), k.manifest(), drift).errors().stream()
+                        .map(i -> i.code() + ":" + i.sourceKey()).toList());
+        writeOutput("GHL_NP_Trust_live_labels_POC.pdf", r.pdf());
+    }
+
+    @Test
+    void curatedManifestsNeverTickWithoutAnAuthorizedRule() throws IOException {
+        for (String[] c : List.of(new String[] {ASB_BOARDER, "tests/fixtures/asb-boarder.request.json"},
+                new String[] {ANZ_BOARDER, "tests/fixtures/anz-boarder.request.json"},
+                new String[] {GHL_INDIVIDUAL, "tests/fixtures/ghl-np-individual.request.json"},
+                new String[] {GHL_TRUST, "tests/fixtures/ghl-np-trust-live-labels.request.json"})) {
+            Case k = require(c[0], c[1]);
+            FillResult r = FILLER.fill(k.template(), k.manifest(), k.data());
+            assertTrue(r.ok(), c[0]);
+            java.util.Set<String> ruled = new java.util.HashSet<>();
+            k.manifest().fields().forEach(f -> ruled.add(f.pdfField()));
+            try (PDDocument d = Loader.loadPDF(r.pdf())) {
+                for (PDField f : d.getDocumentCatalog().getAcroForm().getFieldTree()) {
+                    if (f instanceof org.apache.pdfbox.pdmodel.interactive.form.PDSignatureField) {
+                        assertNull(f.getCOSObject().getDictionaryObject(org.apache.pdfbox.cos.COSName.V), "signature " + f.getFullyQualifiedName());
+                    }
+                    if (f instanceof org.apache.pdfbox.pdmodel.interactive.form.PDButton && !ruled.contains(f.getFullyQualifiedName())) {
+                        String v = f.getValueAsString();
+                        assertTrue(v.isEmpty() || v.equals("Off"), c[0] + ": unruled button on: " + f.getFullyQualifiedName());
+                    }
+                }
+            }
+        }
+    }
+
     @Test
     void everyCommittedManifestResolvesAgainstItsTemplate() throws IOException {
         assumeTrue(Files.isDirectory(REPO.resolve("mappings")) && Files.isDirectory(TEMPLATES), "no mappings/templates");

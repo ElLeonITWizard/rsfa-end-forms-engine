@@ -1,0 +1,136 @@
+{
+  "_comment": "Bank -> lender forms, as in MacroForge Flow C (one PDF Batch Filler per 'Banks to Send Contains <bank>' block; the ASB block also holds the GHL forms; All Banks_DOAD.pdf is always filled). Bank labels are the live 'Selected Banks' dropdown labels (column dropdown_mkzvfgeg, board 5026186805, read 2026-10-27). Status: tested | candidate (synthetic tests pass, awaiting RSFA review) | blocked (open blocking question, docs/06) | partial | untested | not-migrated. Bank selection generates only 'tested' forms, plus 'candidate' with includeCandidates=true; everything else is reported in notMigrated so MacroForge stays responsible for it during the parallel run (D-025).",
+  "contract": "masterboard.v1",
+  "banks": {
+    "ASB": [
+      {
+        "legacyPdfName": "ASB Home Loan Boarder Declaration Form.pdf",
+        "templateId": "ASB_BOARDER_DECLARATION",
+        "templateVersion": "12-22",
+        "status": "candidate"
+      },
+      {
+        "legacyPdfName": "ASB&GHL_AdvDec_05 25.pdf",
+        "status": "not-migrated"
+      },
+      {
+        "legacyPdfName": "ASB_AdvDec_LoanStructure_6 25.pdf",
+        "status": "not-migrated"
+      },
+      {
+        "legacyPdfName": "ASB_CAD_6 19.pdf",
+        "status": "not-migrated"
+      },
+      {
+        "legacyPdfName": "GHL_DD_11 24.pdf",
+        "status": "not-migrated"
+      },
+      {
+        "legacyPdfName": "GHL_N&P Individual_8 19.pdf",
+        "templateId": "GHL_NP_INDIVIDUAL_FORM",
+        "templateVersion": "8-19",
+        "status": "candidate"
+      },
+      {
+        "legacyPdfName": "GHL_N&P Trust_8 19.pdf",
+        "templateId": "GHL_NP_TRUST_FORM",
+        "templateVersion": "8-19",
+        "status": "blocked"
+      }
+    ],
+    "KiwiBank": [
+      {
+        "legacyPdfName": "KB_FMS Form_Oct24_v5.pdf",
+        "status": "not-migrated"
+      },
+      {
+        "legacyPdfName": "KB_Handover Form_May25.pdf",
+        "templateId": "KB_HANDOVER_FORM",
+        "templateVersion": "May25",
+        "status": "untested"
+      },
+      {
+        "legacyPdfName": "KB_Stat Dec_No date.pdf",
+        "status": "not-migrated"
+      }
+    ],
+    "WBC": [
+      {
+        "legacyPdfName": "WBC_BoarderForm_12 24.pdf",
+        "status": "not-migrated"
+      },
+      {
+        "legacyPdfName": "WBC_Entity_GACTA_5 24.pdf",
+        "status": "not-migrated"
+      },
+      {
+        "legacyPdfName": "WBC_Ind_GATCA_5 24.pdf",
+        "status": "not-migrated"
+      },
+      {
+        "legacyPdfName": "WBC_LoanStructure_4 23.pdf",
+        "status": "not-migrated"
+      },
+      {
+        "legacyPdfName": "WBC_Refix_4 23.pdf",
+        "status": "not-migrated"
+      }
+    ],
+    "ANZ": [
+      {
+        "legacyPdfName": "ANZ_Entity_FACTA_8 25.pdf",
+        "status": "not-migrated"
+      },
+      {
+        "legacyPdfName": "ANZ_Individual_FACTA_8 25.pdf",
+        "status": "not-migrated"
+      },
+      {
+        "legacyPdfName": "Boarder-Income-Declaration 12.02.24.pdf",
+        "templateId": "ANZ_BOARDER_INCOME_DECLARATION",
+        "templateVersion": "02-24",
+        "status": "candidate"
+      },
+      {
+        "legacyPdfName": "Gift Declaration form 23.02.26.pdf",
+        "status": "not-migrated"
+      }
+    ],
+    "BNZ": [
+      {
+        "legacyPdfName": "BNZ_BoarderForm_2.0_8 24.pdf",
+        "templateId": "BNZ_BOARDER_FORM",
+        "templateVersion": "2.0_8-24",
+        "status": "tested"
+      },
+      {
+        "legacyPdfName": "BNZ_Handover_8 24.pdf",
+        "templateId": "BNZ_HANDOVER_FORM",
+        "templateVersion": "8-24",
+        "status": "partial"
+      },
+      {
+        "legacyPdfName": "BNZ_Onboarding_Entities_CoysTrusts_5 22.pdf",
+        "status": "not-migrated"
+      },
+      {
+        "legacyPdfName": "BNZ_Onboarding_IndividualPersonal_7 24.pdf",
+        "status": "not-migrated"
+      },
+      {
+        "legacyPdfName": "BNZ_Onboarding_JointPersonal_9 22.pdf",
+        "status": "not-migrated"
+      },
+      {
+        "legacyPdfName": "BNZ Gifting declaration template.pdf",
+        "status": "not-migrated"
+      }
+    ]
+  },
+  "always": [
+    {
+      "legacyPdfName": "All Banks_DOAD.pdf",
+      "status": "not-migrated"
+    }
+  ]
+}

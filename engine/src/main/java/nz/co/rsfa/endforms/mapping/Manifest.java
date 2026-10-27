@@ -21,7 +21,8 @@ public record Manifest(
         FontFallback fontFallback,
         List<FieldRule> fields,
         List<Overlay> overlays,
-        List<JsonNode> unsupported) {
+        List<JsonNode> unsupported,
+        Validation validation) {
 
     public static final int SUPPORTED_SCHEMA_VERSION = 1;
 
@@ -64,7 +65,45 @@ public record Manifest(
                           Double fontSize) {
     }
 
+    /**
+     * Data checks applied before any field is planned (reviewed per template; see docs/06). No data values are
+     * ever reported, only keys, rule ids and codes.
+     *
+     * @param closedOptions keys whose value must select one of this manifest's {@code when} rules
+     * @param requires      business preconditions, e.g. "a board amount is only valid for this form if weekly"
+     */
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record Validation(List<ClosedOption> closedOptions, List<Requirement> requires) {
+        public Validation {
+            closedOptions = closedOptions == null ? List.of() : List.copyOf(closedOptions);
+            requires = requires == null ? List.of() : List.copyOf(requires);
+        }
+    }
+
+    /**
+     * A choice column whose every value must be represented on the form.
+     *
+     * @param key         data key (Monday column title) used by the manifest's {@code when} rules
+     * @param multiSelect the Monday column allows several labels (its text is joined with ", "); the legacy
+     *                    {@code equals} rules can only represent one, so more than one is refused
+     * @param onUnmapped  {@code error} (default): refuse the document; {@code blank}: leave the boxes empty with a warning
+     */
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record ClosedOption(String key, boolean multiSelect, String onUnmapped) {
+    }
+
+    /**
+     * When {@code ifPresent} has a value, {@code require} must hold, otherwise the document is refused.
+     *
+     * @param id     stable identifier reported in issues
+     * @param reason why, in business terms (reported; must not contain data)
+     */
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record Requirement(String id, String ifPresent, FieldRule.Condition require, String reason) {
+    }
+
     public Manifest {
+        validation = validation == null ? new Validation(null, null) : validation;
         encryption = encryption == null ? EncryptionPolicy.reject : encryption;
         sourceKeyNormalization = sourceKeyNormalization == null ? KeyNormalization.none : sourceKeyNormalization;
         fontFallback = fontFallback == null ? FontFallback.none : fontFallback;

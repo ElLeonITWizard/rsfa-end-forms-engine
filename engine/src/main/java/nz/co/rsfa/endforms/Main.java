@@ -140,7 +140,9 @@ public final class Main {
         ApiServer.requirePlatformForIam(auth, env);
         TemplateCatalog catalog = TemplateCatalog.load(Path.of(env.getOrDefault("ENGINE_MAPPINGS_DIR", "mappings")),
                 dirs(env.getOrDefault("ENGINE_TEMPLATE_DIRS", ".local/generated/templates")));
-        ApiServer server = new ApiServer(catalog, new FormFiller(), auth, apiKey);
+        String hmac = env.get("ENGINE_HMAC_SECRET"); // optional request signature for /v1 (D-026); never logged
+        ApiServer server = new ApiServer(catalog, new FormFiller(), auth, apiKey,
+                hmac == null || hmac.isBlank() ? null : hmac, java.time.Clock.systemUTC());
         int bound = server.start(host, port);
         System.err.printf("end-forms-engine listening on %s:%d auth=%s templates=%d%n", host, bound, auth,
                 catalog.manifests().size());
@@ -169,7 +171,7 @@ public final class Main {
                   inspect --pdf FILE
                   fill --manifest FILE --data FILE --out FILE [--templates DIR[:DIR]] [--today YYYY-MM-DD]
                   render --pdf FILE --out-dir DIR [--dpi N]
-                  serve   (env: PORT, ENGINE_BIND, ENGINE_AUTH, ENGINE_API_KEY, ENGINE_MAPPINGS_DIR, ENGINE_TEMPLATE_DIRS)""");
+                  serve   (env: PORT, ENGINE_BIND, ENGINE_AUTH, ENGINE_API_KEY, ENGINE_HMAC_SECRET, ENGINE_MAPPINGS_DIR, ENGINE_TEMPLATE_DIRS)""");
         return 1;
     }
 }

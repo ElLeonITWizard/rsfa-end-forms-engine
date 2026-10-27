@@ -15,7 +15,7 @@ Safety checks (any failure aborts and leaves no context behind):
   * template SHA-256 == allowlist == manifest templateSha256;
   * templates are blank: no text/choice field has a value (a filled client PDF can never be staged by mistake);
   * no staged file is an export (.mforge/.xlsx/blueprint) or contains webhook URLs;
-  * the demo UI assets are present, load nothing from another origin (no CDN), and only offer allowlisted templates;
+  * the demo UI assets are present, load nothing from another origin (no CDN), and offer at least one allowlisted template;
   * the output directory must be inside <repo>/.local/.
 
 Usage:
@@ -73,17 +73,21 @@ def blank_problem(pdf: Path) -> str | None:
 
 
 def ui_problem(ui_dir: Path, allowed: set[str]) -> str | None:
-    """The demo UI must be complete, self-contained (no CDN/third-party URLs) and offer only allowlisted templates."""
+    """The demo UI must be complete, self-contained (no CDN/third-party URLs) and offer at least one allowlisted template.
+
+    forms.json may also list local-only candidate templates: the page shows only the templates that /health reports as
+    usable, and a staged image contains only allowlisted templates, so the others are never offered on Cloud Run (D-024).
+    """
     for name in UI_ASSETS:
         p = ui_dir / name
         if not p.is_file():
             return f"demo UI asset missing: {name}"
         if EXTERNAL_URL.search(p.read_text(encoding="utf-8", errors="ignore")):
             return f"demo UI asset references another origin: {name}"
-    for t in json.loads((ui_dir / "forms.json").read_text(encoding="utf-8")).get("templates", []):
-        key = f"{t.get('templateId')}@{t.get('templateVersion')}"
-        if key not in allowed:
-            return f"demo UI offers a template that is not allowlisted: {key}"
+    offered = {f"{t.get('templateId')}@{t.get('templateVersion')}"
+               for t in json.loads((ui_dir / "forms.json").read_text(encoding="utf-8")).get("templates", [])}
+    if not offered & allowed:
+        return "demo UI offers no allowlisted template"
     return None
 
 

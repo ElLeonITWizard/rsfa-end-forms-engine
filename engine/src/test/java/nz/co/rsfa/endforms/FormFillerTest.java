@@ -422,4 +422,64 @@ class FormFillerTest {
         assertNotNull(m.unsupported());
         assertTrue(m.overlays().isEmpty());
     }
+
+    // ------------------------------------------------------------------ manifest validation (D-023)
+
+    static final String CLOSED = """
+            "validation":{"closedOptions":[{"key":"Freq","multiSelect":true}],
+              "requires":[{"id":"TEST-WEEKLY","ifPresent":"Postcode",
+                           "require":{"key":"Freq","operator":"equals","value":"Weekly"},"reason":"test form is weekly only"},
+                          {"id":"TEST-PRESENT","ifPresent":"Applicant 1 Full Name",
+                           "require":{"key":"Consent","operator":"present"},"reason":"consent answer needed"}]},""";
+
+    @Test
+    void closedOptionsRefuseValuesThatNoBoxRepresents() throws IOException {
+        Manifest m = manifest("\"validation\":{\"closedOptions\":[{\"key\":\"Freq\"}]},", ALL_RULES, template);
+        assertTrue(FILLER.fill(template, m, data(JANE)).ok(), "Fortnightly is represented by a contains rule");
+        FillResult renamed = FILLER.fill(template, m, data(JANE.replace("Fortnightly", "Every two weeks")));
+        assertNull(renamed.pdf(), "a renamed Monday label must not leave the boxes silently blank");
+        assertEquals(List.of("UNMAPPED_OPTION"), codes(renamed));
+        assertEquals("Freq", renamed.issues().getFirst().sourceKey());
+        assertFalse(renamed.issues().toString().contains("Every two weeks"), "issues never echo values");
+        assertTrue(FILLER.fill(template, m, data(JANE.replace("\"Freq\":\"Fortnightly\",", ""))).ok(),
+                "an absent value is handled by the field rules, not by closedOptions");
+
+        Manifest blank = manifest("\"validation\":{\"closedOptions\":[{\"key\":\"Freq\",\"onUnmapped\":\"blank\"}]},",
+                ALL_RULES, template);
+        FillResult b = FILLER.fill(template, blank, data(JANE.replace("Fortnightly", "Every two weeks")));
+        assertTrue(b.ok());
+        assertEquals(List.of("UNMAPPED_OPTION_LEFT_BLANK"), codes(b));
+        assertEquals("Off", values(b.pdf()).get("Frequency"));
+    }
+
+    @Test
+    void multiSelectValuesThatLegacyEqualsRulesCannotRepresentAreRefused() throws IOException {
+        Manifest m = manifest("\"validation\":{\"closedOptions\":[{\"key\":\"Freq\",\"multiSelect\":true}]},",
+                ALL_RULES, template);
+        FillResult r = FILLER.fill(template, m, data(JANE.replace("Fortnightly", "Weekly, Monthly")));
+        assertNull(r.pdf());
+        assertEquals(List.of("MULTI_SELECT_NOT_REPRESENTABLE"), codes(r));
+        assertEquals("1", values(FILLER.fill(template, m, data(JANE.replace("Fortnightly", "Weekly"))).pdf()).get("Frequency"));
+    }
+
+    @Test
+    void preconditionsRefuseDocumentsThatWouldMisstateAValue() throws IOException {
+        Manifest m = manifest(CLOSED, ALL_RULES, template);
+        FillResult r = FILLER.fill(template, m, data(JANE));
+        assertNull(r.pdf(), "Postcode present but Freq is not Weekly");
+        assertEquals(List.of("PRECONDITION_FAILED"), codes(r));
+        assertTrue(r.issues().getFirst().message().contains("TEST-WEEKLY"));
+        assertTrue(FILLER.fill(template, m, data(JANE.replace("Fortnightly", "Weekly"))).ok());
+        FillResult noConsent = FILLER.fill(template, m, data(JANE.replace("Fortnightly", "Weekly").replace("\"Consent\":\"Yes\",", "")));
+        assertEquals(List.of("PRECONDITION_FAILED"), codes(noConsent).stream().filter(c -> !c.equals("SOURCE_KEY_ABSENT")).toList());
+        assertTrue(noConsent.issues().stream().anyMatch(i -> i.message().contains("TEST-PRESENT")));
+        assertTrue(FILLER.fill(template, m, data(JANE.replace("\"Postcode\":\"0999\",", ""))).ok(),
+                "no trigger value, no requirement");
+    }
+
+    @Test
+    void closedOptionKeyWithoutRuleIsAnInvalidManifest() throws IOException {
+        Manifest m = manifest("\"validation\":{\"closedOptions\":[{\"key\":\"Nope\"}]},", ALL_RULES, template);
+        assertEquals(List.of("INVALID_RULE"), codes(FILLER.fill(template, m, data(JANE))));
+    }
 }

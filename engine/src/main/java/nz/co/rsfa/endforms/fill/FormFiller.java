@@ -97,6 +97,7 @@ public final class FormFiller {
             run.warning("UNSUPPORTED_LEGACY_RULE", text(u, "pdfField"), text(u, "sourceKey"),
                     "legacy rule not migrated: " + text(u, "legacyType"));
         }
+        validate(manifest, data, run);
 
         try (PDDocument doc = Loader.loadPDF(template)) {
             boolean incremental = false;
@@ -670,7 +671,7 @@ public final class FormFiller {
     }
 
     private Boolean matches(FieldRule.Condition c, JsonNode data, String field, Run run) {
-        if (c.key() == null || c.operator() == null || c.value() == null) {
+        if (c.key() == null || c.operator() == null || (c.value() == null && c.operator() != FieldRule.Operator.present)) {
             run.error("INVALID_RULE", field, c.key(), "condition needs key, operator and value");
             return null;
         }
@@ -690,7 +691,73 @@ public final class FormFiller {
         return switch (c.operator()) {
             case equals -> s.equals(c.value());
             case contains -> s.contains(c.value());
+            case present -> !s.isBlank();
         };
+    }
+
+    // ------------------------------------------------------------------ manifest validation (D-023)
+
+    /** Separator Monday uses in the {@code .text} of a multi-label dropdown. */
+    static final String MULTI_SELECT_SEPARATOR = ", ";
+
+    /**
+     * Applies the manifest's reviewed data checks: closed options (every incoming choice value must be represented by
+     * a rule, so a renamed Monday label or a multi-selection never leaves boxes silently blank) and business
+     * preconditions. Issues carry keys, rule ids and codes only.
+     */
+    private void validate(Manifest manifest, JsonNode data, Run run) {
+        for (Manifest.ClosedOption co : manifest.validation().closedOptions()) {
+            List<FieldRule.Condition> conds = manifest.fields().stream()
+                    .map(r -> r.source() == null ? null : r.source().when())
+                    .filter(c -> c != null && co.key() != null && co.key().equals(c.key())).toList();
+            if (conds.isEmpty()) {
+                run.error("INVALID_RULE", null, co.key(), "closedOptions key has no when-rule in this manifest");
+                continue;
+            }
+            JsonNode v = data.get(co.key());
+            if (v == null || v.isNull() || (v.isTextual() && v.asText().isBlank())) {
+                continue; // absence is handled by the field rules (SOURCE_KEY_ABSENT / not selected)
+            }
+            if (!v.isValueNode() || v.isBoolean()) {
+                run.error("AMBIGUOUS_SOURCE_VALUE", null, co.key(), "closed-option source must be a text value");
+                continue;
+            }
+            String value = v.asText();
+            if (co.multiSelect() && value.contains(MULTI_SELECT_SEPARATOR)) {
+                run.error("MULTI_SELECT_NOT_REPRESENTABLE", null, co.key(),
+                        "several labels selected; this form's legacy rules can represent only one");
+                continue;
+            }
+            boolean represented = conds.stream().anyMatch(c -> switch (c.operator()) {
+                case equals -> value.equals(c.value());
+                case contains -> c.value() != null && value.contains(c.value());
+                case present -> false;
+            });
+            if (!represented) {
+                if ("blank".equals(co.onUnmapped())) {
+                    run.warning("UNMAPPED_OPTION_LEFT_BLANK", null, co.key(),
+                            "value matches no box on this form; boxes left blank by reviewed policy");
+                } else {
+                    run.error("UNMAPPED_OPTION", null, co.key(),
+                            "value matches no box on this form (renamed Monday label or missing rule); not generated");
+                }
+            }
+        }
+        for (Manifest.Requirement req : manifest.validation().requires()) {
+            if (req.ifPresent() == null || req.require() == null) {
+                run.error("INVALID_RULE", null, req.ifPresent(), "requirement " + req.id() + " needs ifPresent and require");
+                continue;
+            }
+            JsonNode trigger = data.get(req.ifPresent());
+            if (trigger == null || trigger.isNull() || (trigger.isTextual() && trigger.asText().isBlank())) {
+                continue;
+            }
+            Boolean ok = matches(req.require(), data, null, run);
+            if (ok != null && !ok) {
+                run.error("PRECONDITION_FAILED", null, req.require().key(),
+                        "requirement " + req.id() + " not met: " + req.reason());
+            }
+        }
     }
 
     // ------------------------------------------------------------------ helpers

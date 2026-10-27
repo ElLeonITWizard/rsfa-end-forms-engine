@@ -1,0 +1,47 @@
+{
+  "templateId": "GHL_NP_INDIVIDUAL_FORM",
+  "templateVersion": "8-19",
+  "templateSha256": "f256b95d6ecf4bd580644780fa11d6a600d69dff01d61945d01fd850e79fdca4",
+  "validation": {
+    "closedOptions": [
+      {
+        "key": "What do you intend to use your accounts for? (GHL Individual)",
+        "multiSelect": true,
+        "onUnmapped": "error"
+      },
+      {
+        "key": "Total credits or deposits (next 12 months) (ASB)",
+        "multiSelect": false,
+        "onUnmapped": "error"
+      },
+      {
+        "key": "Cash deposits frequency (ASB)",
+        "multiSelect": false,
+        "onUnmapped": "error"
+      },
+      {
+        "key": "Cash deposits average value per deposit (ASB)",
+        "multiSelect": false,
+        "onUnmapped": "error"
+      },
+      {
+        "key": "International payments frequency (ASB)",
+        "multiSelect": false,
+        "onUnmapped": "error"
+      },
+      {
+        "key": "International payments average value per payment (ASB)",
+        "multiSelect": false,
+        "onUnmapped": "error"
+      }
+    ]
+  },
+  "review": {
+    "status": "candidate",
+    "meaning": "synthetic tests pass and every rule was checked against the printed label and the live Monday labels; not approved by RSFA, not compared with a MacroForge output",
+    "openQuestions": [
+      "Live Monday labels with no rule (label drift since the legacy configuration): '$150,001-$250,000' and 'Occasionally (monthly / quarterly)' (cash deposits and international payments). The engine refuses these values (UNMAPPED_OPTION) until RSFA decides whether to update the rules; MacroForge would leave the boxes blank.",
+      "'What do you intend to use your accounts for?' is multi-select on Monday; the legacy equals rules represent one label only, so two labels are refused (MULTI_SELECT_NOT_REPRESENTABLE)."
+    ]
+  }
+}

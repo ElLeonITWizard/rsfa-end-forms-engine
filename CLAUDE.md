@@ -31,14 +31,21 @@ README.md                 5-minute quickstart
 docs/01-context-and-architecture.md   RSFA/Make/Monday/MacroForge context, data contract, security
 docs/02-poc-guide-and-tests.md        manifest schema, POC steps, what is supported, tests, gaps
 docs/03-migration-inventory.md        evidence-based inventory of the legacy .mforge
-docs/04-cloud-run-deployment.md       Cloud Run runbook (prepared, not executed), rollback
+docs/04-cloud-run-deployment.md       Cloud Run runbook (run by RSFA: revisions 1 and 2), deployment record, rollback
 docs/05-demo-script.md                demo page: secure access (gcloud run services proxy) + what to click
+docs/06-template-coverage.md          form selection, readiness levels, open questions, forms not chosen
+docs/07-make-integration.md           Make contract masterboard.v1, auth options, filing, Monday status, test plan
+docs/generated/template-coverage.md   GENERATED per-form coverage report (tools/coverage_report.py)
 docs/decisions.md                     decision log (ADR-lite)
 tools/import_mforge.py    legacy importer (inventory | extract | manifest)
 tools/stage_deploy.py     builds the minimal, approved build context for Cloud Run (allowlist + SHA + blank check)
+tools/coverage_report.py  per-form coverage report from manifests (+ live Monday column schema, Make key contract)
+curation/                 reviewed per-form validation (closedOptions, requires) + review status, merged by the importer
+contracts/                Make contract JSON Schema (masterboard.v1) + fictional example requests
 deploy/                   poc-allowlist.json (approved templates), cloudbuild.yaml, deploy_poc.sh (end-to-end deployment),
                           make_bundle.sh (Cloud Shell bundle), verify_pdf.py (post-deploy PDF checks), bucket lifecycle
-engine/                   Maven project: library, CLI (inspect | fill | render | serve), HTTP API, demo page, Dockerfile
+engine/                   Maven project: library, CLI (inspect | fill | render | serve), HTTP API (/health, /generate,
+                          /v1/masterboard/documents), demo page, routing table (resources/routing), Dockerfile
 mappings/<lender>/<TEMPLATE_ID>@<version>.json   imported manifests (no client data; reviewed)
 tests/fixtures/           synthetic requests (fictional "Jane Example" data only)
 tests/importer/           importer + staging unit tests (synthetic .mforge)
@@ -61,7 +68,9 @@ java -jar engine/target/end-forms-engine.jar fill --manifest "mappings/bnz/BNZ_B
 java -jar engine/target/end-forms-engine.jar render --pdf .local/output/BNZ_BoarderForm_POC.pdf --out-dir .local/output
 docker build --network host -f engine/Dockerfile --target runtime-prebuilt -t end-forms-engine:prebuilt .   # see docs/02
 ENGINE_AUTH=NONE java -jar engine/target/end-forms-engine.jar serve                 # demo page on http://localhost:8080/ (loopback only)
-node tests/ui/demo_smoke.js http://127.0.0.1:8080/ .local/output/ui-smoke          # browser smoke test (server must be running)
+node tests/ui/demo_smoke.js http://127.0.0.1:8080/ .local/output/ui-smoke 5        # browser smoke test (server running; 5 = forms offered)
+python3 tools/coverage_report.py --board .local/reference/masterboard-columns-<date>.json \
+  --contract .local/reference/8731317_result_key_contract.tsv --date <YYYY-MM-DD> --out docs/generated/template-coverage.md
 ```
 
 The legacy-template tests (`LegacyTemplatesTest`) are **skipped** unless the templates have been
@@ -90,6 +99,16 @@ extracted to `.local/generated/templates/`. A green build without them proves on
 
 ## Current status (2026-10-27, iteration 6)
 
+- **Iteration 6 (local only; nothing deployed or changed in Make, Monday, SharePoint or GCP):**
+  - Forms: ASB Boarder, ANZ Boarder and GHL Individual are **candidates**; GHL Trust is **blocked** (docs/06).
+  - Not in the Cloud Run allowlist. The demo page lists only templates `/health` reports usable.
+  - Manifest `validation` (D-023):
+    - closed options refuse drifted Monday labels and multi-selections instead of leaving boxes blank;
+    - preconditions refuse misstated amounts (ANZ weekly).
+  - Make contract `POST /v1/masterboard/documents` (D-025). Auth recommendation is API Gateway or a relay; IAM is kept
+    and there are no SA keys (D-026, proposed).
+  - Live board schema findings: `Selected Banks` (was "Banks to Send"), a new `Historical` status, and label drift (docs/06/07).
+
 - **BNZ Boarder is complete**, including Customer name(s):
   - 7 imported fields + 2 legacy overlays (`rect / 1.2`, docs/03);
   - deterministic (identical bytes across runs, host and container);
@@ -97,8 +116,8 @@ extracted to `.local/generated/templates/`. A green build without them proves on
 - **Declarations:** template-preset ticks are cleared (BNZ Handover `Confirmation`). Constant ticks need a validated approval.
 - **Comb dates** (e.g. BNZ Handover `Date 3`): centred, with printed placeholders knocked out using the measured background.
 - **LineItems:** BNZ Handover fills 3 synthetic facilities into rows 1–3.
-- **Coverage, Flow C:** 1,013 mappings = 804 imported + 19 unsupported + 138 unresolved + 52 inert. Only 3 templates
-  are tested end-to-end. **Equivalence with MacroForge is not proven.**
+- **Coverage, Flow C:** 1,013 mappings = 804 imported + 19 unsupported + 138 unresolved + 52 inert. Six templates are
+  tested end-to-end (BNZ Handover partially). **Equivalence with MacroForge is not proven.**
 - **Demo page (iteration 5):** BNZ Boarder only, synthetic sample, preview + download + provenance.
   - Browser-tested (20 checks) on the host, in the POC image, and behind an emulated IAM layer + `gcloud run services proxy`.
   - The unedited sample gives the fixture's exact SHA-256.
@@ -106,19 +125,18 @@ extracted to `.local/generated/templates/`. A green build without them proves on
 - **Cloud Run: revision 1 deployed by RSFA (2026-10-27).**
   - `rsfa-end-forms-engine-00001-6qm`, IAM required, BNZ Boarder only, verified (docs/04 "Deployment record").
   - It has no demo page.
-- **Revision 2 (demo page): authorised by RSFA, prepared, NOT deployed.**
-  - `UPDATE_EXISTING=1 EXPECT_PREVIOUS_REVISION=rsfa-end-forms-engine-00001-6qm bash deploy_poc.sh`, run from Cloud Shell
-    by RSFA (docs/04 "Revision 2").
-  - The candidate is verified with no traffic before promotion. Rollback is a single `update-traffic` command.
-  - This environment has no Google Cloud credentials and never deploys.
+- **Revision 2 `rsfa-end-forms-engine-00002-nan` (demo page) is live**, as reported by RSFA; its record is not yet
+  handed back. Rollback target: `00001-6qm` (docs/04). It must stay stable: no new revision without RSFA's explicit
+  approval. This environment has no Google Cloud credentials and never deploys.
 - `/health` reports usable templates only (`templates` + `available`, D-022). The demo badge counts the forms the page
   offers that are usable.
-- **Open decisions** (docs/02 "Known gaps"):
+- **Open decisions** (docs/02 "Known gaps", docs/06, docs/07):
+  - the candidate forms' open questions and the GHL label fixes (docs/06);
+  - the Make → Cloud Run authentication option (API Gateway vs relay) and the dedicated Monday engine-status column (docs/07);
   - 36 constant ticks;
   - the DDMMYYYY → 6-cell date transform;
   - the LineItems name conflict;
-  - the `8731317` re-trigger guard;
-  - Make service-to-service auth.
+  - the `8731317` re-trigger guard.
 
 ## Keep the docs true
 

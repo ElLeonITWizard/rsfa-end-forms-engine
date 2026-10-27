@@ -31,7 +31,7 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 
-IMPORTER_VERSION = "0.2.0"
+IMPORTER_VERSION = "0.3.0"
 BATCH_FILLER = "PDF Batch Filler"
 SINGLE_FILLER = "PDF Filler"
 CONDITIONAL = "Conditional Block"
@@ -641,6 +641,43 @@ def select_template(doc: dict, pdf_name: str, flow: str | None, sha: str | None)
     return hits[0]
 
 
+CURATION_KEYS = {"templateId", "templateVersion", "templateSha256", "validation", "review"}
+
+
+def apply_curation(manifest: dict, path: Path) -> None:
+    """Merge a reviewed, version-controlled curation file (curation/<ID>@<version>.json) into a manifest.
+
+    Only `validation` (closedOptions, requires) and `review` (readiness notes) are taken. The file must name the same
+    template and SHA-256, and every closed-option key must be used by a `when` rule, so a curation can never point at
+    another template or invent rules. It holds no data values.
+    """
+    cur = json.loads(path.read_text(encoding="utf-8"))
+    unknown = set(cur) - CURATION_KEYS
+    if unknown:
+        raise SystemExit(f"curation {path.name}: unknown keys {sorted(unknown)}")
+    for k in ("templateId", "templateVersion", "templateSha256"):
+        if cur.get(k) != manifest[k]:
+            raise SystemExit(f"curation {path.name}: {k} does not match the manifest")
+    when_keys = {e["source"]["when"]["key"] for e in manifest["fields"] if "when" in e.get("source", {})}
+    v = cur.get("validation", {})
+    for co in v.get("closedOptions", []):
+        if co.get("key") not in when_keys:
+            raise SystemExit(f"curation {path.name}: closedOptions key is not used by a when-rule: {co.get('key')}")
+        if co.get("onUnmapped", "error") not in ("error", "blank"):
+            raise SystemExit(f"curation {path.name}: onUnmapped must be error or blank")
+    for r in v.get("requires", []):
+        req = r.get("require") or {}
+        if not (r.get("id") and r.get("ifPresent") and req.get("key") and r.get("reason")
+                and (req.get("operator") == "present"
+                     or (req.get("operator") in ("equals", "contains") and isinstance(req.get("value"), str)))):
+            raise SystemExit(f"curation {path.name}: requirement needs id, ifPresent, require{{key,operator,value}}, reason")
+    if v:
+        manifest["validation"] = v
+    if "review" in cur:
+        manifest["review"] = cur["review"]
+    manifest["provenance"]["curation"] = f"curation/{path.name} sha256 {sha256(path.read_bytes())[:12]}"
+
+
 def cmd_manifest(args) -> int:
     src = Path(args.mforge)
     doc = load_mforge(src)
@@ -692,6 +729,8 @@ def cmd_manifest(args) -> int:
     mapped = {e["pdfField"] for e in cls.entries}
     manifest["unmappedPdfFields"] = sorted(n for n, f in info["fields"].items()
                                            if n not in mapped and f.kind not in ("pushbutton",))
+    if args.curation:
+        apply_curation(manifest, Path(args.curation))
     text = json.dumps(manifest, indent=2, ensure_ascii=False) + "\n"
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -728,6 +767,7 @@ def main(argv=None) -> int:
     s.add_argument("--encryption", choices=["reject", "preserve"], default="reject",
                    help="engine policy for encrypted templates; 'preserve' = incremental save keeping the "
                         "bank's encryption (record the human review in docs/decisions.md)")
+    s.add_argument("--curation", help="reviewed curation file (validation + review) merged into the manifest")
     s.add_argument("--out", required=True)
     s.set_defaults(fn=cmd_manifest)
     args = p.parse_args(argv)

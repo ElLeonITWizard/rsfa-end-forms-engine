@@ -67,9 +67,9 @@ class StageDeployTest(unittest.TestCase):
         self.assertTrue(all(f.startswith(("engine/", "mappings/", "poc-templates/")) or f in
                             (".gcloudignore", "cloudbuild.yaml", "STAGED_FILES.txt") for f in files), files)
 
-    def test_demo_ui_offering_a_non_allowlisted_template_is_refused(self):
-        # This allowlist only has T@1, but the real UI offers BNZ Boarder.
-        with self.assertRaisesRegex(sd.StageError, "not allowlisted: BNZ_BOARDER_FORM@2.0_8-24"):
+    def test_demo_ui_offering_no_allowlisted_template_is_refused(self):
+        # This allowlist only has T@1, and the real UI does not offer T@1.
+        with self.assertRaisesRegex(sd.StageError, "offers no allowlisted template"):
             self.stage(self.setup_template(minimal_form_pdf(), APPROVAL, tid="T", ver="1"))
         self.assertFalse(self.out.exists())
 
@@ -78,12 +78,13 @@ class StageDeployTest(unittest.TestCase):
         ui.mkdir()
         for name in sd.UI_ASSETS:
             (ui / name).write_text('{"templates": []}' if name == "forms.json" else "/* ok */")
-        self.assertIsNone(sd.ui_problem(ui, set()))
+        self.assertIn("no allowlisted template", sd.ui_problem(ui, set()))
+        (ui / "forms.json").write_text('{"templates": [{"templateId": "X", "templateVersion": "1"}, '
+                                       '{"templateId": "LOCAL", "templateVersion": "1"}]}')
+        self.assertIsNone(sd.ui_problem(ui, {"X@1"}), "local-only candidates may be listed next to allowlisted ones")
         (ui / "index.html").write_text('<script src="https://cdn.example.org/x.js"></script>')
         self.assertIn("another origin", sd.ui_problem(ui, set()))
         (ui / "index.html").write_text("<p>ok</p>")
-        (ui / "forms.json").write_text('{"templates": [{"templateId": "X", "templateVersion": "1"}]}')
-        self.assertIn("not allowlisted: X@1", sd.ui_problem(ui, set()))
         self.assertIsNone(sd.ui_problem(ui, {"X@1"}))
         (ui / "app.css").unlink()
         self.assertIn("missing", sd.ui_problem(ui, set()))
