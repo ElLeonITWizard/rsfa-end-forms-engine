@@ -148,8 +148,20 @@ public final class ApiServer {
                 sendJson(ex, 405, error(null, "METHOD_NOT_ALLOWED", List.of()));
                 return;
             }
-            ObjectNode n = json.createObjectNode().put("status", "ok").put("templates", catalog.manifests().size());
+            // Count only templates that can actually be generated: manifest loaded AND its blank PDF present with the
+            // expected SHA-256. A manifest without its template (e.g. not allowlisted for this image) is not usable.
+            List<String> usable = catalog.manifests().stream().filter(this::usable).map(Manifest::key).sorted().toList();
+            ObjectNode n = json.createObjectNode().put("status", "ok").put("templates", usable.size());
+            n.set("available", json.valueToTree(usable));
             sendJson(ex, 200, n);
+        }
+    }
+
+    private boolean usable(Manifest m) {
+        try {
+            return catalog.templateBytes(m).map(b -> FormFiller.sha256(b).equalsIgnoreCase(m.templateSha256())).orElse(false);
+        } catch (IOException | RuntimeException e) {
+            return false;
         }
     }
 

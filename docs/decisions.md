@@ -254,3 +254,34 @@ Lightweight ADR log, newest last. Status: `proposed` | `accepted` | `superseded`
   - When the `build_ca` secret is present, copy it to `/tmp/build-ca.crt` with mode 0644 for that single `RUN`.
   - Delete the copy and the apt config in the same `RUN`, so no CA is left in any layer (checked: none in `/tmp` or `apt.conf.d`).
   - Builds without the secret (Cloud Build) are unchanged.
+
+### D-022 `/health` counts usable templates; existing-service updates go through a verified no-traffic candidate
+- **Date:** 2026-10-27 · **Status:** accepted (revision 2 prepared, not deployed)
+- **Context:**
+  - The demo badge said "4 templates loaded" in a local screenshot, while the demo offers only BNZ Boarder.
+  - `/health` counted manifests, not templates that can actually be generated. On a development machine, every manifest
+    in `mappings/` whose blank PDF was extracted counted. The Cloud Run image contains only the allowlisted one and
+    reported 1.
+  - RSFA authorised a second revision of the live service, keeping rollback to `rsfa-end-forms-engine-00001-6qm`.
+- **Decision:**
+  - **Usable templates.** `/health` returns `templates`, the number of manifests whose blank PDF is present **and**
+    matches `templateSha256`, and `available`, the sorted `templateId@templateVersion` keys. Template ids are not
+    sensitive; they are in git.
+  - **Badge.** It counts the forms **offered by the page** that are in `available`: "Engine online · 1 form ready".
+    Offered forms that are not usable are disabled in the selector.
+  - **Update mode.** `deploy_poc.sh` with `UPDATE_EXISTING=1`:
+    - refuses, before any change, unless the serving revision matches `EXPECT_PREVIOUS_REVISION`, the live
+      configuration equals the documented one, and the invoker policy is exactly the deployer;
+    - deploys with `--no-traffic --tag=candidate` and re-checks that the configuration and IAM are unchanged;
+    - verifies the candidate URL, then promotes with `--to-latest`, removes the tag, and re-verifies the main URL;
+    - records `previousRevision` and the rollback command.
+- **Trade-offs:**
+  - The `/health` response gains a field. Clients reading `templates` keep working.
+  - Promotion moves 100% at once (no gradual split). That is acceptable for a single-user demo, and the candidate has
+    already been verified.
+  - A failed candidate revision remains, untagged traffic 0, until a later deploy.
+- **Validation:**
+  - Java tests: a manifest without its PDF, and one with a wrong SHA, are not counted.
+  - Browser smoke test: the badge reads "1 form ready".
+  - Update path: run against a recording `gcloud` stub plus the old and new containers behind IAM stand-ins. It passed,
+    and the 4 negative cases stopped safely (docs/04 "Revision 2").

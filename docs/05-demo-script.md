@@ -23,9 +23,8 @@ gcloud run services proxy rsfa-end-forms-engine \
   Granting it to anyone else, such as Rod, is a separate IAM change that needs RSFA's approval.
 - In **Cloud Shell**, use *Web Preview → Preview on port 8080* instead of `localhost`. Only your Google login can open
   that preview URL. *(Not verified from this repository: no Google Cloud access here.)*
-- If the service was deployed **before** this UI existed, the running revision has no page. Getting it needs a new
-  revision (`UPDATE_EXISTING=1 bash deploy_poc.sh` with a rebuilt bundle). **Do not do this without RSFA's explicit
-  approval.** Option 2 works without any deployment.
+- Revision `rsfa-end-forms-engine-00001-6qm` has no page. Revision 2 adds it: RSFA authorised it and runs it from
+  Cloud Shell (docs/04 "Revision 2"). Rolling back to revision 1 is a single command. Option 2 works without any deployment.
 
 ### Option 2 — Your own computer (no cloud)
 
@@ -41,8 +40,8 @@ ENGINE_AUTH=NONE java -jar engine/target/end-forms-engine.jar serve
 - Docker alternative: `docker run --rm -p 127.0.0.1:8080:8080 -e ENGINE_AUTH=PLATFORM_IAM -e K_SERVICE=demo <poc image>`
   (only on your own machine; this is how the demo was tested).
 
-**Checklist.** The top-right badge says **"Engine online · N templates loaded"**. Then do one Generate with the
-sample data.
+**Checklist.** The top-right badge says **"Engine online · 1 form ready"**. This counts the forms the page offers that
+the engine can actually generate. Then do one Generate with the sample data.
 
 ## During the meeting — what to click
 

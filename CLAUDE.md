@@ -88,7 +88,7 @@ extracted to `.local/generated/templates/`. A green build without them proves on
 8. Nothing is deployed or changed in Google Cloud without RSFA's explicit approval of the exact commands (docs/04).
    Never build from the repo root for deployment: only from the staged context.
 
-## Current status (2026-10-27, iteration 5)
+## Current status (2026-10-27, iteration 6)
 
 - **BNZ Boarder is complete**, including Customer name(s):
   - 7 imported fields + 2 legacy overlays (`rect / 1.2`, docs/03);
@@ -103,13 +103,16 @@ extracted to `.local/generated/templates/`. A green build without them proves on
   - Browser-tested (20 checks) on the host, in the POC image, and behind an emulated IAM layer + `gcloud run services proxy`.
   - The unedited sample gives the fixture's exact SHA-256.
   - Demo script: docs/05.
-- **Cloud Run: approved by RSFA, NOT yet deployed.**
-  - The allowlist entry for the blank BNZ Boarder template is approved (packaging and testing only).
-  - `deploy/deploy_poc.sh` is ready and tested against a stubbed `gcloud`. It now also checks the demo page (403 without a token, 200 with one).
-  - Rebuild the bundle (`stage_deploy.py` + `make_bundle.sh`) so that it contains the page.
-  - Replacing an already-deployed revision needs RSFA's explicit approval.
-  - Blocker: this environment has no Google Cloud credentials. Run the script in Cloud Shell (docs/04, option A),
-    then record the results in docs/04 "Deployment record".
+- **Cloud Run: revision 1 deployed by RSFA (2026-10-27).**
+  - `rsfa-end-forms-engine-00001-6qm`, IAM required, BNZ Boarder only, verified (docs/04 "Deployment record").
+  - It has no demo page.
+- **Revision 2 (demo page): authorised by RSFA, prepared, NOT deployed.**
+  - `UPDATE_EXISTING=1 EXPECT_PREVIOUS_REVISION=rsfa-end-forms-engine-00001-6qm bash deploy_poc.sh`, run from Cloud Shell
+    by RSFA (docs/04 "Revision 2").
+  - The candidate is verified with no traffic before promotion. Rollback is a single `update-traffic` command.
+  - This environment has no Google Cloud credentials and never deploys.
+- `/health` reports usable templates only (`templates` + `available`, D-022). The demo badge counts the forms the page
+  offers that are usable.
 - **Open decisions** (docs/02 "Known gaps"):
   - 36 constant ticks;
   - the DDMMYYYY → 6-cell date transform;

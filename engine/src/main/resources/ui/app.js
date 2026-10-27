@@ -59,17 +59,30 @@
     b.querySelector('.btn-text').textContent = busy ? 'Generating…' : 'Generate PDF';
   }
 
+  // The badge counts the forms this page offers that the engine can actually generate right now (manifest loaded
+  // and blank PDF present with the expected SHA-256, as reported by /health). Offered forms that are not usable on
+  // this server are disabled in the selector.
   async function checkHealth() {
     const box = $('engine-status');
     try {
       const r = await fetch('health', { cache: 'no-store' });
       const j = await r.json();
-      if (r.ok && j.status === 'ok') {
-        box.className = 'engine-status ok';
-        $('engine-status-text').textContent = 'Engine online · ' + j.templates + ' template' + (j.templates === 1 ? '' : 's') + ' loaded';
-        return;
-      }
-      throw new Error('status ' + r.status);
+      if (!(r.ok && j.status === 'ok')) throw new Error('status ' + r.status);
+      const available = new Set(Array.isArray(j.available) ? j.available : []);
+      const opts = Array.from($('template').options);
+      let ready = 0;
+      state.templates.forEach((t, idx) => {
+        const ok = available.has(t.templateId + '@' + t.templateVersion);
+        t.available = ok;
+        if (ok) ready++;
+        if (opts[idx]) {
+          opts[idx].disabled = !ok;
+          opts[idx].textContent = t.label + (ok ? '' : ' (not available on this server)');
+        }
+      });
+      box.className = 'engine-status ' + (ready > 0 ? 'ok' : 'bad');
+      $('engine-status-text').textContent = 'Engine online · ' + (ready === 0 ? 'no forms ready' :
+        ready + ' form' + (ready === 1 ? '' : 's') + ' ready');
     } catch (e) {
       box.className = 'engine-status bad';
       $('engine-status-text').textContent = 'Engine not reachable';
@@ -260,7 +273,6 @@
     $('load-sample').addEventListener('click', loadSample);
     $('clear').addEventListener('click', clearForm);
     $('form').addEventListener('submit', generate);
-    checkHealth();
     try {
       const r = await fetch('ui/forms.json', { cache: 'no-store' });
       if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -279,6 +291,7 @@
     } catch (e) {
       showMessage('error', '<strong>Could not load the form list</strong>' + escapeHtml(e.message));
     }
+    await checkHealth();
   }
 
   document.addEventListener('DOMContentLoaded', init);

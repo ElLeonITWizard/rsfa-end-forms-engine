@@ -34,7 +34,8 @@ function check(cond, msg) {
     await page.goto(base);
     check((await page.title()) === 'RSFA End Forms Engine', 'page title');
     await page.waitForSelector('#engine-status.ok', { timeout: 10000 });
-    check(/Engine online/.test(await page.textContent('#engine-status-text')), 'engine status online');
+    check((await page.textContent('#engine-status-text')) === 'Engine online · 1 form ready',
+      'engine status counts usable forms offered by the page (1)');
     check((await page.textContent('#template option')).includes('BNZ — Boarder Income Declaration'), 'template selector');
     await page.screenshot({ path: path.join(out, '1-empty.png'), fullPage: true });
 

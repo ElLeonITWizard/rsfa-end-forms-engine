@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * The demo UI must use the API's real request schema: every data key it sends is a key the template's manifest reads,
- * and its sample data is the synthetic fixture. Skipped when the repo's mappings are absent (e.g. inside a Docker build).
+ * and its sample data is the synthetic fixture. Skipped when the repo's mappings or fixtures are absent (e.g. inside a Docker build).
  */
 class DemoUiFormsTest {
 
@@ -26,7 +26,8 @@ class DemoUiFormsTest {
 
     @Test
     void formKeysMatchManifestAndSampleMatchesFixture() throws Exception {
-        assumeTrue(Files.isDirectory(REPO.resolve("mappings")), "no mappings");
+        assumeTrue(Files.isDirectory(REPO.resolve("mappings"))
+                && Files.isRegularFile(REPO.resolve("tests/fixtures/bnz-boarder.request.json")), "no mappings/fixtures");
         JsonNode forms;
         try (InputStream in = DemoUiFormsTest.class.getResourceAsStream("/ui/forms.json")) {
             assertNotNull(in);

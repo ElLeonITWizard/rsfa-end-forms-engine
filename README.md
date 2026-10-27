@@ -2,7 +2,7 @@
 
 A deterministic PDF form-filling engine that will replace the MacroForge desktop filler for RSFA
 bank end forms. Mappings are version-controlled and the service can run on Cloud Run.
-**Status: local proof of concept. Nothing is deployed.** See `CLAUDE.md` for the rules and the current status.
+**Status: proof of concept. A private Cloud Run service (BNZ Boarder only) is deployed by RSFA; the demo-page revision is prepared (docs/04).** See `CLAUDE.md` for the rules and the current status.
 
 ## Prerequisites
 
@@ -48,7 +48,7 @@ To view the output without poppler, run `java -jar engine/target/end-forms-engin
 export ENGINE_API_KEY=$(python3 -c "import secrets;print(secrets.token_urlsafe(32))")
 java -jar engine/target/end-forms-engine.jar serve        # 127.0.0.1:8080, auth=API_KEY
 
-curl -s localhost:8080/health                              # {"status":"ok","templates":4}
+curl -s localhost:8080/health    # {"status":"ok","templates":N,"available":[...]}: templates whose blank PDF is present with the right SHA-256
 curl -s -o out.pdf -D - -H "Authorization: Bearer $ENGINE_API_KEY" \
   -H 'Content-Type: application/json' --data @tests/fixtures/bnz-boarder.request.json \
   localhost:8080/generate
@@ -101,7 +101,7 @@ docker run --rm -p 127.0.0.1:8080:8080 -e ENGINE_AUTH=API_KEY -e ENGINE_API_KEY=
 The default target (`docker build -f engine/Dockerfile .`) compiles and tests inside Docker. Proxy and CA options are in
 the Dockerfile header. The verification results are in `docs/02-poc-guide-and-tests.md`.
 
-## Google Cloud Run (approved, not yet deployed)
+## Google Cloud Run (revision 1 deployed by RSFA; revision 2 with the demo page prepared)
 
 The first private deployment generates BNZ Boarder only. The full runbook, with exact `gcloud` commands, IAM, the
 authenticated `/health` and `/generate` calls, and rollback, is in [`docs/04-cloud-run-deployment.md`](docs/04-cloud-run-deployment.md).

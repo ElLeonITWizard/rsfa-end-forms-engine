@@ -113,10 +113,11 @@ Unresolved items (138) are listed per manifest in `unresolvedLegacyMappings`.
 |---|---|---|
 | Importer (synthetic .mforge) + deployment staging (`tools/stage_deploy.py`, incl. demo UI asset checks) | `python3 -m unittest discover -s tests/importer -v` | 8 + 7 |
 | Engine unit (synthetic AcroForm): widget kinds, errors, normalisation, line items, overlays, fonts, approval validation, template presets, comb appearance, rendering, no value echo | `cd engine && mvn -B test` | 26 |
-| HTTP API (incl. PLATFORM_IAM only with `K_SERVICE`, `X-Engine`/`X-Template`, demo page allowlist, CSP and auth) | (same) | 9 |
+| HTTP API (incl. PLATFORM_IAM only with `K_SERVICE`, `X-Engine`/`X-Template`, demo page allowlist, CSP and auth, `/health` counts only usable templates) | (same) | 9 |
 | Demo page form keys = BNZ Boarder manifest keys; sample = fixture. **Skipped without `mappings/`** | (same) | 1 |
 | Legacy templates: BNZ Boarder (+ macrons), BNZ Handover (line items, `Confirmation` cleared, `Date 3`), the DDMMYYYY gap, GHL, manifest resolution. **Skipped without `.local` templates** | (same) | 6 |
 | Demo page in a real browser (needs a running server and the machine's Playwright) | `node tests/ui/demo_smoke.js <base-url> <out-dir>` | 20 checks |
+| `deploy_poc.sh` update mode (`UPDATE_EXISTING=1`): candidate without traffic, promotion, negative cases | recording `gcloud` stub + containers behind IAM stand-ins (docs/04 "Revision 2") | manual harness |
 
 Last full run (2026-10-27, iteration 5):
 - Host: 57 passed (15 Python + 42 Java, none skipped).

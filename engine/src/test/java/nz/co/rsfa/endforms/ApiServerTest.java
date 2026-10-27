@@ -50,6 +50,13 @@ class ApiServerTest {
                  "fields":[{"pdfField":"Full name","kind":"text","source":{"key":"Applicant 1 Full Name"},"required":true},
                            {"pdfField":"Date","kind":"text","source":{"generated":"today","format":"ddMMyy"}}]}"""
                 .formatted(FormFiller.sha256(template)));
+        Files.writeString(mappings.resolve("ghost.json"), """
+                {"schemaVersion":1,"templateId":"GHOST","templateVersion":"1","templateFile":"missing.pdf",
+                 "templateSha256":"%s","fields":[]}""".formatted(FormFiller.sha256(template)));
+        Files.write(templates.resolve("tampered.pdf"), template);
+        Files.writeString(mappings.resolve("tampered.json"), """
+                {"schemaVersion":1,"templateId":"TAMPERED","templateVersion":"1","templateFile":"tampered.pdf",
+                 "templateSha256":"%s","fields":[]}""".formatted("0".repeat(64)));
         TemplateCatalog catalog = TemplateCatalog.load(mappings, List.of(templates));
         server = new ApiServer(catalog, new FormFiller(z -> LocalDate.of(2026, 1, 2)), ApiServer.AuthMode.API_KEY, KEY);
         base = "http://127.0.0.1:" + server.start("127.0.0.1", 0);
@@ -74,7 +81,9 @@ class ApiServerTest {
         HttpResponse<String> r = HTTP.send(HttpRequest.newBuilder(URI.create(base + "/health")).build(),
                 HttpResponse.BodyHandlers.ofString());
         assertEquals(200, r.statusCode());
-        assertEquals("{\"status\":\"ok\",\"templates\":1}", r.body());
+        // Only usable templates count: SYNTH has its PDF; GHOST (manifest without its template file) and
+        // TAMPERED (template present, wrong SHA-256) do not.
+        assertEquals("{\"status\":\"ok\",\"templates\":1,\"available\":[\"SYNTH@1\"]}", r.body());
     }
 
     @Test

@@ -1,10 +1,12 @@
 # 04 — First Cloud Run deployment (POC), runbook
 
-**Status (2026-10-27): approved by RSFA, NOT yet deployed.**
+**Status (2026-10-27): revision 1 DEPLOYED by RSFA; revision 2 (demo page) PREPARED, not deployed.**
 - RSFA approved the deployment and the template allowlist entry (Leonardo Melman, 2026-10-27, `RSFA-END-FORMS-POC-2026-10-27`).
-- Blocker: the Claude Code cloud session that prepared it has **no Google Cloud credentials** (`CREDENTIALS_MISSING`).
-  Nothing was created in the project.
-- No Make, Monday or SharePoint change is part of this deployment.
+- RSFA ran `deploy_poc.sh` from Cloud Shell. See "Deployment record" below; it is taken from the deployer's
+  `deployment-record.json`.
+- RSFA authorised preparing a second revision of the same service to add the demo page, with rollback to revision 1
+  kept available. See "Revision 2" below. The Claude Code session has no Google Cloud credentials and runs nothing in the cloud.
+- No Make, Monday or SharePoint change is part of either revision.
 
 ## Fastest path: one script (recommended)
 
@@ -58,22 +60,124 @@ gcloud run services proxy rsfa-end-forms-engine --region=australia-southeast1 --
 
 - `deploy_poc.sh` step 8 checks the page: 401/403 without a token, 200 with one.
 - Rebuild the bundle before running the script, so that the staged context contains the page.
-- A service deployed before iteration 5 has no page. Replacing its revision (`UPDATE_EXISTING=1`) needs RSFA's
-  explicit approval.
+- Revision 1 has no page. Revision 2 adds it (prepared; see "Revision 2" above).
 - Status: **not exercised against real Cloud Run** (no credentials here). The flow was tested with the POC image behind
   an IAM stand-in plus a `gcloud run services proxy` emulator (docs/02). The meeting walk-through is in
   `docs/05-demo-script.md`.
 
 ## Deployment record
 
+Revision 1. Source: `cloudrun-output/deployment-record.json` returned by the deployer
+(started 2026-10-27T21:49:43Z, finished 21:55:03Z). Classification: confirmed from the deployer's record; not
+re-checked from this repository.
+
 | Item | Value |
 |---|---|
-| Deployed | **not yet** |
-| Service URL | pending |
-| Revision | pending |
-| Image digest | pending |
+| Deployed | **yes**, 2026-10-27, by `deploy_poc.sh` (first-time mode), built with Cloud Build |
+| Service URL | `https://rsfa-end-forms-engine-zjsgxv2kxq-ts.a.run.app` (IAM required; 403 without a token) |
+| Revision | `rsfa-end-forms-engine-00001-6qm` |
+| Image digest | `australia-southeast1-docker.pkg.dev/rsfa-end-forms-engine/rsfa-end-forms/end-forms-engine@sha256:ccf077f73ad0a9bdf6f93252d8a43a074368da7810b7fd736e3c03dbc8e248b4` |
+| Configuration | ingress all; SA `rsfa-end-forms-runtime@…`; 1 vCPU; 1 GiB; min 0; max 2; concurrency 1; timeout 120 s; request-based billing; `ENGINE_AUTH=PLATFORM_IAM` |
 | Invoker | the deployer's own identity only (not recorded here) |
-| Verification | pending (expected PDF SHA-256 for `tests/fixtures/bnz-boarder.request.json`: `2ae7bfacf48b8ee8e63aaf9ce28997650abd2c07b59ddbeade9928ce3269d6f6`) |
+| Verification | **Passed**: unauthenticated `/health` 403; authenticated `/health` 200; `/generate` 200; PDF SHA-256 `2ae7bfacf48b8ee8e63aaf9ce28997650abd2c07b59ddbeade9928ce3269d6f6` = local build; 7 fields + 2 overlays; no ticks, no signature values; logs: 16 entries, 0 fixture values |
+| Demo page | not in revision 1 (it predates commit `900187f`) |
+
+## Revision 2: add the demo page (prepared 2026-10-27, NOT deployed)
+
+**What changes:** only the image. The new image contains:
+- the demo page (`900187f`);
+- `/health` counting usable templates only (D-022);
+- the build fix from D-021.
+
+The configuration, IAM, runtime SA, template and fixture are unchanged.
+
+**How `deploy_poc.sh` deploys it (`UPDATE_EXISTING=1`, D-022):**
+1. **Before any change**, it refuses unless all of these hold:
+   - the serving revision is `EXPECT_PREVIOUS_REVISION`;
+   - the live configuration equals the documented one;
+   - the invoker policy is exactly the current account.
+2. It builds the new image with Cloud Build. Tests run inside the build.
+3. It deploys with `--no-traffic --tag=candidate`. Revision 1 keeps 100% of traffic. It then checks that:
+   - the configuration is identical;
+   - the IAM policy is unchanged.
+4. It verifies the **candidate URL** (`https://candidate---…`, which is also IAM-protected):
+   - 403 without a token;
+   - `/health` = `{"status":"ok","templates":1,"available":["BNZ_BOARDER_FORM@2.0_8-24"]}`;
+   - `/generate` 200, with the PDF checks and the exact SHA;
+   - the demo page 403 without a token and 200 with one.
+5. Only then it runs `update-traffic --to-latest` (100% to revision 2) and removes the `candidate` tag. It then re-checks
+   the main URL: page 403/200, `/health`, and a `/generate` whose PDF is byte-identical.
+6. It runs the log check (no fixture values) and writes the record with `previousRevision` and the exact `rollback` command.
+
+If any step before 5 fails, revision 1 is still serving all traffic and nothing needs to be rolled back.
+Optional clean-up: `gcloud run services update-traffic rsfa-end-forms-engine --region=australia-southeast1 --remove-tags=candidate`.
+
+**Tested here (2026-10-27)**, with a recording `gcloud` stub and two real containers behind IAM stand-ins:
+- Revision 1 was the old image without the page. Revision 2 was the image built from the bundle's own context.
+- Passed end to end. 33 `gcloud` calls; the only deploy call used `--no-traffic --tag=candidate` and kept every
+  configuration flag; no forbidden command.
+- After promotion, the browser smoke test passed through the main URL (20/20) via the `gcloud run services proxy` emulator.
+- Negative cases all stopped safely:
+  - broken candidate: stopped before promotion; 0 traffic changes;
+  - wrong `EXPECT_PREVIOUS_REVISION`: stopped before any change;
+  - live configuration differs: stopped before any change;
+  - `UPDATE_EXISTING` missing: refused.
+- **Not tested against real Cloud Run** (no credentials here).
+
+**Bundle:** `rsfa-end-forms-poc-bundle-rev2.tar.gz`.
+- Built from the commit that adds this section. The SHA-256 is given with the hand-over, not stored here, because the
+  archive is rebuilt per commit.
+- Contents:
+  - the staged context (26 files);
+  - one template: the approved blank BNZ Boarder `7982ae8c…0509795`, checked against the allowlist SHA and as blank;
+  - the script, the PDF verifier, the synthetic fixture, and the expected PDF SHA.
+- Sensitive-data scan: 771 values from the legacy export's sensitive sections and from the Make output bundle were
+  compared against every bundle file, including PDF text and field values. Only counts were printed. The only matches
+  were generic words and column/field names (schema labels). No client value is present.
+
+**Cloud Shell commands (as the deployer, the identity that is the current invoker):**
+
+```bash
+# 1. Upload rsfa-end-forms-poc-bundle-rev2.tar.gz (Cloud Shell: More (⋮) > Upload), then check it:
+cd ~ && echo "<SHA-256 from the hand-over>  rsfa-end-forms-poc-bundle-rev2.tar.gz" | sha256sum -c -
+# 2. Unpack into a fresh folder (does not touch the revision-1 bundle folder)
+rm -rf ~/rev2 && mkdir ~/rev2 && tar -xzf ~/rsfa-end-forms-poc-bundle-rev2.tar.gz -C ~/rev2 && cd ~/rev2/bundle
+gcloud config set project rsfa-end-forms-engine
+gcloud config get-value account          # must be the deployer that is the service's invoker
+# 3. Deploy revision 2 (verified on a no-traffic candidate before it receives traffic)
+UPDATE_EXISTING=1 EXPECT_PREVIOUS_REVISION=rsfa-end-forms-engine-00001-6qm bash deploy_poc.sh 2>&1 | tee deploy-rev2.log
+```
+
+**Post-deployment verification (in `~/rev2/bundle`):**
+
+```bash
+S=rsfa-end-forms-engine; R=australia-southeast1
+gcloud run services describe $S --region=$R --format='yaml(status.latestReadyRevisionName,status.traffic)'  # new revision = 100%
+gcloud run revisions list --service=$S --region=$R                    # 00001-6qm still listed (rollback target)
+gcloud run services get-iam-policy $S --region=$R                     # one invoker: you; no allUsers
+URL=$(gcloud run services describe $S --region=$R --format='value(status.url)')
+TOKEN=$(gcloud auth print-identity-token)
+curl -s -o /dev/null -w 'UI without token: %{http_code}\n' "$URL/"                                  # 403
+curl -s -o /dev/null -w 'UI with token: %{http_code} %{content_type}\n' -H "Authorization: Bearer $TOKEN" "$URL/"  # 200 text/html
+curl -s -H "Authorization: Bearer $TOKEN" "$URL/health"; echo         # {"status":"ok","templates":1,"available":["BNZ_BOARDER_FORM@2.0_8-24"]}
+curl -s -o rev2.pdf -D - -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  --data @fixture.request.json "$URL/generate" | grep -i -E '^(HTTP|x-)'          # 200, x-fields-filled: 9, x-engine: …no-ai
+cloudrun-output/venv/bin/python verify_pdf.py rev2.pdf expected_pdf_sha256.txt   # "ok": true, matchesLocalBuild true
+# Visual demo: keep this running, then Web Preview > Preview on port 8080 (badge: "Engine online · 1 form ready")
+gcloud run services proxy $S --region=$R --port=8080
+```
+
+**Rollback to revision 1** (instant; revision 2 stays deployed but receives no traffic):
+
+```bash
+gcloud run services update-traffic rsfa-end-forms-engine --region=australia-southeast1 --project=rsfa-end-forms-engine \
+  --to-revisions=rsfa-end-forms-engine-00001-6qm=100
+gcloud run services describe rsfa-end-forms-engine --region=australia-southeast1 --format='yaml(status.traffic)'  # 00001-6qm: 100
+curl -s -H "Authorization: Bearer $(gcloud auth print-identity-token)" "$URL/health"; echo   # {"status":"ok","templates":1} (revision-1 format)
+# Return to revision 2 later:  gcloud run services update-traffic rsfa-end-forms-engine --region=australia-southeast1 --to-latest
+```
+
+Hand back `~/rev2/bundle/cloudrun-output/deployment-record.json` so this section can record revision 2.
 
 The manual runbook follows. The script runs exactly these steps.
 
@@ -246,7 +350,7 @@ export URL=$(gcloud run services describe $SERVICE --region=$REGION --project=$P
 curl -s -o /dev/null -w '%{http_code}\n' "$URL/health"          # expect 403: no token, rejected by Cloud Run
 
 export TOKEN=$(gcloud auth print-identity-token)
-curl -s -H "Authorization: Bearer $TOKEN" "$URL/health"          # {"status":"ok","templates":1}
+curl -s -H "Authorization: Bearer $TOKEN" "$URL/health"          # {"status":"ok","templates":1,"available":["BNZ_BOARDER_FORM@2.0_8-24"]} (revision 1: {"status":"ok","templates":1})
 
 curl -s -o .local/output/cloudrun_BNZ_Boarder.pdf -D - \
   -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
