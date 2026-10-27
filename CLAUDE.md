@@ -49,6 +49,8 @@ python3 -m unittest discover -s tests/importer -v                               
 (cd engine && mvn -B package)                                                       # Java tests + fat jar
 java -jar engine/target/end-forms-engine.jar fill --manifest "mappings/bnz/BNZ_BOARDER_FORM@2.0_8-24.json" \
   --data tests/fixtures/bnz-boarder.request.json --out .local/output/BNZ_BoarderForm_POC.pdf
+java -jar engine/target/end-forms-engine.jar render --pdf .local/output/BNZ_BoarderForm_POC.pdf --out-dir .local/output
+docker build --network host -f engine/Dockerfile --target runtime-prebuilt -t end-forms-engine:prebuilt .   # see docs/02
 ```
 
 The legacy-template tests (`LegacyTemplatesTest`) are **skipped** unless the templates have been
@@ -58,26 +60,39 @@ extracted to `.local/generated/templates/`. A green build without them proves on
 
 1. Never commit `.mforge` files, Make blueprints, bundles, spreadsheets, lender PDFs, generated PDFs,
    webhook URLs, tokens or client data. `.gitignore` enforces most of this, so check `git status` before every commit.
-2. The `.mforge` contains a **real client `sample_payload`** and a webhook URL. Tools must never print or
-   write values from `sample_payload`, `variable_map`, `export_folder`, `filename_generator` or `webhook_url`.
+2. The `.mforge` contains **real client data** and a webhook URL. Tools must never print or write values from
+   `sample_payload`, `variable_map`, `flow_data` (`__raw_webhook_payload`, `current_parsed_pdf_data`), `export_folder`,
+   `filename_generator` or `webhook_url`.
 3. Never call the MacroForge webhook or any production endpoint. Never modify Make scenarios `8731317` / `9254149`.
-4. Never fill signature or push-button fields. Never synthesise signatures. Constant "checked" boxes and
-   `[TODAY]` dates near declarations are legacy behaviour flagged `reviewRequired`, not auto-approved.
+4. Never fill signature or push-button fields. Never synthesise signatures. Constant "checked" boxes are applied
+   only when a human sets `"approved": true` on that rule (D-013). Never set it on someone's behalf.
+   `[TODAY]` dates near declarations are flagged `reviewRequired`.
 5. Issues, logs and errors carry field names, keys and codes only, never data values.
-6. Unsupported legacy rules must be reported (manifest `unsupported`, engine warning). Never silently coerce them.
+6. Unsupported or unresolved legacy rules must be reported (manifest `unsupported` / `unresolvedLegacyMappings`,
+   engine warning). Never silently coerce them, never alias names or invent coordinates, and never label a mapping
+   "obsolete" without RSFA's decision (use `inert` only with evidence; see docs/03).
 7. Fixtures are fictional. Do not derive them from real records.
 
-## Current status (2026-10-27)
+## Current status (2026-10-27, iteration 2)
 
-- **Working POC:** `BNZ_BoarderForm_2.0_8 24.pdf` filled from the **imported** legacy mapping with synthetic
-  data. The output was checked by assertions and by rendering in two renderers (PDFBox and poppler). Customer name(s)
-  stays empty because the legacy app writes it with a free-positioned overlay that is not migrated (see docs/02).
-- Second template tested: `GHL_N&P Trust_8 19.pdf` (checkboxes, multi-widget on-states, owner-encrypted,
-  preserved via incremental save).
-- Import coverage across all 25 Flow C templates: 697/1013 mappings imported, 192 unsupported, 124 stale. Only 2 templates
-  are tested end-to-end. **Equivalence with MacroForge is not proven for any template.**
-- HTTP API exercised locally. Docker image defined but **not built**: there is no Docker daemon in the POC environment.
-  Nothing is deployed.
+- **BNZ Boarder is complete**, including Customer name(s):
+  - 7 imported fields + 2 legacy overlays, placed with the evidenced `rect / 1.2` transform (docs/03);
+  - deterministic: identical bytes across runs and host/container;
+  - a macron variant (`Ōtāhuhu`, `Tāwhiri`) passes via the embedded Unicode font.
+- **LineItems**: generic `lineItem` source. BNZ Handover fills 3 synthetic facilities into rows 1–3 (rows 4–6 empty).
+- Second checkbox template: `GHL_N&P Trust_8 19.pdf` (multi-widget on-states, owner-encrypted, incremental save).
+- Import coverage, Flow C:
+  - 1,013 mappings = 804 imported (109 line items) + 19 unsupported + 138 unresolved + 52 inert; 14/14 overlays imported.
+  - Only 3 templates are tested end-to-end. **Equivalence with MacroForge is not proven for any template.**
+- Docker:
+  - The runtime image was built and verified locally: fill, render, HTTP, fonts.
+  - The full build ran with a local stand-in for the rate-limited `maven` base image.
+  - Nothing is deployed.
+- Open decisions for RSFA (docs/02 "Known gaps"):
+  - 36 constant ticks awaiting approval;
+  - the DDMMYYYY → 6-cell date transform;
+  - the LineItems name conflict;
+  - the `8731317` re-trigger guard.
 
 ## Keep the docs true
 

@@ -6,8 +6,9 @@
   "templateSha256": "0057d507cf71176f8692e73ec320c49fa343136af353805efb780f27ab50797c",
   "encryption": "preserve",
   "sourceKeyNormalization": "macroforge-v1",
+  "fontFallback": "unicode",
   "provenance": {
-    "importer": "tools/import_mforge.py 0.1.0",
+    "importer": "tools/import_mforge.py 0.2.0",
     "sourceFile": "RSFA End Forms Filling BluePrint 271026.mforge",
     "sourceSha256": "8052c17b374b551272e17f5036de1ebfa9a295328eb8a6d079d30eec788b9a51",
     "flow": "Flow C",
@@ -769,10 +770,12 @@
       }
     }
   ],
+  "overlays": [],
   "unsupported": [],
+  "unresolvedLegacyMappings": [],
+  "inertLegacyMappings": [],
   "importErrors": [],
   "importWarnings": [],
-  "staleLegacyMappings": [],
   "unmappedPdfFields": [
     "Check Box100",
     "Check Box106",

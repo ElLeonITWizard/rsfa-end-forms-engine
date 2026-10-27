@@ -15,6 +15,37 @@ final class Rendering {
     private Rendering() {
     }
 
+    /** Page-content text inside a rectangle in PDF points (bottom-left origin), trimmed. Not widget values. */
+    static String textIn(byte[] pdf, int page, float x, float y, float w, float h) throws IOException {
+        try (PDDocument doc = Loader.loadPDF(pdf)) {
+            float pageH = doc.getPage(page).getMediaBox().getHeight();
+            var stripper = new org.apache.pdfbox.text.PDFTextStripperByArea();
+            stripper.addRegion("r", new java.awt.geom.Rectangle2D.Float(x, pageH - y - h, w, h));
+            stripper.extractRegions(doc.getPage(page));
+            return stripper.getTextForRegion("r").trim();
+        }
+    }
+
+    /** Names of fonts that are embedded in the document's page and AcroForm resources (subset prefix removed). */
+    static java.util.Set<String> embeddedFonts(byte[] pdf) throws IOException {
+        java.util.Set<String> out = new java.util.TreeSet<>();
+        try (PDDocument doc = Loader.loadPDF(pdf)) {
+            java.util.List<org.apache.pdfbox.pdmodel.PDResources> res = new java.util.ArrayList<>();
+            for (var p : doc.getPages()) {
+                if (p.getResources() != null) res.add(p.getResources());
+            }
+            var form = doc.getDocumentCatalog().getAcroForm();
+            if (form != null && form.getDefaultResources() != null) res.add(form.getDefaultResources());
+            for (var r : res) {
+                for (var n : r.getFontNames()) {
+                    var f = r.getFont(n);
+                    if (f != null && f.isEmbedded()) out.add(f.getName().replaceFirst("^[A-Z]{6}\\+", ""));
+                }
+            }
+        }
+        return out;
+    }
+
     /** Counts dark pixels inside a rectangle given in PDF points (bottom-left origin). */
     static int darkPixels(byte[] pdf, int page, float x, float y, float w, float h) throws IOException {
         try (PDDocument doc = Loader.loadPDF(pdf)) {

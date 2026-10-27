@@ -6,8 +6,9 @@
   "templateSha256": "15867550a027dc54cbb825e4f4e5cd1b7a97f43935e42abd6e738f275162f1a2",
   "encryption": "reject",
   "sourceKeyNormalization": "macroforge-v1",
+  "fontFallback": "unicode",
   "provenance": {
-    "importer": "tools/import_mforge.py 0.1.0",
+    "importer": "tools/import_mforge.py 0.2.0",
     "sourceFile": "RSFA End Forms Filling BluePrint 271026.mforge",
     "sourceSha256": "8052c17b374b551272e17f5036de1ebfa9a295328eb8a6d079d30eec788b9a51",
     "flow": "Flow C",
@@ -573,6 +574,226 @@
       }
     },
     {
+      "pdfField": "2 12",
+      "kind": "text",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 2,
+          "path": [
+            "values",
+            "Borrower(s)"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "2 12",
+        "mapping": "line_item",
+        "lineItem": "LineItems.Borrowers_2"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
+    },
+    {
+      "pdfField": "2 13",
+      "kind": "text",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 2,
+          "path": [
+            "values",
+            "Loan amount"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "2 13",
+        "mapping": "line_item",
+        "lineItem": "LineItems.Loan amount_2"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
+    },
+    {
+      "pdfField": "2 15",
+      "kind": "text",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 2,
+          "path": [
+            "values",
+            "Interest rate (%)"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "2 15",
+        "mapping": "line_item",
+        "lineItem": "LineItems.Interest rate_2"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
+    },
+    {
+      "pdfField": "2 18",
+      "kind": "text",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 3,
+          "path": [
+            "values",
+            "Borrower(s)"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "2 18",
+        "mapping": "line_item",
+        "lineItem": "LineItems.Borrowers_3"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
+    },
+    {
+      "pdfField": "2 19",
+      "kind": "text",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 3,
+          "path": [
+            "values",
+            "Loan amount"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "2 19",
+        "mapping": "line_item",
+        "lineItem": "LineItems.Loan amount_3"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
+    },
+    {
+      "pdfField": "2 2",
+      "kind": "text",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 1,
+          "path": [
+            "values",
+            "First repayment date"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "2 2",
+        "mapping": "line_item",
+        "lineItem": "LineItems.First repayment date_1"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
+    },
+    {
+      "pdfField": "2 21",
+      "kind": "text",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 3,
+          "path": [
+            "values",
+            "Interest rate (%)"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "2 21",
+        "mapping": "line_item",
+        "lineItem": "LineItems.Interest rate_3"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
+    },
+    {
+      "pdfField": "2 24",
+      "kind": "text",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 4,
+          "path": [
+            "values",
+            "Borrower(s)"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "2 24",
+        "mapping": "line_item",
+        "lineItem": "LineItems.Borrowers_4"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
+    },
+    {
+      "pdfField": "2 25",
+      "kind": "text",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 4,
+          "path": [
+            "values",
+            "Loan amount"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "2 25",
+        "mapping": "line_item",
+        "lineItem": "LineItems.Loan amount_4"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
+    },
+    {
+      "pdfField": "2 27",
+      "kind": "text",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 4,
+          "path": [
+            "values",
+            "Interest rate (%)"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "2 27",
+        "mapping": "line_item",
+        "lineItem": "LineItems.Interest rate_4"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
+    },
+    {
+      "pdfField": "2 3",
+      "kind": "combo",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 1,
+          "path": [
+            "values",
+            "Repayment frequency"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "2 3",
+        "mapping": "line_item",
+        "lineItem": "LineItems.Repayment frequency_1"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
+    },
+    {
       "pdfField": "2 30",
       "kind": "text",
       "source": {
@@ -593,6 +814,66 @@
         "field": "2 4",
         "mapping": "source_key"
       }
+    },
+    {
+      "pdfField": "2 6",
+      "kind": "text",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 1,
+          "path": [
+            "values",
+            "Borrower(s)"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "2 6",
+        "mapping": "line_item",
+        "lineItem": "LineItems.Borrowers_1"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
+    },
+    {
+      "pdfField": "2 7",
+      "kind": "text",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 1,
+          "path": [
+            "values",
+            "Loan amount"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "2 7",
+        "mapping": "line_item",
+        "lineItem": "LineItems.Loan amount_1"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
+    },
+    {
+      "pdfField": "2 9",
+      "kind": "text",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 1,
+          "path": [
+            "values",
+            "Interest rate (%)"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "2 9",
+        "mapping": "line_item",
+        "lineItem": "LineItems.Interest rate_1"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
     },
     {
       "pdfField": "4 1",
@@ -686,134 +967,127 @@
       }
     }
   ],
-  "unsupported": [
-    {
-      "pdfField": "2 2",
-      "legacyType": "line_item",
-      "lineItemField": "First repayment date",
-      "index": 1,
-      "reason": "subitem (LineItems.<field>_<n>) key naming vs Make 'Subitems' titles not yet verified"
-    },
-    {
-      "pdfField": "2 3",
-      "legacyType": "line_item",
-      "lineItemField": "Repayment frequency",
-      "index": 1,
-      "reason": "subitem (LineItems.<field>_<n>) key naming vs Make 'Subitems' titles not yet verified"
-    },
-    {
-      "pdfField": "2 6",
-      "legacyType": "line_item",
-      "lineItemField": "Borrowers",
-      "index": 1,
-      "reason": "subitem (LineItems.<field>_<n>) key naming vs Make 'Subitems' titles not yet verified"
-    },
-    {
-      "pdfField": "2 12",
-      "legacyType": "line_item",
-      "lineItemField": "Borrowers",
-      "index": 2,
-      "reason": "subitem (LineItems.<field>_<n>) key naming vs Make 'Subitems' titles not yet verified"
-    },
-    {
-      "pdfField": "2 18",
-      "legacyType": "line_item",
-      "lineItemField": "Borrowers",
-      "index": 3,
-      "reason": "subitem (LineItems.<field>_<n>) key naming vs Make 'Subitems' titles not yet verified"
-    },
-    {
-      "pdfField": "2 24",
-      "legacyType": "line_item",
-      "lineItemField": "Borrowers",
-      "index": 4,
-      "reason": "subitem (LineItems.<field>_<n>) key naming vs Make 'Subitems' titles not yet verified"
-    },
-    {
-      "pdfField": "2 7",
-      "legacyType": "line_item",
-      "lineItemField": "Loan amount",
-      "index": 1,
-      "reason": "subitem (LineItems.<field>_<n>) key naming vs Make 'Subitems' titles not yet verified"
-    },
-    {
-      "pdfField": "2 13",
-      "legacyType": "line_item",
-      "lineItemField": "Loan amount",
-      "index": 2,
-      "reason": "subitem (LineItems.<field>_<n>) key naming vs Make 'Subitems' titles not yet verified"
-    },
-    {
-      "pdfField": "2 19",
-      "legacyType": "line_item",
-      "lineItemField": "Loan amount",
-      "index": 3,
-      "reason": "subitem (LineItems.<field>_<n>) key naming vs Make 'Subitems' titles not yet verified"
-    },
-    {
-      "pdfField": "2 25",
-      "legacyType": "line_item",
-      "lineItemField": "Loan amount",
-      "index": 4,
-      "reason": "subitem (LineItems.<field>_<n>) key naming vs Make 'Subitems' titles not yet verified"
-    },
-    {
-      "pdfField": "2 9",
-      "legacyType": "line_item",
-      "lineItemField": "Interest rate",
-      "index": 1,
-      "reason": "subitem (LineItems.<field>_<n>) key naming vs Make 'Subitems' titles not yet verified"
-    },
-    {
-      "pdfField": "2 15",
-      "legacyType": "line_item",
-      "lineItemField": "Interest rate",
-      "index": 2,
-      "reason": "subitem (LineItems.<field>_<n>) key naming vs Make 'Subitems' titles not yet verified"
-    },
-    {
-      "pdfField": "2 21",
-      "legacyType": "line_item",
-      "lineItemField": "Interest rate",
-      "index": 3,
-      "reason": "subitem (LineItems.<field>_<n>) key naming vs Make 'Subitems' titles not yet verified"
-    },
-    {
-      "pdfField": "2 27",
-      "legacyType": "line_item",
-      "lineItemField": "Interest rate",
-      "index": 4,
-      "reason": "subitem (LineItems.<field>_<n>) key naming vs Make 'Subitems' titles not yet verified"
-    },
+  "overlays": [],
+  "unsupported": [],
+  "unresolvedLegacyMappings": [
     {
       "pdfField": "2 11",
-      "legacyType": "line_item",
-      "lineItemField": "Loan term in years",
-      "index": 1,
-      "reason": "subitem (LineItems.<field>_<n>) key naming vs Make 'Subitems' titles not yet verified"
+      "mapping": "line_item",
+      "category": "line_item_name_conflict",
+      "evidence": {
+        "subfield": "Loan term in years",
+        "position": 1,
+        "knownSubfields": [
+          "ASB Facility type",
+          "Additional purposes",
+          "BNZ product",
+          "Borrowers",
+          "First repayment date",
+          "Fixed term months",
+          "Fixed term yrs",
+          "Interest only period months",
+          "Interest only term years",
+          "Interest rate",
+          "Loan amount",
+          "Loan term years",
+          "Main purpose for each facility",
+          "Repayment frequency",
+          "Request to ratelock RLA",
+          "WBC Loan product",
+          "name"
+        ]
+      },
+      "reason": "subfield not produced by the current line_items_configs"
     },
     {
       "pdfField": "2 17",
-      "legacyType": "line_item",
-      "lineItemField": "Loan term in years",
-      "index": 2,
-      "reason": "subitem (LineItems.<field>_<n>) key naming vs Make 'Subitems' titles not yet verified"
+      "mapping": "line_item",
+      "category": "line_item_name_conflict",
+      "evidence": {
+        "subfield": "Loan term in years",
+        "position": 2,
+        "knownSubfields": [
+          "ASB Facility type",
+          "Additional purposes",
+          "BNZ product",
+          "Borrowers",
+          "First repayment date",
+          "Fixed term months",
+          "Fixed term yrs",
+          "Interest only period months",
+          "Interest only term years",
+          "Interest rate",
+          "Loan amount",
+          "Loan term years",
+          "Main purpose for each facility",
+          "Repayment frequency",
+          "Request to ratelock RLA",
+          "WBC Loan product",
+          "name"
+        ]
+      },
+      "reason": "subfield not produced by the current line_items_configs"
     },
     {
       "pdfField": "2 23",
-      "legacyType": "line_item",
-      "lineItemField": "Loan term in years",
-      "index": 3,
-      "reason": "subitem (LineItems.<field>_<n>) key naming vs Make 'Subitems' titles not yet verified"
+      "mapping": "line_item",
+      "category": "line_item_name_conflict",
+      "evidence": {
+        "subfield": "Loan term in years",
+        "position": 3,
+        "knownSubfields": [
+          "ASB Facility type",
+          "Additional purposes",
+          "BNZ product",
+          "Borrowers",
+          "First repayment date",
+          "Fixed term months",
+          "Fixed term yrs",
+          "Interest only period months",
+          "Interest only term years",
+          "Interest rate",
+          "Loan amount",
+          "Loan term years",
+          "Main purpose for each facility",
+          "Repayment frequency",
+          "Request to ratelock RLA",
+          "WBC Loan product",
+          "name"
+        ]
+      },
+      "reason": "subfield not produced by the current line_items_configs"
     },
     {
       "pdfField": "2 29",
-      "legacyType": "line_item",
-      "lineItemField": "Loan term in years",
-      "index": 4,
-      "reason": "subitem (LineItems.<field>_<n>) key naming vs Make 'Subitems' titles not yet verified"
+      "mapping": "line_item",
+      "category": "line_item_name_conflict",
+      "evidence": {
+        "subfield": "Loan term in years",
+        "position": 4,
+        "knownSubfields": [
+          "ASB Facility type",
+          "Additional purposes",
+          "BNZ product",
+          "Borrowers",
+          "First repayment date",
+          "Fixed term months",
+          "Fixed term yrs",
+          "Interest only period months",
+          "Interest only term years",
+          "Interest rate",
+          "Loan amount",
+          "Loan term years",
+          "Main purpose for each facility",
+          "Repayment frequency",
+          "Request to ratelock RLA",
+          "WBC Loan product",
+          "name"
+        ]
+      },
+      "reason": "subfield not produced by the current line_items_configs"
     }
   ],
+  "inertLegacyMappings": [],
   "importErrors": [],
   "importWarnings": [
     {
@@ -825,7 +1099,6 @@
       "count": 1
     }
   ],
-  "staleLegacyMappings": [],
   "unmappedPdfFields": [
     "1 10",
     "1 11",
@@ -845,36 +1118,22 @@
     "1 25",
     "2 10",
     "2 11",
-    "2 12",
-    "2 13",
     "2 14",
-    "2 15",
     "2 16",
     "2 17",
-    "2 18",
-    "2 19",
-    "2 2",
     "2 20",
-    "2 21",
     "2 22",
     "2 23",
-    "2 24",
-    "2 25",
     "2 26",
-    "2 27",
     "2 28",
     "2 29",
     "2 29 total",
-    "2 3",
     "2 32",
     "2 33",
     "2 34",
     "2 35",
     "2 5",
-    "2 6",
-    "2 7",
     "2 8",
-    "2 9",
     "3 1",
     "3 2",
     "3 3",

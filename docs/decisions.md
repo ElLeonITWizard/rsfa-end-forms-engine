@@ -75,3 +75,61 @@ Lightweight ADR log, newest last. Status: `proposed` | `accepted` | `superseded`
 - **Decision:** Mount a private GCS bucket at `/templates` (Cloud Run volume mount) and set `ENGINE_TEMPLATE_DIRS=/templates`.
   The engine needs no storage SDK. Mappings are baked into the image.
 - **Next review:** with D-009.
+
+### D-011 Overlays: reproduce MacroForge `custom_fields` with an evidenced coordinate transform
+- **Date:** 2026-10-27 · **Status:** accepted (POC); production use needs one comparison with a real MacroForge output
+- **Context:**
+  - 14 legacy overlays carry values that no AcroForm field holds, e.g. the BNZ Boarder customer names.
+  - The export records no scale.
+  - Hand-writing a field mapping (e.g. BNZ `Text 1`) would invent behaviour.
+- **Decision:**
+  - The importer converts each overlay rect with `pdf = rect / 1.2`, top-left origin, into PDF points.
+    Evidence: 4 independent label anchors fit s = 1.194 ± 0.013, and all 14 overlays were visually reviewed (docs/03).
+  - The engine draws single-line text into the page content using embedded Liberation Sans (bundled in PDFBox).
+    Size: ≤10pt, ≤70% of the rect height, shrunk to fit the width. Below 6pt it is an error, never truncated.
+- **Trade-offs:**
+  - The legacy font and size are unknown, so the look may differ from MacroForge.
+  - Page-content text is not editable as a form field. It is visible in all viewers.
+  - Overlays on encrypted templates are refused until verified.
+- **Validation / next review:** compare positions against one real MacroForge output before cutover.
+
+### D-012 LineItems: generic `lineItem` source driven by the export's `line_items_configs`
+- **Date:** 2026-10-27 · **Status:** accepted (POC)
+- **Decision:**
+  - `{"lineItem": {"array", "position" (1-based), "path"}}` reads element n of a data array.
+  - The importer builds it only from `sub_mappings` (verified) and cross-checks against `line_item_instances`.
+  - Names not produced by `sub_mappings` stay unresolved; there is no aliasing.
+  - Conditions on `LineItems.*` without a row index stay unsupported.
+- **Trade-offs:** 64 legacy line-item mappings (term/period fields) stay unfilled until the naming is confirmed.
+- **Next review:** after a real MacroForge callback or output confirms the current subfield names.
+
+### D-013 Constant "checked" boxes require explicit human approval
+- **Date:** 2026-10-27 · **Status:** accepted
+- **Context:**
+  - 36 legacy rules tick a box regardless of data.
+  - One is the BNZ Handover adviser certification ("I confirm I have recommended … as appropriate").
+  - The brief forbids auto-consenting to legally meaningful statements.
+- **Decision:** a constant `true` rule is applied only when the manifest rule has `"approved": true`. Otherwise the box
+  stays Off with `CONSTANT_CHECK_NOT_APPROVED`. Constant `false` (legacy default Off) needs no approval.
+- **Trade-offs:** the output differs from legacy until RSFA approves each tick. This is deliberate.
+
+### D-014 Unicode text: check each field's own font, fall back to an embedded Unicode font by manifest policy
+- **Date:** 2026-10-27 · **Status:** accepted (POC)
+- **Context:**
+  - Bank templates use subset or WinAnsi/MacRoman fonts that cannot encode te reo Māori macrons.
+  - Dropping or transliterating characters would corrupt names and addresses.
+- **Decision:**
+  - The engine checks encodability before writing.
+  - With `fontFallback: unicode` (the importer's default, reviewable per manifest), only the affected field is re-pointed
+    at a fully embedded Liberation Sans, with a `FONT_FALLBACK` warning.
+  - With `none` the fill fails with `UNENCODABLE_TEXT`.
+- **Trade-offs:** that field's typeface differs from the bank's font. Adds ~400 KB per affected PDF (full embedding is required for AcroForm appearances).
+
+### D-015 Container: fonts and build inputs
+- **Date:** 2026-10-27 · **Status:** accepted (POC)
+- **Decision:**
+  - Filling needs no system fonts: Liberation Sans comes from the PDFBox jar, and banks embed or reference standard-14 fonts.
+  - The runtime image still installs `fontconfig` + `fonts-urw-base35`, so the `render` command (and any future thumbnails or flattening) draws ZapfDingbats check marks.
+  - The Dockerfile has a `runtime-prebuilt` target for verifying with a host-built jar.
+  - Optional `BUILD_IMAGE`, `APT_MIRROR`, `MAVEN_EXTRA_OPTS` and a BuildKit secret `build_ca` support TLS-intercepting proxies without leaving anything in the image.
+- **Validation:** see the Docker verification table in docs/02.

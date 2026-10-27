@@ -1,0 +1,46 @@
+{
+  "requestId": "poc-bnz-handover-0001",
+  "templateId": "BNZ_HANDOVER_FORM",
+  "templateVersion": "8-24",
+  "today": "2026-10-27",
+  "data": {
+    "Applicant 1 Full Name": "Jane Example",
+    "Applicant 2 Full Name": "John Sample",
+    "Banks to Send": "BNZ",
+    "Subitems": [
+      {
+        "name": "Facility 1",
+        "values": {
+          "BNZ product": "Classic (fixed rate)",
+          "Loan amount": "450000",
+          "Interest rate (%)": "5.49",
+          "Repayment frequency": "Fortnightly",
+          "Main purpose for each facility": "–  Buy a home or land (incl. investment)",
+          "Request to ratelock (RLA)": true
+        }
+      },
+      {
+        "name": "Facility 2",
+        "values": {
+          "BNZ product": "Rapid Repay (revolving credit)",
+          "Loan amount": "50000",
+          "Interest rate (%)": "6.10",
+          "Repayment frequency": "Monthly",
+          "Main purpose for each facility": null,
+          "Request to ratelock (RLA)": false
+        }
+      },
+      {
+        "name": "Facility 3",
+        "values": {
+          "BNZ product": "TotalMoney (offsetting)",
+          "Loan amount": "25000",
+          "Interest rate (%)": "5.95",
+          "Repayment frequency": "Weekly",
+          "Main purpose for each facility": "",
+          "Request to ratelock (RLA)": false
+        }
+      }
+    ]
+  }
+}

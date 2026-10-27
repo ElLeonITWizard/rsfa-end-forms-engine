@@ -1,5 +1,6 @@
 .local
 .git
-engine/target
+engine/target/*
+!engine/target/end-forms-engine.jar
 **/*.mforge
 **/*.xlsx

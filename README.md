@@ -32,8 +32,15 @@ java -jar engine/target/end-forms-engine.jar fill \
 pdftoppm -r 110 -png -singlefile .local/output/BNZ_BoarderForm_POC.pdf .local/output/BNZ_BoarderForm_POC
 ```
 
-Expected output: a JSON report with `"ok": true`, 7 fields filled (`Text 2`–`Text 6`, `Date 1`, `Date 2`)
-and 2 `UNSUPPORTED_LEGACY_RULE` warnings for the customer-name overlays. The PDF stays editable.
+Expected output: a JSON report with `"ok": true`, no issues, and 9 entries filled. These are the fields
+`Text 2`–`Text 6`, `Date 1` and `Date 2`, plus the two customer-name overlays `overlay:custom_text_…`. The PDF stays editable.
+
+Other fixtures:
+- `bnz-boarder-macrons.request.json`: te reo Māori macrons, which use the Unicode fallback.
+- `bnz-handover.request.json`: repeated loan facilities via LineItems.
+- `ghl-np-trust.request.json`: checkboxes on an encrypted template.
+
+To view the output without poppler, run `java -jar engine/target/end-forms-engine.jar render --pdf <file> --out-dir <dir>`.
 
 ## Run the HTTP API locally
 
@@ -41,7 +48,7 @@ and 2 `UNSUPPORTED_LEGACY_RULE` warnings for the customer-name overlays. The PDF
 export ENGINE_API_KEY=$(python3 -c "import secrets;print(secrets.token_urlsafe(32))")
 java -jar engine/target/end-forms-engine.jar serve        # 127.0.0.1:8080, auth=API_KEY
 
-curl -s localhost:8080/health                              # {"status":"ok","templates":3}
+curl -s localhost:8080/health                              # {"status":"ok","templates":4}
 curl -s -o out.pdf -D - -H "Authorization: Bearer $ENGINE_API_KEY" \
   -H 'Content-Type: application/json' --data @tests/fixtures/bnz-boarder.request.json \
   localhost:8080/generate
@@ -64,13 +71,27 @@ Responses:
   - 422 validation failed
   - 503 template file unavailable
 
+## Docker (local only, nothing deployed)
+
+```bash
+(cd engine && mvn -B package)
+docker build --network host -f engine/Dockerfile --target runtime-prebuilt -t end-forms-engine:prebuilt .
+docker run --rm -p 127.0.0.1:8080:8080 -e ENGINE_AUTH=API_KEY -e ENGINE_API_KEY="$ENGINE_API_KEY" \
+  -v "$PWD/.local/generated/templates:/templates:ro" end-forms-engine:prebuilt
+```
+
+The default target (`docker build -f engine/Dockerfile .`) compiles and tests inside Docker. Proxy and CA options are in
+the Dockerfile header. The verification results are in `docs/02-poc-guide-and-tests.md`.
+
 ## Current limitations
 
-- Two real templates are tested end-to-end (BNZ Boarder, GHL N&P Trust). The other 23 are imported but untested.
-- The following legacy rules are not supported:
-  - free-positioned overlays (e.g. the BNZ customer names)
-  - subitem/`LineItems` mappings
-  - multi-condition rules
+- Three real templates are tested end-to-end (BNZ Boarder, BNZ Handover partially, GHL N&P Trust). The other 22 are imported but untested.
+- 138 legacy mappings are unresolved and 19 are unsupported (docs/03). Notable cases:
+  - LineItems term/period name conflicts;
+  - BNZ Gifting has no form fields;
+  - row-less line-item conditions.
+- The overlay position transform (`/1.2`) is strongly evidenced but not compared with a real MacroForge output.
+  The overlay font and size are engine policy.
+- Constant ticks stay Off until a human approves them in the manifest (`"approved": true`).
 - The legacy `[TODAY]` format and `equals`/`contains` semantics are inferred, not confirmed.
-- Text that the template's font cannot encode (e.g. macrons such as `ā`) fails with `UNENCODABLE_TEXT`. It is never dropped.
 - There is no flattening, no SharePoint upload and no Make integration yet.

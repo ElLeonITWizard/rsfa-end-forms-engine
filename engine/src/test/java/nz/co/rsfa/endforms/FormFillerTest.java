@@ -43,9 +43,14 @@ class FormFillerTest {
     }
 
     static Manifest manifest(String fieldsJson, byte[] tpl) throws IOException {
+        return manifest("", fieldsJson, tpl);
+    }
+
+    /** @param extra additional top-level manifest properties, e.g. {@code "fontFallback":"unicode",} */
+    static Manifest manifest(String extra, String fieldsJson, byte[] tpl) throws IOException {
         String m = """
-                {"schemaVersion":1,"templateId":"SYNTH","templateVersion":"1","templateFile":"synth.pdf",
-                 "templateSha256":"%s","fields":%s}""".formatted(FormFiller.sha256(tpl), fieldsJson);
+                {"schemaVersion":1,"templateId":"SYNTH","templateVersion":"1","templateFile":"synth.pdf",%s
+                 "templateSha256":"%s","fields":%s}""".formatted(extra, FormFiller.sha256(tpl), fieldsJson);
         return JSON.readValue(m, Manifest.class);
     }
 
@@ -156,7 +161,7 @@ class FormFillerTest {
     @Test
     void unmatchedConditionLeavesExistingStateUntouched() throws IOException {
         byte[] prechecked = FILLER.fill(template, manifest(
-                "[{\"pdfField\":\"Consent box\",\"kind\":\"checkbox\",\"source\":{\"constant\":true}}]"),
+                "[{\"pdfField\":\"Consent box\",\"kind\":\"checkbox\",\"source\":{\"constant\":true},\"approved\":true}]"),
                 data("{}")).pdf();
         String rules = """
                 [{"pdfField":"Consent box","kind":"checkbox","source":{"when":{"key":"Consent","operator":"equals","value":"Yes"}}}]""";
@@ -169,12 +174,124 @@ class FormFillerTest {
     @Test
     void constantCheckedAndUnchecked() throws IOException {
         String rules = """
-                [{"pdfField":"Consent box","kind":"checkbox","source":{"constant":true}},
+                [{"pdfField":"Consent box","kind":"checkbox","source":{"constant":true},"approved":true},
                  {"pdfField":"Frequency","kind":"checkbox","option":"3","source":{"constant":false}}]""";
         FillResult r = FILLER.fill(template, manifest(rules), data("{}"));
         assertTrue(r.ok(), () -> r.issues().toString());
         assertEquals("Yes", values(r.pdf()).get("Consent box"));
         assertEquals("Off", values(r.pdf()).get("Frequency"));
+    }
+
+    @Test
+    void constantTickIsNotAppliedUntilApproved() throws IOException {
+        String rules = "[{\"pdfField\":\"Consent box\",\"kind\":\"checkbox\",\"source\":{\"constant\":true}}]";
+        FillResult r = FILLER.fill(template, manifest(rules), data("{}"));
+        assertTrue(r.ok());
+        assertEquals(List.of("CONSTANT_CHECK_NOT_APPROVED"), codes(r));
+        assertEquals("Off", values(r.pdf()).get("Consent box"), "an unreviewed declaration tick must stay Off");
+    }
+
+    @Test
+    void forcedOffNeedsNoOnStateOnMultiStateCheckbox() throws IOException {
+        String rules = """
+                [{"pdfField":"Frequency","kind":"checkbox","source":{"constant":false}},
+                 {"pdfField":"Frequency","kind":"checkbox","option":"2","source":{"when":{"key":"F","operator":"equals","value":"x"}}}]""";
+        FillResult off = FILLER.fill(template, manifest(rules), data("{\"F\":\"y\"}"));
+        assertTrue(off.ok(), () -> off.issues().toString());
+        assertEquals("Off", values(off.pdf()).get("Frequency"));
+        FillResult on = FILLER.fill(template, manifest(rules), data("{\"F\":\"x\"}"));
+        assertEquals("2", values(on.pdf()).get("Frequency"), "a matching option wins over the field-level default Off");
+    }
+
+    // ------------------------------------------------------------------ line items
+
+    static final String LINE_RULES = """
+            [{"pdfField":"Full name","kind":"text","source":{"lineItem":{"array":"Subitems","position":1,"path":["name"]}}},
+             {"pdfField":"Postcode","kind":"text","source":{"lineItem":{"array":"Subitems","position":2,"path":["values","Code"]}}},
+             {"pdfField":"Notes","kind":"text","source":{"lineItem":{"array":"Subitems","position":3,"path":["values","Code"]}}},
+             {"pdfField":"Repayment frequency","kind":"combo","source":{"lineItem":{"array":"Subitems","position":1,"path":["values","Repayment frequency"]}}}]""";
+
+    @Test
+    void lineItemsReadTheNthArrayElement() throws IOException {
+        FillResult r = FILLER.fill(template, manifest(LINE_RULES), data("""
+                {"Subitems":[{"name":"Facility A","values":{"Repayment frequency":"Weekly","Code":"0001"}},
+                             {"name":"Facility B","values":{"Code":"0002"}}]}"""));
+        assertTrue(r.ok(), () -> r.issues().toString());
+        Map<String, String> v = values(r.pdf());
+        assertEquals("Facility A", v.get("Full name"));
+        assertEquals("0002", v.get("Postcode"));
+        assertEquals("Weekly", v.get("Repayment frequency"));
+        assertEquals(List.of("Notes"), r.skipped(), "row 3 does not exist: skipped quietly");
+        assertTrue(r.issues().isEmpty(), r.issues().toString());
+    }
+
+    @Test
+    void lineItemContractProblemsAreReported() throws IOException {
+        FillResult noArray = FILLER.fill(template, manifest(LINE_RULES), data("{}"));
+        assertTrue(noArray.ok());
+        assertTrue(codes(noArray).contains("SOURCE_KEY_ABSENT"));
+        FillResult missingColumn = FILLER.fill(template, manifest(LINE_RULES),
+                data("{\"Subitems\":[{\"name\":\"A\",\"values\":{}}]}"));
+        assertTrue(missingColumn.issues().stream().anyMatch(i -> i.code().equals("SOURCE_KEY_ABSENT")
+                && "Subitems[1].values.Repayment frequency".equals(i.sourceKey())));
+        FillResult notArray = FILLER.fill(template, manifest(LINE_RULES), data("{\"Subitems\":\"x\"}"));
+        assertNull(notArray.pdf());
+        assertTrue(codes(notArray).contains("UNSUPPORTED_VALUE_TYPE"));
+    }
+
+    // ------------------------------------------------------------------ overlays
+
+    static String overlay(String id, double x0, double y0, double x1, double y1, String source) {
+        return """
+                {"id":"%s","page":0,"rect":[%s,%s,%s,%s],"source":%s}""".formatted(id, x0, y0, x1, y1, source);
+    }
+
+    @Test
+    void overlaysDrawTextAtTheirRectInAnEmbeddedFont() throws IOException {
+        String overlays = "\"overlays\":[" + overlay("a", 360, 740, 560, 758, "{\"key\":\"Applicant 1 Full Name\"}")
+                + "," + overlay("b", 360, 700, 560, 718, "{\"constant\":\"Mere Tāwhiri-Sample\"}") + "],";
+        FillResult r = FILLER.fill(template, manifest(overlays, "[]", template), data("{\"Applicant 1 Full Name\":\"Jane Example\"}"));
+        assertTrue(r.ok(), () -> r.issues().toString());
+        assertEquals(List.of("overlay:a", "overlay:b"), r.filled());
+        assertEquals("Jane Example", Rendering.textIn(r.pdf(), 0, 360, 740, 200, 18));
+        assertEquals("Mere Tāwhiri-Sample", Rendering.textIn(r.pdf(), 0, 360, 700, 200, 18));
+        assertTrue(Rendering.darkPixels(r.pdf(), 0, 360, 740, 200, 18) > 50);
+        assertTrue(Rendering.embeddedFonts(r.pdf()).contains("LiberationSans"), "overlay font must be embedded");
+    }
+
+    @Test
+    void overlayFailuresAreStructured() throws IOException {
+        String tooLong = "\"overlays\":[" + overlay("t", 40, 400, 70, 412, "{\"constant\":\"This value is far too long for a tiny box\"}") + "],";
+        assertEquals(List.of("OVERLAY_TEXT_TOO_LONG"), codes(FILLER.fill(template, manifest(tooLong, "[]", template), data("{}"))));
+        String outside = "\"overlays\":[" + overlay("o", 500, 830, 700, 850, "{\"constant\":\"x\"}") + "],";
+        assertEquals(List.of("OVERLAY_OUT_OF_PAGE"), codes(FILLER.fill(template, manifest(outside, "[]", template), data("{}"))));
+        String underWidget = "\"overlays\":[" + overlay("w", 40, 600, 340, 618, "{\"constant\":\"x\"}") + "],";
+        FillResult r = FILLER.fill(template, manifest(underWidget, "[]", template), data("{}"));
+        assertTrue(r.ok());
+        assertEquals(List.of("OVERLAY_UNDER_OPAQUE_WIDGET"), codes(r));
+        String required = "\"overlays\":[" + overlay("r", 40, 400, 300, 418, "{\"key\":\"k\"}").replace("}}", "},\"required\":true}") + "],";
+        assertEquals(List.of("MISSING_REQUIRED_VALUE"), codes(FILLER.fill(template, manifest(required, "[]", template), data("{}"))));
+    }
+
+    @Test
+    void overlaysOnEncryptedTemplatesAreRefused() throws IOException {
+        byte[] enc = SyntheticTemplate.buildEncrypted();
+        String extra = "\"encryption\":\"preserve\",\"overlays\":[" + overlay("e", 40, 400, 300, 418, "{\"constant\":\"x\"}") + "],";
+        assertEquals(List.of("OVERLAY_ON_ENCRYPTED_TEMPLATE"), codes(FILLER.fill(enc, manifest(extra, "[]", enc), data("{}"))));
+    }
+
+    // ------------------------------------------------------------------ fonts
+
+    @Test
+    void unicodeFallbackFillsMacronsWhenTheManifestAllowsIt() throws IOException {
+        String rules = "[{\"pdfField\":\"Full name\",\"kind\":\"text\",\"source\":{\"key\":\"n\"}}]";
+        FillResult r = FILLER.fill(template, manifest("\"fontFallback\":\"unicode\",", rules, template),
+                data("{\"n\":\"Ātaahua Ōtāhuhu\"}"));
+        assertTrue(r.ok(), () -> r.issues().toString());
+        assertEquals(List.of("FONT_FALLBACK"), codes(r));
+        assertEquals("Ātaahua Ōtāhuhu", values(r.pdf()).get("Full name"));
+        assertTrue(Rendering.darkPixels(r.pdf(), 0, 40, 740, 300, 18) > 50, "fallback appearance must render");
+        assertTrue(Rendering.embeddedFonts(r.pdf()).contains("LiberationSans"));
     }
 
     @Test
@@ -220,7 +337,7 @@ class FormFillerTest {
     @Test
     void macroforgeKeyNormalisationMatchesLegacyKeys() throws IOException {
         String rules = "[{\"pdfField\":\"Full name\",\"kind\":\"text\",\"source\":{\"key\":\"Applicant 1 Residential City_Town\"}}]";
-        Manifest m = JSON.readValue(JSON.writeValueAsString(manifest(rules)).replace("\"none\"", "\"macroforge-v1\""), Manifest.class);
+        Manifest m = JSON.readValue(JSON.writeValueAsString(manifest(rules)).replace("\"sourceKeyNormalization\":\"none\"", "\"sourceKeyNormalization\":\"macroforge-v1\""), Manifest.class);
         assertEquals(Manifest.KeyNormalization.macroforgeV1, m.sourceKeyNormalization());
         FillResult r = FILLER.fill(template, m, data("{\"Applicant 1 Residential City/Town\":\"Auckland\"}"));
         assertTrue(r.ok(), () -> r.issues().toString());
@@ -235,6 +352,8 @@ class FormFillerTest {
     void manifestDefaultsAreSafe() throws IOException {
         Manifest m = manifest("[]");
         assertEquals(Manifest.EncryptionPolicy.reject, m.encryption());
+        assertEquals(Manifest.FontFallback.none, m.fontFallback());
         assertNotNull(m.unsupported());
+        assertTrue(m.overlays().isEmpty());
     }
 }

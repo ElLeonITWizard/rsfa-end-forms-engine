@@ -18,7 +18,9 @@ public record Manifest(
         String templateSha256,
         EncryptionPolicy encryption,
         KeyNormalization sourceKeyNormalization,
+        FontFallback fontFallback,
         List<FieldRule> fields,
+        List<Overlay> overlays,
         List<JsonNode> unsupported) {
 
     public static final int SUPPORTED_SCHEMA_VERSION = 1;
@@ -43,10 +45,31 @@ public record Manifest(
         macroforgeV1
     }
 
+    /** What to do when a form field's own font cannot encode a value (e.g. Māori macrons). */
+    public enum FontFallback {
+        /** Fail with UNENCODABLE_TEXT. */
+        none,
+        /** Re-point that field's appearance at the engine's embedded Unicode font (Liberation Sans). */
+        unicode
+    }
+
+    /**
+     * Text drawn at a fixed position (legacy MacroForge "custom field").
+     *
+     * @param rect     [llx, lly, urx, ury] in PDF points, bottom-left origin (already converted by the importer)
+     * @param fontSize maximum font size in points; the engine shrinks to fit, never truncates (default 10)
+     */
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record Overlay(String id, int page, List<Double> rect, FieldRule.Source source, boolean required,
+                          Double fontSize) {
+    }
+
     public Manifest {
         encryption = encryption == null ? EncryptionPolicy.reject : encryption;
         sourceKeyNormalization = sourceKeyNormalization == null ? KeyNormalization.none : sourceKeyNormalization;
+        fontFallback = fontFallback == null ? FontFallback.none : fontFallback;
         fields = fields == null ? List.of() : List.copyOf(fields);
+        overlays = overlays == null ? List.of() : List.copyOf(overlays);
         unsupported = unsupported == null ? List.of() : List.copyOf(unsupported);
     }
 

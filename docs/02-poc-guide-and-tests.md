@@ -2,34 +2,36 @@
 
 ## End-to-end POC steps
 
-See the README quickstart. In summary: (1) copy the `.mforge` to `.local/reference/`, (2) `import_mforge.py extract`,
-(3) `mvn package` (runs all tests), (4) `fill` with `tests/fixtures/bnz-boarder.request.json`,
-(5) render with `pdftoppm` and look at it.
+See the README quickstart. In summary:
+1. Copy the `.mforge` to `.local/reference/`.
+2. Run `import_mforge.py extract`.
+3. Run `mvn package` (runs all tests).
+4. Run `fill` with a fixture from `tests/fixtures/`.
+5. Render with `pdftoppm` or the engine's `render` command and look at the output.
 
 To re-import a manifest after the legacy export changes, run `import_mforge.py manifest … --strict --date <YYYY-MM-DD>`
 and review the diff. Every `reviewRequired` entry needs a human decision before production.
 
-## How the BNZ Boarder template was classified
+## BNZ Boarder (acceptance template)
 
 | Property | Result | Evidence |
 |---|---|---|
-| Identity | embedded in Flow C node 15 (`Banks to Send Contains BNZ`), SHA-256 `7982ae8cbda97f0be9173c2632839afaa7c0d725349cab32dddbd62520509795`, 49,354 bytes | importer |
-| External copy | **not supplied**, so no SHA comparison was possible. The embedded copy was used. | — |
-| Structure | 1 page A4, AcroForm, no XFA, not encrypted, 8 text fields (`Text 1`–`Text 6`, `Date 1`, `Date 2`), no duplicates | pypdf + PDFBox |
-| Fonts | field DA uses embedded `SerranoPro-Regular` (Type1C, MacRoman). ASCII fills correctly; `ā` fails | experiment |
-| Dates | `Date 1`/`Date 2`: comb, MaxLen 6, Acrobat action `AFDate_FormatEx("ddmmyy")`, so `ddMMyy` | PDF |
-| Legacy mapping | 7 entries: 5 source keys (`1st Property Address Street/City/Postcode`, `Number of rooms proposed to be rented`, `Proposed weekly amount(s) per room`) + 2 `direct_text` `[TODAY]` (`today_date`) | `.mforge` |
-| Not migrated | 2 `custom_fields` overlays (`Applicant 1/2 Full Name`) drawn at free positions. `Text 1` (Customer name(s)) has no AcroForm mapping in the legacy config | `.mforge` |
+| Identity | Flow C node 15 (`Banks to Send Contains BNZ`), SHA-256 `7982ae8c…0509795`, 49,354 bytes; the external copy was not supplied | importer |
+| Structure | 1 page A4, AcroForm, no XFA, not encrypted, 8 text fields (`Text 1`–`Text 6`, `Date 1`, `Date 2`) | pypdf + PDFBox |
+| Fonts | field DA uses an embedded `SerranoPro-Regular` subset (Type1C, MacRoman): ASCII works; `Ō`/`ā` need the Unicode fallback | experiment + test |
+| Dates | `Date 1`/`Date 2`: comb, MaxLen 6, Acrobat `AFDate_FormatEx("ddmmyy")`, so `ddMMyy` | PDF |
+| Mapping | 5 source keys + 2 `[TODAY]` + **2 overlays** `Applicant 1/2 Full Name` (legacy rects `[121,160,395,182]` and `[398,161,671,182]` → PDF `[100.83,690.22,329.17,708.56]` and `[331.67,690.22,559.17,707.72]`) | `.mforge`, transform evidence in docs/03 |
+| Customer name(s) | Filled by the 2 overlays exactly as the legacy config does. `Text 1` stays unmapped, as in the legacy config. Its widget has no background or appearance, so the overlay text stays visible | `.mforge` + PDF |
 
-The overlay rects (`[121,160,395,182]`, `[398,161,671,182]`, page 0) do not match the page in PDF points
-(they exceed the 595pt width) or at 96 DPI. MacroForge's own `native_field_info` rects *are* top-left PDF points
-(verified against the widget rects). The overlay coordinate system is therefore **unknown**, and no position is guessed.
-Proposed next step: confirm with RSFA whether `Text 1` should receive `Applicant 1 Full Name` + `Applicant 2 Full Name`.
-That would be a hand-authored, reviewed mapping change, not an import.
+## Second and third templates
 
-The second test template, **GHL N&P Trust**, uses the user-supplied file, which is SHA-256 identical to the embedded copy
-(`0057d507…797c`). It is AES-128 owner-encrypted (`/P -1084`, fill-in permitted). It uses checkbox fields with
-several widgets, each with its own on-state (e.g. `Check Box101` = 1/2/3/4). The legacy `Field#state` syntax selects among them.
+- **GHL N&P Trust** (user-supplied, SHA-identical to the embedded copy):
+  - AES-128 owner-encrypted, fill-in permitted, preserved via incremental save.
+  - Checkbox fields with several widgets, each with its own on-state.
+- **BNZ Handover** (embedded) is the **LineItems** demonstration: 6 repeating loan-facility rows. 36 line-item rules are imported:
+  - per row: `BNZ product` (combo), `Loan amount`, `Interest rate`, `Repayment frequency` (combo),
+    `Main purpose for each facility` (combo), `First repayment date`;
+  - 18 more (`Loan term`, `Fixed term`, `Interest only period`) are unresolved name conflicts (docs/03).
 
 ## Manifest schema (v1)
 
@@ -40,73 +42,107 @@ several widgets, each with its own on-state (e.g. `Check Box101` = 1/2/3/4). The
   "templateFile": "7982ae8cbda9__BNZ_BoarderForm_2.0_8_24.pdf",   // looked up in template dirs
   "templateSha256": "7982ae8c…",                                  // must match the bytes, else TEMPLATE_HASH_MISMATCH
   "encryption": "reject" | "preserve",                            // preserve = incremental save, original encryption kept
-  "sourceKeyNormalization": "none" | "macroforge-v1",             // '/' and '.' in data keys -> '_'
+  "sourceKeyNormalization": "none" | "macroforge-v1",             // '/' and '.' in top-level data keys -> '_'
+  "fontFallback": "none" | "unicode",                             // engine default none; importer writes unicode
   "provenance": { … },  "pdf": { …field inventory… },            // informational
   "fields": [
     {"pdfField": "Text 2", "kind": "text", "source": {"key": "1st Property Address Street"}, "required": false},
     {"pdfField": "Date 1", "kind": "text", "source": {"generated": "today", "format": "ddMMyy", "zone": "Pacific/Auckland"}},
     {"pdfField": "Check Box95", "kind": "checkbox", "option": "3",
      "source": {"when": {"key": "Total credits or deposits (next 12 months) (GHL Trust)", "operator": "equals", "value": "$1M-$5M"}}},
-    {"pdfField": "Some box", "kind": "checkbox", "source": {"constant": true}}
+    {"pdfField": "Some box", "kind": "checkbox", "source": {"constant": true}, "approved": false},
+    {"pdfField": "Loan Amount 2", "kind": "text",
+     "source": {"lineItem": {"array": "Subitems", "position": 2, "path": ["values", "Loan amount"]}}}
   ],
-  "unsupported": [ … ],  "importErrors": [ … ],  "importWarnings": [ … ],  "staleLegacyMappings": [ … ]
+  "overlays": [
+    {"id": "custom_text_1_1777387659", "page": 0, "rect": [100.83, 690.22, 329.17, 708.56],   // PDF pt, bottom-left
+     "source": {"key": "Applicant 1 Full Name"}, "required": false, "fontSize": 10}            // fontSize optional (max)
+  ],
+  "unsupported": [ … ], "unresolvedLegacyMappings": [ … ], "inertLegacyMappings": [ … ],
+  "importErrors": [ … ], "importWarnings": [ … ]
 }
 ```
 
-Kinds: `text`, `checkbox`, `radio`, `combo`, `list`. Sources: `key` | `constant` | `generated:"today"` | `when`.
+Kinds: `text`, `checkbox`, `radio`, `combo`, `list`. Sources: `key` | `constant` | `generated:"today"` | `when` | `lineItem`.
 
-## Engine behaviour (what is supported)
+## Engine behaviour
 
 | Case | Behaviour |
 |---|---|
-| Text from key/constant/today | `setValue` + PDFBox appearance generation; MaxLen enforced (no truncation); line breaks rejected in single-line fields |
-| Number value | rendered as plain decimal (`250.00` stays as sent if it is a string) |
+| Text from key/constant/today/lineItem | `setValue` + PDFBox appearance generation; MaxLen enforced (no truncation); line breaks rejected in single-line fields |
+| Number value | rendered as plain decimal |
 | Boolean/array/object value into text | `UNSUPPORTED_VALUE_TYPE` / `AMBIGUOUS_SOURCE_VALUE` error |
-| Missing value | required → `MISSING_REQUIRED_VALUE` error; optional → skipped; key absent → also `SOURCE_KEY_ABSENT` warning |
-| Checkbox/radio `when` | exact (`equals`) / substring (`contains`), case-sensitive; a non-match leaves the field untouched; >1 selected option → `CONFLICTING_SELECTION` |
-| Checkbox constant | `true` → on-state, `false` → Off (legacy `checked`/`unchecked`) |
+| Missing value | required → `MISSING_REQUIRED_VALUE`; optional → skipped; key absent → also `SOURCE_KEY_ABSENT` warning |
+| **LineItems** | element `position` (1-based) of the array, then `path` inside it. Fewer rows than the form → skipped quietly. Array absent / column absent in a row → `SOURCE_KEY_ABSENT`. Non-array → error |
+| Checkbox/radio `when` | exact (`equals`) / substring (`contains`), case-sensitive. A non-match leaves the field untouched. More than one selected option → `CONFLICTING_SELECTION` |
+| Checkbox constant `false` | forces Off; works on multi-state fields without an option (legacy field-level `unchecked` default) |
+| **Checkbox constant `true`** | applied **only if `"approved": true`**; otherwise left Off with `CONSTANT_CHECK_NOT_APPROVED` (D-013) |
 | Combo/list | value must be an export or display option, else `INVALID_OPTION` |
 | Signature / push button target | always `FORBIDDEN_TARGET` |
-| Unencodable characters | `UNENCODABLE_TEXT` (field font lacks the glyph); never dropped |
+| **Overlays** | single line drawn into the page content in **embedded Liberation Sans** at `rect`: size min(maxSize 10, 70% of the rect height), shrunk to fit the width, 2pt left padding, vertically centred. Under 6pt → `OVERLAY_TEXT_TOO_LONG`. Rect outside the page → `OVERLAY_OUT_OF_PAGE`. A widget with a background colour under it → `OVERLAY_UNDER_OPAQUE_WIDGET` warning. Encrypted template → `OVERLAY_ON_ENCRYPTED_TEMPLATE` (not verified yet). Rotated page → error |
+| **Unicode in fields** | each value is checked against the field's own font first. If it cannot be encoded: `fontFallback=none` → `UNENCODABLE_TEXT`; `unicode` → the field's DA is pointed at the fully embedded Liberation Sans (`FONT_FALLBACK` warning). Characters are never dropped |
 | Encrypted template | `reject` → `ENCRYPTED_TEMPLATE`; `preserve` → requires fill-in permission, incremental save |
 | XFA / no AcroForm | `XFA_PRESENT` / `NO_ACROFORM` |
 | Any ERROR | no PDF is produced (strict) |
-| Output | new bytes; template never modified; editable (not flattened); JavaScript format actions are not run (the value is written exactly as resolved) |
+| Output | new bytes; template never modified; editable (not flattened); JavaScript format actions are not run |
+| Determinism | same input → identical bytes for unencrypted templates (host and container, verified). Encrypted (incremental) outputs differ in bytes on every run because AES uses a random IV, but field values are identical |
 
-**Not supported (legacy rule types):**
-- `overlay_text` (14 in Flow C)
-- `line_item` (173), using `LineItems.<field>_<n>` keys, with subitem key naming still unverified
-- `line_item_condition` (18)
-- multi-condition `conditional` (1)
+**Not supported (legacy rule types):** `line_item_condition` without a row index (18) and multi-condition `conditional` (1).
+Unresolved items (138) are listed per manifest in `unresolvedLegacyMappings`.
 
-## Acceptance criteria for this POC
+## Acceptance criteria
 
 | # | Criterion | Status |
 |---|---|---|
-| 1 | One existing lender PDF filled locally from a mapping **imported** from the `.mforge`, using fictional data | **Passed**: `BNZ_BoarderForm_2.0_8 24.pdf`, 7/7 imported fields |
-| 2 | Field values asserted on the output | **Passed**: `LegacyTemplatesTest.bnzBoarderFormFromImportedMapping` |
-| 3 | Output visibly rendered (appearance streams), no clipping/misalignment | **Passed** (PDFBox raster assertion + manual poppler render review) |
-| 4 | Same input + mapping → equivalent field values on repeated runs | **Passed** (field values; bytes are not compared) |
-| 5 | Checkbox/radio template smoke test | **Passed**: GHL N&P Trust (checkboxes), poppler render reviewed with the URW Dingbats font. **Radio** passes only on the synthetic template |
-| 6 | Same output as MacroForge for the same input | **Not testable** here: no MacroForge output available |
-| 7 | Customer names on BNZ form | **Failed / not migrated** (overlay) |
+| 1 | Existing lender PDF filled from an **imported** mapping with fictional data | **Passed**: BNZ Boarder |
+| 2 | **Complete BNZ Boarder incl. customer name(s)**, deterministic | **Passed**: 7 fields + 2 overlays. The overlay text is asserted by region extraction. Bytes are identical across runs and host/container |
+| 3 | Māori macrons in overlays and fields | **Passed**: `Aroha Tūhoe-Example`, `Mere Tāwhiri-Sample`, `Ōtāhuhu` (host + container render) |
+| 4 | Repeated LineItems example | **Passed**: BNZ Handover, 3 facilities into rows 1–3, rows 4–6 empty |
+| 5 | Checkbox template | **Passed**: GHL N&P Trust. Radio only on the synthetic template |
+| 6 | Docker image runs the engine with required fonts | **Passed** with caveats (see below) |
+| 7 | Same output as MacroForge for the same input | **Not testable**: no MacroForge output is available. Overlay font/size are engine policy |
 
 ## Repeatable tests
 
-| Suite | Command | Count | Notes |
-|---|---|---|---|
-| Importer (synthetic .mforge) | `python3 -m unittest discover -s tests/importer -v` | 6 | includes a "no payload/webhook value leaks" test |
-| Engine unit (synthetic AcroForm) | `cd engine && mvn -B test` | 14 | every widget kind, errors, normalisation, rendering, no value echo |
-| HTTP API | (same) | 6 | health, 200 PDF, 401/404/400/413, 422 without data echo, loopback-only `NONE` |
-| Legacy templates | (same) | 3 | BNZ, GHL, every committed manifest resolves against its template; **skipped without `.local` templates** |
+| Suite | Command | Count |
+|---|---|---|
+| Importer (synthetic .mforge) | `python3 -m unittest discover -s tests/importer -v` | 8 |
+| Engine unit (synthetic AcroForm): widget kinds, errors, normalisation, line items, overlays, fonts, approval gate, rendering, no value echo | `cd engine && mvn -B test` | 22 |
+| HTTP API | (same) | 6 |
+| Legacy templates: BNZ Boarder (+ macrons), BNZ Handover line items, the DDMMYYYY gap, GHL, manifest resolution. **Skipped without `.local` templates** | (same) | 6 |
 
-Last full run: 2026-10-27, all 29 passed (6 Python + 23 Java, none skipped).
+Last full run (2026-10-27):
+- Host: 42 passed (8 Python + 34 Java, none skipped).
+- Inside the Docker build: 28 Java passed, 6 skipped by design (no private templates in the build context).
+
+## Docker verification (2026-10-27)
+
+| Check | Result |
+|---|---|
+| `runtime-prebuilt` image (host-built jar) | built; runs as uid 10001; Temurin 21 JRE; fontconfig + URW base-35 (D050000L Dingbats) |
+| Full default build (Maven inside Docker, tests inside) | **passed**, with one substitution: Docker Hub and ECR Public rate-limited the `maven:3.9.11-eclipse-temurin-21` pull, so `BUILD_IMAGE` was set to a local stand-in (the pulled `eclipse-temurin:21-jre` + JDK 21 + Maven 3.9.11). **Not verified: the official Maven base image itself** |
+| Fill in the container (4 fixtures, read-only `/templates` mount) | all OK; 3 of 4 outputs **byte-identical** to the host. GHL differs only in the encrypted appended revision (random AES IV) |
+| Render in the container (PDFBox) | macrons in overlays and fallback field correct; bank ZapfDingbats ✔ renders via URW |
+| HTTP in the container | `$PORT` honoured; `/health` 200; `/generate` 200 PDF; 401 without key; `NONE` on 0.0.0.0 refuses to start; `PLATFORM_IAM` starts; 0 data values in logs |
+| Proxy / CA handling | optional BuildKit secret `build_ca` + `APT_MIRROR`/`MAVEN_EXTRA_OPTS` build args; no CA or secret left in the image |
+
+Reproduce:
+```bash
+cd engine && mvn -B package && cd ..
+docker build --network host -f engine/Dockerfile --target runtime-prebuilt -t end-forms-engine:prebuilt .
+docker run --rm -v "$PWD/.local/generated/templates:/templates:ro" -v "$PWD/tests/fixtures:/fixtures:ro" \
+  -v "$PWD/.local/output:/out" end-forms-engine:prebuilt fill \
+  --manifest "/app/mappings/bnz/BNZ_BOARDER_FORM@2.0_8-24.json" --templates /templates \
+  --data /fixtures/bnz-boarder-macrons.request.json --out /out/macrons.pdf --today 2026-10-27
+docker build -f engine/Dockerfile -t end-forms-engine:dev .     # full build, where Docker Hub is reachable
+```
 
 ## Known gaps / next work
 
-1. Decide on BNZ `Text 1` (customer names) and the overlay strategy in general (14 overlays, including `All Banks_DOAD.pdf`).
-2. Line items: map `LineItems.<field>_<n>` to `Subitems[n-1].values[<title>]` once the title normalisation is verified.
-3. Confirm the legacy `[TODAY]` format, the `equals`/`contains` semantics and the `checked` defaults against real MacroForge output (parallel run).
-4. Verify the 11 source keys missing from the cached Make column list against the live board.
-5. Fonts: embed a Unicode fallback font for macrons (a decision is needed, as it changes appearance).
-6. Review the 124 stale mappings with RSFA (e.g. 57 on `BNZ Gifting declaration template.pdf`, which has no form fields).
+1. Overlay transform (1.2) and engine font policy: compare with one real MacroForge output (any template with overlays).
+2. LineItems name conflict (`… in months/years` vs `… months/years`): confirm which names MacroForge produces today.
+3. Decide on a reviewed transform for Make's `DDMMYYYY` subitem dates into 6-cell `DDMMYY` comb fields (BNZ Handover).
+4. Approve or reject the 36 constant ticks (`approved: true` per rule), starting with BNZ Handover `Check Box 31`.
+5. Confirm the legacy `[TODAY]` format and the `equals`/`contains` semantics in a parallel run.
+6. Verify that the Monday labels match the PDF combo options exactly (BNZ product and purpose).
+7. Re-run the full Docker build with the official Maven base image where Docker Hub is reachable.

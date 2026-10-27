@@ -31,7 +31,7 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 
-IMPORTER_VERSION = "0.1.0"
+IMPORTER_VERSION = "0.2.0"
 BATCH_FILLER = "PDF Batch Filler"
 SINGLE_FILLER = "PDF Filler"
 CONDITIONAL = "Conditional Block"
@@ -39,6 +39,10 @@ SENTINELS = {"direct_text", "conditional", "checked", "unchecked"}
 LINE_ITEM = re.compile(r"^LineItems\.(?P<field>.+)_(?P<n>\d+)$")
 MAX_INPUT_BYTES = 200 * 1024 * 1024
 MANIFEST_SCHEMA_VERSION = 1
+# MacroForge stores free-positioned overlay rects in its preview coordinates: top-left origin,
+# PDF points x 1.2. Evidence (2026-10-27): 4 overlays with printed labels next to them fit
+# s = 1.194 +/- 0.013, and all 14 overlays land in their intended blanks at s = 1.2 (docs/03).
+OVERLAY_PREVIEW_SCALE = 1.2
 
 
 class ImportError_(Exception):
@@ -100,6 +104,7 @@ class TemplateRef:
     custom_fields: dict
     line_items: dict
     native_fields: set  # field names MacroForge itself detected in this PDF (native_field_info_by_file)
+    line_item_cfg: dict = field(default_factory=dict)  # LineItems subfield name -> {"array", "path"}
 
     @property
     def sha256(self) -> str:
@@ -114,12 +119,34 @@ def _describe_condition(cond_node: dict | None) -> str | None:
     return gate or None
 
 
+def line_item_config(nodes: list) -> dict:
+    """LineItems subfield -> source location, from the flow trigger's line_items_configs.
+
+    Each config has array_path (e.g. 'result|Subitems') and sub_mappings
+    [{source_rel_path: 'values|Loan amount', subfield_name: 'Loan amount'}]; excluded_paths drop subfields.
+    The engine's `data` is Make's `result` object, so a leading 'result|' is removed from array_path.
+    """
+    cfg = {}
+    for node in nodes:
+        for lic in node.get("line_items_configs", []) or []:
+            array = str(lic.get("array_path", "")).split("|")
+            if array[:1] == ["result"]:
+                array = array[1:]
+            excluded = set(lic.get("excluded_paths", []) or [])
+            for sm in lic.get("sub_mappings", []) or []:
+                rel = sm.get("source_rel_path")
+                if rel and rel not in excluded and sm.get("subfield_name"):
+                    cfg[sm["subfield_name"]] = {"array": "|".join(array), "path": rel.split("|")}
+    return cfg
+
+
 def iter_templates(doc: dict):
     """Yield every embedded template with its mapping configuration and routing condition."""
     names = doc.get("flow_display_names", {})
     for flow, nodes in doc["branches"].items():
         if not isinstance(nodes, list):
             continue
+        li_cfg = line_item_config(nodes)
         open_condition: dict | None = None
         for idx, node in enumerate(nodes):
             kind = node_kind(node)
@@ -136,6 +163,7 @@ def iter_templates(doc: dict):
                         node.get("custom_fields_by_file", {}).get(pdf_name, {}),
                         node.get("line_item_instances_by_file", {}).get(pdf_name, {}),
                         set(node.get("native_field_info_by_file", {}).get(pdf_name, {})),
+                        li_cfg,
                     )
             elif kind == SINGLE_FILLER and node.get("pdf_data_base64"):
                 yield TemplateRef(
@@ -144,6 +172,7 @@ def iter_templates(doc: dict):
                     node.get("field_mappings", {}), node.get("field_conditions", {}),
                     node.get("custom_fields", {}), node.get("line_item_instances", {}),
                     set(node.get("native_field_info_by_file", {}).get(node.get("pdf_filename"), {})),
+                    li_cfg,
                 )
 
 
@@ -176,6 +205,8 @@ def inspect_pdf(pdf_bytes: bytes) -> dict:
         "xfa": bool(acro is not None and acro.get("/XFA") is not None),
         "fields": {},
         "duplicate_names": [],
+        "page_sizes": [(float(p.mediabox.width), float(p.mediabox.height), int(p.get("/Rotate", 0) or 0),
+                        float(p.mediabox.left), float(p.mediabox.bottom)) for p in reader.pages],
     }
     if acro is None:
         return result
@@ -258,7 +289,9 @@ class Classified:
     unsupported: list = field(default_factory=list)
     errors: list = field(default_factory=list)
     warnings: list = field(default_factory=list)
-    stale: list = field(default_factory=list)
+    overlays: list = field(default_factory=list)
+    inert: list = field(default_factory=list)       # no effect in legacy, with evidence (not "obsolete")
+    unresolved: list = field(default_factory=list)  # cannot be imported yet; needs evidence or a decision
 
 
 def decode_pdf_name(s: str) -> str:
@@ -266,8 +299,12 @@ def decode_pdf_name(s: str) -> str:
     return re.sub(r"#([0-9A-Fa-f]{2})", lambda m: chr(int(m.group(1), 16)), s)
 
 
-def classify(ref: TemplateRef, pdf_info: dict | None) -> Classified:
-    """Translate legacy mapping entries into engine field entries, never guessing silently."""
+def classify(ref: TemplateRef, pdf_info: dict | None, siblings: tuple = ()) -> Classified:
+    """Translate legacy mapping entries into engine field entries, never guessing silently.
+
+    `siblings` = [(TemplateRef, pdf_info)] of the other templates in the same batch node; they are
+    the evidence for recognising copied mapping sets.
+    """
     out = Classified()
     pdf_fields: dict[str, PdfField] = (pdf_info or {}).get("fields", {})
     duplicates = set((pdf_info or {}).get("duplicate_names", []))
@@ -289,12 +326,28 @@ def classify(ref: TemplateRef, pdf_info: dict | None) -> Classified:
         name, option, pf = target(pdf_field)
         legacy = {"field": pdf_field, "mapping": source if source in SENTINELS else "source_key"}
         if pdf_info is not None and pf is None:
-            if name not in ref.native_fields and pdf_field not in ref.native_fields:
-                # Not in the PDF and not in MacroForge's own field scan: dead legacy config, which
-                # the legacy engine cannot fill either. Dropped, but listed for human review.
-                out.stale.append({"pdfField": pdf_field, "mapping": legacy["mapping"]})
-            else:
+            if name in ref.native_fields or pdf_field in ref.native_fields:
                 out.errors.append({"code": "UNRESOLVED_PDF_FIELD", "pdfField": pdf_field})
+                continue
+            # Neither in the PDF nor in MacroForge's own scan: the legacy engine cannot fill it either.
+            dup = [s.pdf_name for s, si in siblings
+                   if s.mappings.get(pdf_field) == source and s.conditions.get(pdf_field) == ref.conditions.get(pdf_field)
+                   and si and name in si.get("fields", {})]
+            seen = [s.pdf_name for s, si in siblings if si and name in si.get("fields", {})]
+            item = {"pdfField": pdf_field, "mapping": legacy["mapping"]}
+            if not pdf_fields:
+                out.unresolved.append({**item, "category": "template_without_form_fields",
+                                       "evidence": {"duplicateOf": dup[:1]},
+                                       "reason": "template has no form fields; only a fillable version or "
+                                                 "coordinate overlays could carry this value"})
+            elif dup:
+                out.inert.append({**item, "category": "sibling_duplicate", "evidence": {"duplicateOf": dup[0]},
+                                  "reason": "identical rule resolves on a sibling template in the same batch; "
+                                            "no target here"})
+            else:
+                out.unresolved.append({**item, "category": "no_target_field", "evidence": {"nameFoundIn": seen},
+                                       "reason": "no such field in this template; the same name elsewhere has a "
+                                                 "different rule" if seen else "no such field in any template"})
             continue
         if name in duplicates:
             out.errors.append({"code": "AMBIGUOUS_PDF_FIELD", "pdfField": pdf_field})
@@ -310,10 +363,25 @@ def classify(ref: TemplateRef, pdf_info: dict | None) -> Classified:
 
         m = LINE_ITEM.match(source)
         if m:
-            out.unsupported.append({"pdfField": pdf_field, "legacyType": "line_item",
-                                    "lineItemField": m["field"], "index": int(m["n"]),
-                                    "reason": "subitem (LineItems.<field>_<n>) key naming vs Make 'Subitems' "
-                                              "titles not yet verified"})
+            sub, pos = m["field"], int(m["n"])
+            loc = ref.line_item_cfg.get(sub)
+            if loc is None:
+                out.unresolved.append({"pdfField": pdf_field, "mapping": "line_item", "category": "line_item_name_conflict",
+                                       "evidence": {"subfield": sub, "position": pos,
+                                                    "knownSubfields": sorted(ref.line_item_cfg)},
+                                       "reason": "subfield not produced by the current line_items_configs"})
+                continue
+            if kind not in (None, "text", "combo", "list"):
+                out.unsupported.append({"pdfField": pdf_field, "legacyType": "line_item", "pdfKind": kind,
+                                        "reason": "line item mapped to a button field"})
+                continue
+            inst = (ref.line_items.get("LineItems", {}) or {}).get(sub, {}).get(str(pos))
+            if inst is not None and inst != pdf_field:
+                out.warnings.append({"code": "LINE_ITEM_INSTANCE_MISMATCH", "pdfField": pdf_field})
+            out.entries.append({"pdfField": name, "kind": kind or "text",
+                                "source": {"lineItem": {"array": loc["array"], "position": pos, "path": loc["path"]}},
+                                "legacy": {**legacy, "mapping": "line_item", "lineItem": source},
+                                "reviewRequired": "row order = order of the Make Subitems array (inferred)"})
             continue
 
         if source in ("checked", "unchecked"):
@@ -324,6 +392,12 @@ def classify(ref: TemplateRef, pdf_info: dict | None) -> Classified:
             if kind not in (None, "checkbox", "radio"):
                 out.errors.append({"code": "KIND_MISMATCH", "pdfField": pdf_field, "pdfKind": kind,
                                    "legacyType": source})
+                continue
+            if source == "checked" and option is None and pf is not None and len(pf.states) > 1:
+                out.unresolved.append({"pdfField": pdf_field, "mapping": source, "category": "ambiguous_checked_state",
+                                       "evidence": {"onStates": pf.states},
+                                       "reason": "legacy 'checked' without a state on a field with several on-states "
+                                                 "does not say which box to tick"})
                 continue
             entry = {"pdfField": name, "kind": kind or "checkbox",
                      "source": {"constant": source == "checked"}, "legacy": legacy,
@@ -368,7 +442,8 @@ def classify(ref: TemplateRef, pdf_info: dict | None) -> Classified:
             c = conds[0]
             if str(c.get("column", "")).startswith("LineItems."):
                 out.unsupported.append({"pdfField": pdf_field, "legacyType": "line_item_condition",
-                                        "reason": "condition on a subitem (LineItems) column"})
+                                        "reason": "condition on a LineItems column without a row index; which "
+                                                  "subitem it tests is not recorded in the export"})
                 continue
             op = str(c.get("operator", "")).lower()
             if op not in ("equals", "contains"):
@@ -407,15 +482,54 @@ def classify(ref: TemplateRef, pdf_info: dict | None) -> Classified:
         if fld not in ref.mappings:
             out.warnings.append({"code": "ORPHAN_CONDITION", "pdfField": fld})
 
+    sizes = (pdf_info or {}).get("page_sizes", [])
     for cid, cf in ref.custom_fields.items():
-        out.unsupported.append({"pdfField": None, "legacyType": f"overlay_{cf.get('type')}",
-                                "customFieldId": cid, "page": cf.get("page"), "rect": cf.get("rect"),
-                                "sourceKey": cf.get("mapping"),
-                                "reason": "free-positioned overlay; MacroForge rect coordinate system/scale "
-                                          "unverified (does not match PDF points or 96 DPI)"})
+        ov = overlay_entry(cid, cf, sizes) if pdf_info is not None else None
+        if isinstance(ov, dict):
+            out.overlays.append(ov)
+            if "constant" in ov["source"]:
+                out.warnings.append({"code": "CONSTANT_TEXT", "overlay": cid})
+        else:
+            out.unsupported.append({"pdfField": None, "legacyType": f"overlay_{cf.get('type')}",
+                                    "customFieldId": cid, "page": cf.get("page"), "sourceKey": cf.get("mapping"),
+                                    "reason": ov or "PDF not inspected"})
     if ref.line_items:
         out.warnings.append({"code": "LINE_ITEM_INSTANCES_PRESENT", "count": len(ref.line_items)})
     return out
+
+
+def overlay_entry(cid: str, cf: dict, page_sizes: list):
+    """Convert a MacroForge custom text field to an engine overlay, or return a reason string."""
+    if cf.get("type") != "text":
+        return f"overlay type {cf.get('type')!r} not supported"
+    page, rect = cf.get("page"), cf.get("rect")
+    if not isinstance(page, int) or not (0 <= page < len(page_sizes)) or not isinstance(rect, list) or len(rect) != 4:
+        return "overlay page/rect invalid"
+    w, h, rot, llx, lly = page_sizes[page]
+    if rot % 360:
+        return "rotated page: overlay transform unverified"
+    x0, y0, x1, y1 = (v / OVERLAY_PREVIEW_SCALE for v in rect)
+    pdf_rect = [round(llx + x0, 2), round(lly + h - y1, 2), round(llx + min(x1, w), 2), round(lly + h - y0, 2)]
+    mapping = cf.get("mapping")
+    if mapping == "direct_text":
+        if not isinstance(cf.get("current_text"), str):
+            return "direct_text overlay without text"
+        source = {"constant": cf["current_text"]}
+    elif isinstance(mapping, str) and mapping and mapping not in SENTINELS and not LINE_ITEM.match(mapping):
+        source = {"key": mapping}
+    else:
+        return f"overlay mapping {mapping!r} not supported"
+    return {"id": cid, "page": page, "rect": pdf_rect, "source": source,
+            "legacy": {"rect": rect, "transform": f"pdf = rect / {OVERLAY_PREVIEW_SCALE}, top-left origin"},
+            "reviewRequired": "overlay position derived from the evidenced 1.2 preview scale; font/size are "
+                              "engine policy (legacy font not recorded)"
+                              + ("; constant literal: confirm it contains no personal data"
+                                 if "constant" in source else "")}
+
+
+def siblings_of(ref: TemplateRef, refs_with_info: list) -> tuple:
+    return tuple((r, i) for r, i in refs_with_info
+                 if r.flow == ref.flow and r.node_index == ref.node_index and r is not ref)
 
 
 # --------------------------------------------------------------------------- commands
@@ -438,9 +552,9 @@ def cmd_inventory(args) -> int:
             "nodeTypes": dict(Counter(node_kind(n) for n in nodes)) if isinstance(nodes, list) else {},
             "current": doc.get("current_branch") == flow,
         }
-    for ref in iter_templates(doc):
-        info = inspect_pdf(ref.pdf_bytes) if args.with_pdf else None
-        cls = classify(ref, info)
+    refs = [(r, inspect_pdf(r.pdf_bytes) if args.with_pdf else None) for r in iter_templates(doc)]
+    for ref, info in refs:
+        cls = classify(ref, info, siblings_of(ref, refs))
         kinds = Counter()
         for src in ref.mappings.values():
             kinds["line_item" if LINE_ITEM.match(src) else (src if src in SENTINELS else "source_key")] += 1
@@ -450,7 +564,8 @@ def cmd_inventory(args) -> int:
             "mappings": len(ref.mappings), "mappingKinds": dict(kinds), "overlays": len(ref.custom_fields),
             "conditionEntries": len(ref.conditions),
             "imported": len(cls.entries), "unsupported": len(cls.unsupported), "errors": len(cls.errors),
-            "stale": len(cls.stale), "warnings": len(cls.warnings),
+            "overlaysImported": len(cls.overlays), "inert": len(cls.inert), "unresolved": len(cls.unresolved),
+            "warnings": len(cls.warnings),
         }
         if info is not None:
             fk = Counter(f.kind for f in info["fields"].values())
@@ -461,6 +576,9 @@ def cmd_inventory(args) -> int:
                               "multiWidgetFields": sum(1 for f in info["fields"].values() if f.widgets > 1)}
             row["errorCodes"] = dict(Counter(e["code"] for e in cls.errors))
             row["unsupportedTypes"] = dict(Counter(u["legacyType"] for u in cls.unsupported))
+            row["unresolvedCategories"] = dict(Counter(u["category"] for u in cls.unresolved))
+            row["inertCategories"] = dict(Counter(u["category"] for u in cls.inert))
+            row["importedKinds"] = dict(Counter(next(iter(e["source"])) for e in cls.entries))
         report["templates"].append(row)
         report["totals"]["templates"] += 1
         report["totals"]["mappings"] += len(ref.mappings)
@@ -469,7 +587,9 @@ def cmd_inventory(args) -> int:
             report["totals"]["imported"] += len(cls.entries)
             report["totals"]["unsupported"] += len(cls.unsupported)
             report["totals"]["errors"] += len(cls.errors)
-            report["totals"]["stale"] += len(cls.stale)
+            report["totals"]["overlaysImported"] += len(cls.overlays)
+            report["totals"]["inert"] += len(cls.inert)
+            report["totals"]["unresolved"] += len(cls.unresolved)
         for k, v in row["mappingKinds"].items():
             report["totals"][f"kind:{k}"] += v
     report["totals"] = dict(report["totals"])
@@ -524,7 +644,9 @@ def cmd_manifest(args) -> int:
     if info["encrypted"] and args.encryption == "reject":
         print("warning: template is encrypted; the engine will refuse it unless --encryption preserve",
               file=sys.stderr)
-    cls = classify(ref, info)
+    refs = [(r, inspect_pdf(r.pdf_bytes) if (r.flow, r.node_index) == (ref.flow, ref.node_index) else None)
+            for r in iter_templates(doc)]
+    cls = classify(ref, info, siblings_of(ref, refs))
     template_file = f"{ref.sha256[:12]}__{safe_filename(ref.pdf_name)}"
     if not template_file.endswith(".pdf"):
         template_file += ".pdf"
@@ -536,6 +658,7 @@ def cmd_manifest(args) -> int:
         "templateSha256": ref.sha256,
         "encryption": args.encryption,
         "sourceKeyNormalization": "macroforge-v1",
+        "fontFallback": args.font_fallback,
         "provenance": {
             "importer": f"tools/import_mforge.py {IMPORTER_VERSION}",
             "sourceFile": src.name,
@@ -551,10 +674,12 @@ def cmd_manifest(args) -> int:
                                **({"widgets": f.widgets} if f.widgets > 1 else {})}
                            for n, f in sorted(info["fields"].items())}},
         "fields": sorted(cls.entries, key=lambda e: (e["pdfField"], e.get("option", ""))),
+        "overlays": cls.overlays,
         "unsupported": cls.unsupported,
+        "unresolvedLegacyMappings": cls.unresolved,
+        "inertLegacyMappings": cls.inert,
         "importErrors": cls.errors,
         "importWarnings": cls.warnings,
-        "staleLegacyMappings": cls.stale,
     }
     mapped = {e["pdfField"] for e in cls.entries}
     manifest["unmappedPdfFields"] = sorted(n for n, f in info["fields"].items()
@@ -564,7 +689,8 @@ def cmd_manifest(args) -> int:
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(text, encoding="utf-8")
     print(f"manifest written: {out}  fields={len(cls.entries)} unsupported={len(cls.unsupported)} "
-          f"errors={len(cls.errors)} stale={len(cls.stale)} warnings={len(cls.warnings)}")
+          f"overlays={len(cls.overlays)} unresolved={len(cls.unresolved)} inert={len(cls.inert)} "
+          f"errors={len(cls.errors)} warnings={len(cls.warnings)}")
     return 1 if cls.errors and args.strict else 0
 
 
@@ -589,6 +715,8 @@ def main(argv=None) -> int:
     s.add_argument("--template-version", required=True)
     s.add_argument("--date", help="override provenance date (YYYY-MM-DD) for reproducible output")
     s.add_argument("--strict", action="store_true", help="exit 1 when import errors exist")
+    s.add_argument("--font-fallback", choices=["unicode", "none"], default="unicode",
+                   help="engine policy when a field's own font cannot encode a value (e.g. macrons)")
     s.add_argument("--encryption", choices=["reject", "preserve"], default="reject",
                    help="engine policy for encrypted templates; 'preserve' = incremental save keeping the "
                         "bank's encryption (record the human review in docs/decisions.md)")

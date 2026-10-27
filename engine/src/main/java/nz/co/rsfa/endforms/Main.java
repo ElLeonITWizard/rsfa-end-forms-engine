@@ -25,6 +25,7 @@ import java.util.Map;
  * <pre>
  *   inspect  --pdf FILE
  *   fill     --manifest FILE --data FILE --out FILE [--templates DIR[:DIR]] [--today YYYY-MM-DD]
+ *   render   --pdf FILE --out-dir DIR [--dpi N]   (PNG per page, for visual verification only)
  *   serve    (configured by environment; see README)
  * </pre>
  * Exit codes: 0 ok, 1 usage, 2 I/O, 3 validation failed.
@@ -52,6 +53,10 @@ public final class Main {
             }
             case "fill" -> {
                 return fill(opt, json);
+            }
+            case "render" -> {
+                if (!opt.containsKey("pdf") || !opt.containsKey("out-dir")) return usage();
+                return render(Path.of(opt.get("pdf")), Path.of(opt.get("out-dir")), Float.parseFloat(opt.getOrDefault("dpi", "110")));
             }
             case "serve" -> {
                 return serve();
@@ -105,6 +110,20 @@ public final class Main {
         return r.ok() ? 0 : 3;
     }
 
+    private static int render(Path pdf, Path outDir, float dpi) throws Exception {
+        Files.createDirectories(outDir);
+        String stem = pdf.getFileName().toString().replaceAll("\\.pdf$", "").replaceAll("[^A-Za-z0-9._-]", "_");
+        try (var doc = org.apache.pdfbox.Loader.loadPDF(pdf.toFile())) {
+            var renderer = new org.apache.pdfbox.rendering.PDFRenderer(doc);
+            for (int i = 0; i < doc.getNumberOfPages(); i++) {
+                Path out = outDir.resolve(stem + "-p" + (i + 1) + ".png");
+                javax.imageio.ImageIO.write(renderer.renderImageWithDPI(i, dpi), "png", out.toFile());
+                System.out.println(out);
+            }
+        }
+        return 0;
+    }
+
     private static int serve() throws Exception {
         Map<String, String> env = System.getenv();
         String host = env.getOrDefault("ENGINE_BIND", "127.0.0.1");
@@ -142,6 +161,7 @@ public final class Main {
                 usage:
                   inspect --pdf FILE
                   fill --manifest FILE --data FILE --out FILE [--templates DIR[:DIR]] [--today YYYY-MM-DD]
+                  render --pdf FILE --out-dir DIR [--dpi N]
                   serve   (env: PORT, ENGINE_BIND, ENGINE_AUTH, ENGINE_API_KEY, ENGINE_MAPPINGS_DIR, ENGINE_TEMPLATE_DIRS)""");
         return 1;
     }

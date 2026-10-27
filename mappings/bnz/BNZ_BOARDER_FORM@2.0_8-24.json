@@ -6,8 +6,9 @@
   "templateSha256": "7982ae8cbda97f0be9173c2632839afaa7c0d725349cab32dddbd62520509795",
   "encryption": "reject",
   "sourceKeyNormalization": "macroforge-v1",
+  "fontFallback": "unicode",
   "provenance": {
-    "importer": "tools/import_mforge.py 0.1.0",
+    "importer": "tools/import_mforge.py 0.2.0",
     "sourceFile": "RSFA End Forms Filling BluePrint 271026.mforge",
     "sourceSha256": "8052c17b374b551272e17f5036de1ebfa9a295328eb8a6d079d30eec788b9a51",
     "flow": "Flow C",
@@ -137,36 +138,57 @@
       }
     }
   ],
-  "unsupported": [
+  "overlays": [
     {
-      "pdfField": null,
-      "legacyType": "overlay_text",
-      "customFieldId": "custom_text_1_1777387659",
+      "id": "custom_text_1_1777387659",
       "page": 0,
       "rect": [
-        121.0,
-        160.0,
-        395.0,
-        182.0
+        100.83,
+        690.22,
+        329.17,
+        708.56
       ],
-      "sourceKey": "Applicant 1 Full Name",
-      "reason": "free-positioned overlay; MacroForge rect coordinate system/scale unverified (does not match PDF points or 96 DPI)"
+      "source": {
+        "key": "Applicant 1 Full Name"
+      },
+      "legacy": {
+        "rect": [
+          121.0,
+          160.0,
+          395.0,
+          182.0
+        ],
+        "transform": "pdf = rect / 1.2, top-left origin"
+      },
+      "reviewRequired": "overlay position derived from the evidenced 1.2 preview scale; font/size are engine policy (legacy font not recorded)"
     },
     {
-      "pdfField": null,
-      "legacyType": "overlay_text",
-      "customFieldId": "custom_text_2_1777387667",
+      "id": "custom_text_2_1777387667",
       "page": 0,
       "rect": [
-        398.0,
-        161.0,
-        671.0,
-        182.0
+        331.67,
+        690.22,
+        559.17,
+        707.72
       ],
-      "sourceKey": "Applicant 2 Full Name",
-      "reason": "free-positioned overlay; MacroForge rect coordinate system/scale unverified (does not match PDF points or 96 DPI)"
+      "source": {
+        "key": "Applicant 2 Full Name"
+      },
+      "legacy": {
+        "rect": [
+          398.0,
+          161.0,
+          671.0,
+          182.0
+        ],
+        "transform": "pdf = rect / 1.2, top-left origin"
+      },
+      "reviewRequired": "overlay position derived from the evidenced 1.2 preview scale; font/size are engine policy (legacy font not recorded)"
     }
   ],
+  "unsupported": [],
+  "unresolvedLegacyMappings": [],
+  "inertLegacyMappings": [],
   "importErrors": [],
   "importWarnings": [
     {
@@ -178,7 +200,6 @@
       "pdfField": "Date 2"
     }
   ],
-  "staleLegacyMappings": [],
   "unmappedPdfFields": [
     "Text 1"
   ]

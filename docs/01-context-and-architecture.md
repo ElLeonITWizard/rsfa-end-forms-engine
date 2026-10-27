@@ -32,9 +32,20 @@ Make 9254149 "Macroforge to M.com: End Forms Filled (May 2026)"
 ```
 
 Facts and caveats:
-- **[live]** The trigger has **no label filter**. Any change to `status` fires `8731317`, including the
-  `Filled` written by `9254149`. **[inference]** This can re-trigger MacroForge unless MacroForge filters it.
-  Read-only execution history would confirm this. TODO: verify.
+- **Re-trigger risk (`Filled` → `8731317`), reviewed read-only on 2026-10-27:**
+  - **[live]** Hook `3905270` config is `{columnId: "status"}`, with no value or previous-value filter. `8731317` has no
+    filter on any module, and no module reads the trigger label (only `pulseId` and `userId`). By design, any `status`
+    change that Monday emits, including `Filled` written by `9254149`, runs the whole chain and POSTs to MacroForge again.
+  - **[live, 1 sample]** Make's execution history returned a single pair, as follows. `8731317` ran 2026-10-01 23:16:43Z
+    (SUCCESS, 20 ops), then `9254149` ran 23:17:09Z (SUCCESS, 2 ops). **No `8731317` execution followed.** Run details (item id,
+    label, HTTP status) were not retrievable, and no older runs were returned (retention or API limit unknown).
+  - **Conclusion:** possible by design, **not observed** in the only available sample. Why it did not fire is unknown.
+    Possible reasons: the item was already `Filled`; Monday did not emit the event for an API write; the callback `id` pointed
+    elsewhere (module 2 errors are ignored).
+  - **Read-only next checks:** the Monday activity log for column `status` around 2026-10-01 23:16–23:20 UTC, or
+    the two runs in Make's execution log UI.
+  - **Proposed guard (production change, needs a change plan and RSFA approval, not done):** a filter after module 1
+    so `8731317` continues only for the intended label (e.g. `Reviewed`).
 - **[export]** `module-3-output-bundles.json` is only the HTTP *response* envelope: `200 {"status":"routed","success":true}`.
   It proves dispatch, **not completion**, and contains no request body.
 - **[live]** Labels on `status`: `Filled`, `Reviewed`, `Reviewing`, `Cancelled`.
@@ -92,4 +103,5 @@ Responsibilities:
   - **[live]** Make test modules 43/44 in `8731317` hold a full real-looking client payload and the MacroForge webhook URL.
   - **[live]** The MacroForge webhook URLs are hard-coded and the HTTP call is unauthenticated.
   - **[live]** Every run sends client address data to OpenAI.
-  - **[export]** The `.mforge` itself contains a real client `sample_payload` and a webhook URL. Treat the file as sensitive.
+  - **[export]** The `.mforge` itself contains a real client `sample_payload`, `flow_data.__raw_webhook_payload` and
+    `current_parsed_pdf_data`, and a webhook URL. Treat the file as sensitive.

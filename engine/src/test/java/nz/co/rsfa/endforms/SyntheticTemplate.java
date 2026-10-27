@@ -8,7 +8,10 @@ import org.apache.pdfbox.pdmodel.PDResources;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
+import org.apache.pdfbox.pdmodel.graphics.color.PDColor;
+import org.apache.pdfbox.pdmodel.graphics.color.PDDeviceRGB;
 import org.apache.pdfbox.pdmodel.interactive.annotation.PDAnnotationWidget;
+import org.apache.pdfbox.pdmodel.interactive.annotation.PDAppearanceCharacteristicsDictionary;
 import org.apache.pdfbox.pdmodel.interactive.annotation.PDAppearanceDictionary;
 import org.apache.pdfbox.pdmodel.interactive.annotation.PDAppearanceEntry;
 import org.apache.pdfbox.pdmodel.interactive.annotation.PDAppearanceStream;
@@ -57,7 +60,12 @@ final class SyntheticTemplate {
             text(form, page, "Full name", 40, 740, 300, 0, false);
             text(form, page, "Postcode", 40, 710, 80, 4, false);
             text(form, page, "Date", 40, 680, 120, 6, true);
-            text(form, page, "Notes", 40, 600, 300, 0, false).setMultiline(true);
+            PDTextField notes = text(form, page, "Notes", 40, 600, 300, 0, false);
+            notes.setMultiline(true);
+            // opaque background, like some bank widgets: overlays drawn under it may be hidden
+            PDAppearanceCharacteristicsDictionary mk = new PDAppearanceCharacteristicsDictionary(new COSDictionary());
+            mk.setBackground(new PDColor(new float[] {1f, 1f, 1f}, PDDeviceRGB.INSTANCE));
+            notes.getWidgets().getFirst().setAppearanceCharacteristics(mk);
 
             checkbox(doc, form, page, "Consent box", List.of("Yes"), 40, 560);
             checkbox(doc, form, page, "Frequency", List.of("1", "2", "3"), 40, 530);
@@ -85,6 +93,21 @@ final class SyntheticTemplate {
             page.getAnnotations().add(sw);
             form.getFields().add(sig);
 
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            doc.save(out);
+            return out.toByteArray();
+        }
+    }
+
+    /** The synthetic template re-saved with owner-password restrictions (empty user password, fill-in allowed). */
+    static byte[] buildEncrypted() throws IOException {
+        try (PDDocument doc = org.apache.pdfbox.Loader.loadPDF(build())) {
+            org.apache.pdfbox.pdmodel.encryption.AccessPermission ap = new org.apache.pdfbox.pdmodel.encryption.AccessPermission();
+            ap.setCanModify(false);
+            ap.setCanFillInForm(true);
+            var policy = new org.apache.pdfbox.pdmodel.encryption.StandardProtectionPolicy("synthetic-owner", "", ap);
+            policy.setEncryptionKeyLength(128);
+            doc.protect(policy);
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             doc.save(out);
             return out.toByteArray();

@@ -7,7 +7,17 @@ import nz.co.rsfa.endforms.mapping.FieldRule;
 import nz.co.rsfa.endforms.mapping.FieldRule.Kind;
 import nz.co.rsfa.endforms.mapping.Manifest;
 import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.PDResources;
+import org.apache.pdfbox.pdmodel.common.PDRectangle;
+import org.apache.pdfbox.pdmodel.font.PDFont;
+import org.apache.pdfbox.pdmodel.font.PDType0Font;
+import org.apache.pdfbox.pdmodel.interactive.annotation.PDAnnotation;
+import org.apache.pdfbox.pdmodel.interactive.annotation.PDAnnotationWidget;
+import org.apache.pdfbox.pdmodel.interactive.annotation.PDAppearanceCharacteristicsDictionary;
 import org.apache.pdfbox.pdmodel.interactive.form.PDAcroForm;
 import org.apache.pdfbox.pdmodel.interactive.form.PDButton;
 import org.apache.pdfbox.pdmodel.interactive.form.PDCheckBox;
@@ -22,6 +32,7 @@ import org.apache.pdfbox.pdmodel.interactive.form.PDTextField;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -37,6 +48,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Fills one AcroForm template from a flat JSON {@code data} object using a {@link Manifest}.
@@ -46,6 +59,14 @@ import java.util.function.Function;
  * Signature and push-button fields are never written.
  */
 public final class FormFiller {
+
+    /** Unicode TTF shipped inside PDFBox (SIL OFL); used for overlays and the opt-in field font fallback. */
+    static final String UNICODE_FONT = "/org/apache/pdfbox/resources/ttf/LiberationSans-Regular.ttf";
+    static final String FALLBACK_FONT_NAME = "RsfaUnicode";
+    private static final Pattern DA_FONT = Pattern.compile("/(\\S+)\\s+([\\d.]+)\\s+Tf");
+    private static final float OVERLAY_DEFAULT_SIZE = 10f;
+    private static final float OVERLAY_MIN_SIZE = 6f;
+    private static final float OVERLAY_PADDING = 2f;
 
     private final Function<ZoneId, LocalDate> today;
 
@@ -59,7 +80,7 @@ public final class FormFiller {
     }
 
     public FillResult fill(byte[] template, Manifest manifest, JsonNode data) {
-        Run run = new Run();
+        Run run = new Run(manifest);
         if (!sha256(template).equalsIgnoreCase(String.valueOf(manifest.templateSha256()))) {
             run.error("TEMPLATE_HASH_MISMATCH", null, null,
                     "template bytes do not match manifest templateSha256 for " + manifest.key());
@@ -90,7 +111,13 @@ public final class FormFiller {
                     return run.result(null);
                 }
                 incremental = true; // keeps original bytes and encryption; owner password is unknown
+                if (!manifest.overlays().isEmpty()) {
+                    run.error("OVERLAY_ON_ENCRYPTED_TEMPLATE", null, null,
+                            "overlays on encrypted templates are not verified yet");
+                    return run.result(null);
+                }
             }
+            run.doc = doc;
             PDAcroForm form = doc.getDocumentCatalog().getAcroForm();
             if (form == null || form.getFields().isEmpty()) {
                 run.error("NO_ACROFORM", null, null, "template has no interactive form fields");
@@ -108,6 +135,9 @@ public final class FormFiller {
             List<Runnable> writes = new ArrayList<>();
             for (var e : byField.entrySet()) {
                 plan(form.getField(e.getKey()), e.getKey(), e.getValue(), data, run, writes);
+            }
+            for (Manifest.Overlay o : manifest.overlays()) {
+                planOverlay(doc, o, data, run, writes);
             }
             if (run.hasErrors()) {
                 return run.result(null);
@@ -180,29 +210,43 @@ public final class FormFiller {
             return;
         }
         FieldRule rule = rules.getFirst();
-        String value = scalar(rule, data, run);
+        String value = scalar(name, rule.source(), rule.required(), data, run);
         if (value == null) {
             return;
         }
         if (field.getMaxLen() > 0 && value.codePointCount(0, value.length()) > field.getMaxLen()) {
-            run.error("TEXT_TOO_LONG", name, rule.source().key(),
+            run.error("TEXT_TOO_LONG", name, keyOf(rule.source()),
                     "value exceeds field MaxLen " + field.getMaxLen() + " (no silent truncation)");
             return;
         }
         if (!field.isMultiline() && (value.indexOf('\n') >= 0 || value.indexOf('\r') >= 0)) {
-            run.error("MULTILINE_NOT_ALLOWED", name, rule.source().key(), "line break in single-line field");
+            run.error("MULTILINE_NOT_ALLOWED", name, keyOf(rule.source()), "line break in single-line field");
             return;
+        }
+        boolean fallback = !encodableInFieldFont(field, value);
+        if (fallback && run.manifest.fontFallback() != Manifest.FontFallback.unicode) {
+            run.error("UNENCODABLE_TEXT", name, keyOf(rule.source()),
+                    "field font cannot encode at least one character of the value");
+            return;
+        }
+        if (fallback) {
+            run.fullUnicodeFont = true; // AcroForm appearances need a fully embedded font
         }
         writes.add(() -> {
             try {
+                if (fallback) {
+                    useUnicodeFont(field, run);
+                    run.warning("FONT_FALLBACK", name, keyOf(rule.source()),
+                            "value needed the embedded Unicode font instead of the field's own font");
+                }
                 field.setValue(value);
                 run.filled.add(name);
             } catch (IllegalArgumentException e) {
                 // PDFBox throws when the field's font cannot encode a character (e.g. macrons)
-                run.error("UNENCODABLE_TEXT", name, rule.source().key(),
+                run.error("UNENCODABLE_TEXT", name, keyOf(rule.source()),
                         "field font cannot encode at least one character of the value");
             } catch (IOException e) {
-                run.error("APPEARANCE_FAILED", name, rule.source().key(), "could not build field appearance");
+                run.error("APPEARANCE_FAILED", name, keyOf(rule.source()), "could not build field appearance");
             }
         });
     }
@@ -214,13 +258,13 @@ public final class FormFiller {
             return;
         }
         FieldRule rule = rules.getFirst();
-        String value = scalar(rule, data, run);
+        String value = scalar(name, rule.source(), rule.required(), data, run);
         if (value == null) {
             return;
         }
         boolean known = field.getOptionsExportValues().contains(value) || field.getOptionsDisplayValues().contains(value);
         if (!known) {
-            run.error("INVALID_OPTION", name, rule.source().key(), "value is not one of the field's options");
+            run.error("INVALID_OPTION", name, keyOf(rule.source()), "value is not one of the field's options");
             return;
         }
         writes.add(() -> {
@@ -228,7 +272,7 @@ public final class FormFiller {
                 field.setValue(value);
                 run.filled.add(name);
             } catch (IllegalArgumentException | IOException e) {
-                run.error("APPEARANCE_FAILED", name, rule.source().key(), "could not set choice value");
+                run.error("APPEARANCE_FAILED", name, keyOf(rule.source()), "could not set choice value");
             }
         });
     }
@@ -253,8 +297,13 @@ public final class FormFiller {
                 on = matches(s.when(), data, name, run);
             } else if (s.constant() != null && s.constant().isBoolean()) {
                 on = s.constant().booleanValue();
+                if (on && !r.approved()) {
+                    run.warning("CONSTANT_CHECK_NOT_APPROVED", name, null,
+                            "constant tick not applied: set approved=true after human review");
+                    continue;
+                }
             } else if (s.key() != null && field instanceof PDRadioButton && state == null) {
-                String v = scalar(r, data, run);       // radio fed directly with an export value
+                String v = scalar(name, s, r.required(), data, run); // radio fed directly with an export value
                 state = v;
                 on = v == null ? null : Boolean.TRUE;
             } else {
@@ -263,6 +312,10 @@ public final class FormFiller {
             }
             if (on == null || (!on && s.when() != null)) {
                 continue;  // error recorded / absent radio value / condition not met: leave untouched
+            }
+            if (!on) {
+                forceOff = true; // constant false: all widgets Off, no on-state needed
+                continue;
             }
             if (state == null) {
                 run.error("AMBIGUOUS_ON_STATE", name, null, "checkbox has several on-states; rule needs option");
@@ -307,41 +360,64 @@ public final class FormFiller {
 
     // ------------------------------------------------------------------ values
 
-    /** Resolve a text-like value. Returns null when nothing should be written (issue recorded if needed). */
-    private String scalar(FieldRule rule, JsonNode data, Run run) {
-        FieldRule.Source s = rule.source();
-        String name = rule.pdfField();
+    /**
+     * Resolve a text-like value for a field or overlay ({@code label}). Returns null when nothing should
+     * be written; an issue is recorded where needed. Issues name keys, never values.
+     */
+    private String scalar(String label, FieldRule.Source s, boolean required, JsonNode data, Run run) {
         if (s == null) {
-            run.error("INVALID_RULE", name, null, "rule has no source");
+            run.error("INVALID_RULE", label, null, "rule has no source");
             return null;
         }
         if (s.generated() != null) {
             if (!"today".equals(s.generated())) {
-                run.error("UNSUPPORTED_SOURCE", name, null, "unknown generated source " + s.generated());
+                run.error("UNSUPPORTED_SOURCE", label, null, "unknown generated source " + s.generated());
                 return null;
             }
             try {
                 ZoneId zone = ZoneId.of(s.zone() == null ? "Pacific/Auckland" : s.zone());
                 return today.apply(zone).format(DateTimeFormatter.ofPattern(s.format() == null ? "dd/MM/yyyy" : s.format()));
             } catch (DateTimeException | IllegalArgumentException e) {
-                run.error("INVALID_RULE", name, null, "invalid date format or zone");
+                run.error("INVALID_RULE", label, null, "invalid date format or zone");
                 return null;
             }
         }
+        String key = keyOf(s);
         JsonNode v;
         if (s.constant() != null) {
             v = s.constant();
         } else if (s.key() != null) {
             if (!data.has(s.key())) {
-                return missing(rule, run, true);
+                return missing(label, key, required, run, true);
             }
             v = data.get(s.key());
+        } else if (s.lineItem() != null) {
+            FieldRule.LineItem li = s.lineItem();
+            JsonNode arr = li.array() == null ? null : data.get(li.array());
+            if (arr == null) {
+                return missing(label, key, required, run, true);
+            }
+            if (!arr.isArray() || li.position() < 1 || li.path() == null || li.path().isEmpty()) {
+                run.error(arr.isArray() ? "INVALID_RULE" : "UNSUPPORTED_VALUE_TYPE", label, key,
+                        "line item needs an array source, position >= 1 and a path");
+                return null;
+            }
+            if (li.position() > arr.size()) {
+                return missing(label, key, required, run, false); // fewer rows than the form offers
+            }
+            v = arr.get(li.position() - 1);
+            for (String p : li.path()) {
+                v = v != null && v.isObject() ? v.get(p) : null;
+            }
+            if (v == null) {
+                return missing(label, key, required, run, true);
+            }
         } else {
-            run.error("UNSUPPORTED_SOURCE", name, null, "rule needs key, constant or generated");
+            run.error("UNSUPPORTED_SOURCE", label, null, "rule needs key, constant, generated or lineItem");
             return null;
         }
-        if (v == null || v.isNull() || (v.isTextual() && v.asText().isBlank())) {
-            return missing(rule, run, false);
+        if (v.isNull() || (v.isTextual() && v.asText().isBlank())) {
+            return missing(label, key, required, run, false);
         }
         if (v.isTextual()) {
             return v.asText();
@@ -350,25 +426,172 @@ public final class FormFiller {
             return v.isIntegralNumber() ? v.bigIntegerValue().toString() : new BigDecimal(v.asText()).toPlainString();
         }
         if (v.isArray()) {
-            run.error("AMBIGUOUS_SOURCE_VALUE", name, s.key(),
+            run.error("AMBIGUOUS_SOURCE_VALUE", label, key,
                     "source is an array (duplicate Monday column titles?); mapping must choose one");
         } else {
-            run.error("UNSUPPORTED_VALUE_TYPE", name, s.key(), "source value type " + v.getNodeType() + " not allowed here");
+            run.error("UNSUPPORTED_VALUE_TYPE", label, key, "source value type " + v.getNodeType() + " not allowed here");
         }
         return null;
     }
 
-    private String missing(FieldRule rule, Run run, boolean absent) {
-        if (rule.required()) {
-            run.error("MISSING_REQUIRED_VALUE", rule.pdfField(), rule.source().key(), "required value is missing");
+    /** A printable reference to where a value comes from (key names only). */
+    static String keyOf(FieldRule.Source s) {
+        if (s == null) {
+            return null;
+        }
+        if (s.lineItem() != null) {
+            FieldRule.LineItem li = s.lineItem();
+            return li.array() + "[" + li.position() + "]." + String.join(".", li.path() == null ? List.of() : li.path());
+        }
+        return s.key();
+    }
+
+    private String missing(String label, String key, boolean required, Run run, boolean absent) {
+        if (required) {
+            run.error("MISSING_REQUIRED_VALUE", label, key, "required value is missing");
         } else {
             if (absent) {
-                run.warning("SOURCE_KEY_ABSENT", rule.pdfField(), rule.source().key(),
-                        "key not present in data (payload contract drift?)");
+                run.warning("SOURCE_KEY_ABSENT", label, key, "key not present in data (payload contract drift?)");
             }
-            run.skipped.add(rule.pdfField());
+            run.skipped.add(label);
         }
         return null;
+    }
+
+    // ------------------------------------------------------------------ fonts
+
+    private static boolean encodableInFieldFont(PDTextField field, String value) {
+        Matcher m = DA_FONT.matcher(String.valueOf(field.getDefaultAppearance()));
+        PDResources dr = field.getAcroForm().getDefaultResources();
+        if (!m.find() || dr == null) {
+            return true; // cannot tell; setValue reports UNENCODABLE_TEXT if it fails
+        }
+        try {
+            PDFont font = dr.getFont(COSName.getPDFName(m.group(1)));
+            if (font == null) {
+                return true;
+            }
+            font.encode(value);
+            return true;
+        } catch (IllegalArgumentException | IOException e) {
+            return false;
+        }
+    }
+
+    /** Point the field (and any widget-level DA) at the embedded Unicode font, keeping the size. */
+    private static void useUnicodeFont(PDTextField field, Run run) throws IOException {
+        PDAcroForm form = field.getAcroForm();
+        PDResources dr = form.getDefaultResources();
+        if (dr == null) {
+            dr = new PDResources();
+            form.setDefaultResources(dr);
+        }
+        COSName fname = COSName.getPDFName(FALLBACK_FONT_NAME);
+        if (dr.getFont(fname) == null) {
+            dr.put(fname, run.unicodeFont());
+        }
+        Matcher m = DA_FONT.matcher(String.valueOf(field.getDefaultAppearance()));
+        String size = m.find() ? m.group(2) : "0";
+        String da = m.reset().find() ? m.replaceFirst("/" + FALLBACK_FONT_NAME + " " + size + " Tf")
+                : "/" + FALLBACK_FONT_NAME + " 0 Tf 0 g";
+        field.setDefaultAppearance(da);
+        for (PDAnnotationWidget w : field.getWidgets()) {
+            if (w.getCOSObject() != field.getCOSObject()) { // merged field/widget shares one dictionary
+                w.getCOSObject().removeItem(COSName.DA);
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------ overlays
+
+    /**
+     * Legacy MacroForge "custom fields": single-line text drawn into the page content at a fixed rect.
+     * Font: embedded Liberation Sans. Size: the manifest maximum (default 10pt), capped at 70% of the
+     * rect height, shrunk to fit the width; below 6pt it is an error (never truncated).
+     */
+    private void planOverlay(PDDocument doc, Manifest.Overlay o, JsonNode data, Run run, List<Runnable> writes) {
+        String label = "overlay:" + o.id();
+        if (o.page() < 0 || o.page() >= doc.getNumberOfPages() || o.rect() == null || o.rect().size() != 4) {
+            run.error("INVALID_RULE", label, null, "overlay page or rect invalid");
+            return;
+        }
+        PDPage page = doc.getPage(o.page());
+        PDRectangle box = page.getMediaBox();
+        float x0 = o.rect().get(0).floatValue(), y0 = o.rect().get(1).floatValue();
+        float x1 = o.rect().get(2).floatValue(), y1 = o.rect().get(3).floatValue();
+        if (page.getRotation() % 360 != 0) {
+            run.error("OVERLAY_ROTATED_PAGE", label, null, "overlay on a rotated page is not supported");
+            return;
+        }
+        if (x1 <= x0 || y1 <= y0 || x0 < box.getLowerLeftX() - 1 || y0 < box.getLowerLeftY() - 1
+                || x1 > box.getUpperRightX() + 1 || y1 > box.getUpperRightY() + 1) {
+            run.error("OVERLAY_OUT_OF_PAGE", label, null, "overlay rect is empty or outside the page");
+            return;
+        }
+        String value = scalar(label, o.source(), o.required(), data, run);
+        if (value == null) {
+            return;
+        }
+        if (value.indexOf('\n') >= 0 || value.indexOf('\r') >= 0) {
+            run.error("MULTILINE_NOT_ALLOWED", label, keyOf(o.source()), "overlays are single-line");
+            return;
+        }
+        try {
+            for (PDAnnotation a : page.getAnnotations()) {
+                if (a instanceof PDAnnotationWidget w && intersects(w.getRectangle(), x0, y0, x1, y1)) {
+                    PDAppearanceCharacteristicsDictionary mk = w.getAppearanceCharacteristics();
+                    if (mk != null && mk.getBackground() != null) {
+                        run.warning("OVERLAY_UNDER_OPAQUE_WIDGET", label, null,
+                                "overlay intersects a widget with a background colour; it may be hidden");
+                    }
+                }
+            }
+        } catch (IOException e) {
+            run.warning("OVERLAY_ANNOTATIONS_UNREADABLE", label, null, "could not check widgets under the overlay");
+        }
+        float maxSize = o.fontSize() == null ? OVERLAY_DEFAULT_SIZE : o.fontSize().floatValue();
+        writes.add(() -> {
+            try {
+                PDType0Font font = run.unicodeFont();
+                try {
+                    font.encode(value);
+                } catch (IllegalArgumentException e) {
+                    run.error("UNENCODABLE_TEXT", label, keyOf(o.source()), "overlay font cannot encode the value");
+                    return;
+                }
+                float h = y1 - y0, avail = (x1 - x0) - 2 * OVERLAY_PADDING;
+                float size = Math.min(maxSize, h * 0.7f);
+                float width = font.getStringWidth(value) / 1000f * size;
+                if (width > avail) {
+                    size = size * avail / width;
+                }
+                if (size < OVERLAY_MIN_SIZE) {
+                    run.error("OVERLAY_TEXT_TOO_LONG", label, keyOf(o.source()),
+                            "value does not fit the overlay at the minimum font size (no truncation)");
+                    return;
+                }
+                float capHeight = font.getFontDescriptor() != null && font.getFontDescriptor().getCapHeight() > 0
+                        ? font.getFontDescriptor().getCapHeight() / 1000f : 0.7f;
+                float baseline = y0 + (h - size * capHeight) / 2f;
+                try (PDPageContentStream cs = new PDPageContentStream(doc, page, PDPageContentStream.AppendMode.APPEND,
+                        true, true)) {
+                    cs.beginText();
+                    cs.setFont(font, size);
+                    cs.setNonStrokingColor(0f);
+                    cs.newLineAtOffset(x0 + OVERLAY_PADDING, baseline);
+                    cs.showText(value);
+                    cs.endText();
+                }
+                run.filled.add(label);
+            } catch (IOException e) {
+                run.error("APPEARANCE_FAILED", label, keyOf(o.source()), "could not draw overlay");
+            }
+        });
+    }
+
+    private static boolean intersects(PDRectangle r, float x0, float y0, float x1, float y1) {
+        return r != null && r.getLowerLeftX() < x1 && r.getUpperRightX() > x0
+                && r.getLowerLeftY() < y1 && r.getUpperRightY() > y0;
     }
 
     private Boolean matches(FieldRule.Condition c, JsonNode data, String field, Run run) {
@@ -432,6 +655,10 @@ public final class FormFiller {
     }
 
     private static final class Run {
+        final Manifest manifest;
+        PDDocument doc;
+        boolean fullUnicodeFont;
+        private PDType0Font unicodeFont;
         final List<Issue> issues = new ArrayList<>();
         final List<String> filled = new ArrayList<>();
         final List<String> skipped = new ArrayList<>();
@@ -442,6 +669,23 @@ public final class FormFiller {
 
         void warning(String code, String f, String k, String m) {
             issues.add(Issue.warning(code, f, k, m));
+        }
+
+        Run(Manifest manifest) {
+            this.manifest = manifest;
+        }
+
+        /** Loaded once per document: subset for overlays only, full embedding if a form field uses it. */
+        PDType0Font unicodeFont() throws IOException {
+            if (unicodeFont == null) {
+                try (InputStream in = FormFiller.class.getResourceAsStream(UNICODE_FONT)) {
+                    if (in == null) {
+                        throw new IOException("bundled Unicode font missing");
+                    }
+                    unicodeFont = PDType0Font.load(doc, in, !fullUnicodeFont);
+                }
+            }
+            return unicodeFont;
         }
 
         boolean hasErrors() {

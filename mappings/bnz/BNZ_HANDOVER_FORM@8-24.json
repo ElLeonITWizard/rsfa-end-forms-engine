@@ -1,0 +1,2975 @@
+{
+  "schemaVersion": 1,
+  "templateId": "BNZ_HANDOVER_FORM",
+  "templateVersion": "8-24",
+  "templateFile": "ebdc9a1fc831__BNZ_Handover_8_24.pdf",
+  "templateSha256": "ebdc9a1fc831243117ea57cbb750716eff5eeed9b99898bd30d3b4a07ba6f717",
+  "encryption": "reject",
+  "sourceKeyNormalization": "macroforge-v1",
+  "fontFallback": "unicode",
+  "provenance": {
+    "importer": "tools/import_mforge.py 0.2.0",
+    "sourceFile": "RSFA End Forms Filling BluePrint 271026.mforge",
+    "sourceSha256": "8052c17b374b551272e17f5036de1ebfa9a295328eb8a6d079d30eec788b9a51",
+    "flow": "Flow C",
+    "flowDisplayName": "End Forms Flow Filling",
+    "node": 15,
+    "legacyPdfName": "BNZ_Handover_8 24.pdf",
+    "lenderCondition": "Banks to Send Contains BNZ",
+    "importedOn": "2026-10-27"
+  },
+  "pdf": {
+    "pages": 4,
+    "acroform": true,
+    "xfa": false,
+    "fields": {
+      "Additional information from adviser": {
+        "kind": "text"
+      },
+      "Address 1": {
+        "kind": "text"
+      },
+      "Address 2": {
+        "kind": "text"
+      },
+      "Address 3": {
+        "kind": "text"
+      },
+      "Address 4": {
+        "kind": "text"
+      },
+      "Address 5": {
+        "kind": "text"
+      },
+      "Adviser name": {
+        "kind": "text"
+      },
+      "Agreed Interest 1": {
+        "kind": "text"
+      },
+      "Agreed Interest 2": {
+        "kind": "text"
+      },
+      "Agreed Interest 3": {
+        "kind": "text"
+      },
+      "Agreed Interest 4": {
+        "kind": "text"
+      },
+      "Agreed Interest 5": {
+        "kind": "text"
+      },
+      "Agreed Interest 6": {
+        "kind": "text"
+      },
+      "BNZ Product dropdown 1": {
+        "kind": "combo",
+        "states": [
+          " ",
+          "Classic (fixed rate)",
+          "Rapid Repay (revolving credit)",
+          "TotalMoney (offsetting)",
+          "Standard (fixed)",
+          "Standard (variable)"
+        ]
+      },
+      "BNZ Product dropdown 2": {
+        "kind": "combo",
+        "states": [
+          " ",
+          "Classic (fixed rate)",
+          "Rapid Repay (revolving credit)",
+          "TotalMoney (offsetting)",
+          "Standard (fixed)",
+          "Standard (variable)"
+        ]
+      },
+      "BNZ Product dropdown 3": {
+        "kind": "combo",
+        "states": [
+          " ",
+          "Classic (fixed rate)",
+          "Rapid Repay (revolving credit)",
+          "TotalMoney (offsetting)",
+          "Standard (fixed)",
+          "Standard (variable)"
+        ]
+      },
+      "BNZ Product dropdown 4": {
+        "kind": "combo",
+        "states": [
+          " ",
+          "Classic (fixed rate)",
+          "Rapid Repay (revolving credit)",
+          "TotalMoney (offsetting)",
+          "Standard (fixed)",
+          "Standard (variable)"
+        ]
+      },
+      "BNZ Product dropdown 5": {
+        "kind": "combo",
+        "states": [
+          " ",
+          "Classic (fixed rate)",
+          "Rapid Repay (revolving credit)",
+          "TotalMoney (offsetting)",
+          "Standard (fixed)",
+          "Standard (variable)"
+        ]
+      },
+      "BNZ Product dropdown 6": {
+        "kind": "combo",
+        "states": [
+          " ",
+          "Classic (fixed rate)",
+          "Rapid Repay (revolving credit)",
+          "TotalMoney (offsetting)",
+          "Standard (fixed)",
+          "Standard (variable)"
+        ]
+      },
+      "Best time to call": {
+        "kind": "text"
+      },
+      "Borrower name 1": {
+        "kind": "text"
+      },
+      "Borrower name 2": {
+        "kind": "text"
+      },
+      "Borrower(s) who are refinancing drop down": {
+        "kind": "combo",
+        "states": [
+          " ",
+          "Consolidate and reduce the level of their total debt repayments",
+          "Reduce the total amount of interest being paid on their debts",
+          "Restructure existing debt to incorporate BNZ products",
+          "Release equity in home",
+          "Take over existing joint debt",
+          "I am looking for a better level of service from my provider",
+          "Other - Please provide detail"
+        ]
+      },
+      "Borrower(s) who are refinancing more detail": {
+        "kind": "text"
+      },
+      "Borrowing Entity": {
+        "kind": "text"
+      },
+      "Capacity 1": {
+        "kind": "text"
+      },
+      "Capacity 2": {
+        "kind": "text"
+      },
+      "Cash contribution": {
+        "kind": "text"
+      },
+      "Check Box 1": {
+        "kind": "checkbox",
+        "states": [
+          "Top Up",
+          "Refinance",
+          "New",
+          "Restructure"
+        ],
+        "widgets": 4
+      },
+      "Check Box 10": {
+        "kind": "checkbox",
+        "states": [
+          "Yes"
+        ]
+      },
+      "Check Box 11": {
+        "kind": "checkbox",
+        "states": [
+          "Yes"
+        ]
+      },
+      "Check Box 12": {
+        "kind": "checkbox",
+        "states": [
+          "No",
+          "Yes"
+        ],
+        "widgets": 2
+      },
+      "Check Box 13": {
+        "kind": "checkbox",
+        "states": [
+          "No",
+          "Yes"
+        ],
+        "widgets": 2
+      },
+      "Check Box 14": {
+        "kind": "checkbox",
+        "states": [
+          "No",
+          "Yes"
+        ],
+        "widgets": 2
+      },
+      "Check Box 15": {
+        "kind": "checkbox",
+        "states": [
+          "Yes",
+          "No"
+        ],
+        "widgets": 2
+      },
+      "Check Box 16": {
+        "kind": "checkbox",
+        "states": [
+          "Verify"
+        ]
+      },
+      "Check Box 17": {
+        "kind": "checkbox",
+        "states": [
+          "No",
+          "Yes"
+        ],
+        "widgets": 2
+      },
+      "Check Box 18": {
+        "kind": "checkbox",
+        "states": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+        ],
+        "widgets": 5
+      },
+      "Check Box 19": {
+        "kind": "checkbox",
+        "states": [
+          "1",
+          "2",
+          "3"
+        ],
+        "widgets": 3
+      },
+      "Check Box 21": {
+        "kind": "checkbox",
+        "states": [
+          "Owner Occupied",
+          "Investment",
+          "Holiday home"
+        ],
+        "widgets": 3
+      },
+      "Check Box 23": {
+        "kind": "checkbox",
+        "states": [
+          "Owner occupied",
+          "Investment",
+          "Holiday home"
+        ],
+        "widgets": 3
+      },
+      "Check Box 25": {
+        "kind": "checkbox",
+        "states": [
+          "1",
+          "2",
+          "3"
+        ],
+        "widgets": 3
+      },
+      "Check Box 27": {
+        "kind": "checkbox",
+        "states": [
+          "1",
+          "2",
+          "3"
+        ],
+        "widgets": 3
+      },
+      "Check Box 28": {
+        "kind": "checkbox",
+        "states": [
+          "Nature & Purpose"
+        ]
+      },
+      "Check Box 29": {
+        "kind": "checkbox",
+        "states": [
+          "Nature & Purpose"
+        ]
+      },
+      "Check Box 3": {
+        "kind": "checkbox",
+        "states": [
+          "Ratelock facility"
+        ]
+      },
+      "Check Box 30": {
+        "kind": "checkbox",
+        "states": [
+          "Nature & Purpose"
+        ]
+      },
+      "Check Box 31": {
+        "kind": "checkbox",
+        "states": [
+          "I have",
+          "I have not"
+        ],
+        "widgets": 2
+      },
+      "Check Box 4": {
+        "kind": "checkbox",
+        "states": [
+          "Ratelock facility"
+        ]
+      },
+      "Check Box 5": {
+        "kind": "checkbox",
+        "states": [
+          "Ratelock facility"
+        ]
+      },
+      "Check Box 6": {
+        "kind": "checkbox",
+        "states": [
+          "Ratelock facility"
+        ]
+      },
+      "Check Box 7": {
+        "kind": "checkbox",
+        "states": [
+          "Ratelock facility"
+        ]
+      },
+      "Check Box 8": {
+        "kind": "checkbox",
+        "states": [
+          "Ratelock facility"
+        ]
+      },
+      "Confirmation": {
+        "kind": "checkbox",
+        "states": [
+          "Yes"
+        ]
+      },
+      "Contact name": {
+        "kind": "text"
+      },
+      "Date 1": {
+        "kind": "text",
+        "maxLen": 6,
+        "comb": true
+      },
+      "Date 3": {
+        "kind": "text",
+        "maxLen": 6,
+        "comb": true
+      },
+      "Date 4": {
+        "kind": "text",
+        "maxLen": 6,
+        "comb": true
+      },
+      "Date 5": {
+        "kind": "text",
+        "maxLen": 6,
+        "comb": true
+      },
+      "Email address 1": {
+        "kind": "text"
+      },
+      "Email address 2": {
+        "kind": "text"
+      },
+      "Email address 3": {
+        "kind": "text"
+      },
+      "Establishment fee": {
+        "kind": "text"
+      },
+      "Firm": {
+        "kind": "text"
+      },
+      "First Repayment Date 1": {
+        "kind": "text",
+        "maxLen": 6,
+        "comb": true
+      },
+      "First Repayment Date 2": {
+        "kind": "text",
+        "maxLen": 6,
+        "comb": true
+      },
+      "First Repayment Date 3": {
+        "kind": "text",
+        "maxLen": 6,
+        "comb": true
+      },
+      "First Repayment Date 4": {
+        "kind": "text",
+        "maxLen": 6,
+        "comb": true
+      },
+      "First Repayment Date 5": {
+        "kind": "text",
+        "maxLen": 6,
+        "comb": true
+      },
+      "First Repayment Date 6": {
+        "kind": "text",
+        "maxLen": 6,
+        "comb": true
+      },
+      "First names 1": {
+        "kind": "text"
+      },
+      "First names 2`": {
+        "kind": "text"
+      },
+      "First names 3": {
+        "kind": "text"
+      },
+      "First names 4": {
+        "kind": "text"
+      },
+      "Fixed Rate Period? 1": {
+        "kind": "combo",
+        "states": [
+          " ",
+          "N/A",
+          "6 months",
+          "1 year ",
+          "18 months",
+          "2 years",
+          "3 years",
+          "4 years",
+          "5 years"
+        ]
+      },
+      "Fixed Rate Period? 2": {
+        "kind": "combo",
+        "states": [
+          " ",
+          "N/A",
+          "6 months",
+          "1 year ",
+          "18 months",
+          "2 years",
+          "3 years",
+          "4 years",
+          "5 years"
+        ]
+      },
+      "Fixed Rate Period? 3": {
+        "kind": "combo",
+        "states": [
+          " ",
+          "N/A",
+          "6 months",
+          "1 year ",
+          "18 months",
+          "2 years",
+          "3 years",
+          "4 years",
+          "5 years"
+        ]
+      },
+      "Fixed Rate Period? 4": {
+        "kind": "combo",
+        "states": [
+          " ",
+          "N/A",
+          "6 months",
+          "1 year ",
+          "18 months",
+          "2 years",
+          "3 years",
+          "4 years",
+          "5 years"
+        ]
+      },
+      "Fixed Rate Period? 5": {
+        "kind": "combo",
+        "states": [
+          " ",
+          "N/A",
+          "6 months",
+          "1 year ",
+          "18 months",
+          "2 years",
+          "3 years",
+          "4 years",
+          "5 years"
+        ]
+      },
+      "Fixed Rate Period? 6": {
+        "kind": "combo",
+        "states": [
+          " ",
+          "N/A",
+          "6 months",
+          "1 year ",
+          "18 months",
+          "2 years",
+          "3 years",
+          "4 years",
+          "5 years"
+        ]
+      },
+      "I have recommended BNZ to the borrower(s) due to: drop down": {
+        "kind": "combo",
+        "states": [
+          "Please select from the options listed here",
+          " ",
+          "The borrower(s) have an existing banking relationship with BNZ that they wish to maintain",
+          "BNZ’s competitive pricing and/or loan products best align with the needs and objectives of the borrower(s)",
+          "The flexibility and range of BNZ products are attractive to the borrower(s)",
+          "BNZ credit criteria was best aligned with the requirements of the borrower(s)",
+          "BNZ offers a good branch/ATM network and/or digital banking solutions that are important to the borrower(s)",
+          "Other - Please provide detail"
+        ]
+      },
+      "I have recommended BNZ to the borrower(s) due to: more detail": {
+        "kind": "text"
+      },
+      "Interest Only Period? 1": {
+        "kind": "text",
+        "maxLen": 10
+      },
+      "Interest Only Period? 2": {
+        "kind": "text"
+      },
+      "Interest Only Period? 3": {
+        "kind": "text"
+      },
+      "Interest Only Period? 4": {
+        "kind": "text"
+      },
+      "Interest Only Period? 5": {
+        "kind": "text"
+      },
+      "Interest Only Period? 6": {
+        "kind": "text"
+      },
+      "Last names 1": {
+        "kind": "text"
+      },
+      "Last names 2": {
+        "kind": "text"
+      },
+      "Last names 3": {
+        "kind": "text"
+      },
+      "Last names 4": {
+        "kind": "text"
+      },
+      "Loan Amount 1": {
+        "kind": "text",
+        "maxLen": 10
+      },
+      "Loan Amount 2": {
+        "kind": "text"
+      },
+      "Loan Amount 3": {
+        "kind": "text"
+      },
+      "Loan Amount 4": {
+        "kind": "text"
+      },
+      "Loan Amount 5": {
+        "kind": "text"
+      },
+      "Loan Amount 6": {
+        "kind": "text"
+      },
+      "Loan Term 1": {
+        "kind": "text",
+        "maxLen": 10
+      },
+      "Loan Term 2": {
+        "kind": "text"
+      },
+      "Loan Term 3": {
+        "kind": "text"
+      },
+      "Loan Term 4": {
+        "kind": "text"
+      },
+      "Loan Term 5": {
+        "kind": "text"
+      },
+      "Loan Term 6": {
+        "kind": "text"
+      },
+      "Location": {
+        "kind": "text"
+      },
+      "More assistance required? more detail": {
+        "kind": "text"
+      },
+      "Name": {
+        "kind": "text"
+      },
+      "Owning Entity": {
+        "kind": "text"
+      },
+      "Payment Rate Period 1": {
+        "kind": "combo",
+        "states": [
+          " ",
+          "Weekly",
+          "Fortnightly",
+          "Monthly"
+        ]
+      },
+      "Payment Rate Period 2": {
+        "kind": "combo",
+        "states": [
+          " ",
+          "Weekly",
+          "Fortnightly",
+          "Monthly"
+        ]
+      },
+      "Payment Rate Period 3": {
+        "kind": "combo",
+        "states": [
+          " ",
+          "Weekly",
+          "Fortnightly",
+          "Monthly"
+        ]
+      },
+      "Payment Rate Period 4": {
+        "kind": "combo",
+        "states": [
+          " ",
+          "Weekly",
+          "Fortnightly",
+          "Monthly"
+        ]
+      },
+      "Payment Rate Period 5": {
+        "kind": "combo",
+        "states": [
+          " ",
+          "Weekly",
+          "Fortnightly",
+          "Monthly"
+        ]
+      },
+      "Payment Rate Period 6": {
+        "kind": "combo",
+        "states": [
+          " ",
+          "Weekly",
+          "Fortnightly",
+          "Monthly"
+        ]
+      },
+      "Phone 1": {
+        "kind": "text"
+      },
+      "Phone 2": {
+        "kind": "text"
+      },
+      "Preferred BNZ branch": {
+        "kind": "text"
+      },
+      "Select the main purpose for each facility 1": {
+        "kind": "combo",
+        "states": [
+          "Please select the main bullet pointed purpose here",
+          " ",
+          "NEW PROPERTY AND MOVING  ",
+          "–  Buy a home or land (incl. investment)",
+          "–  Build a home (incl. investment)",
+          "–  Costs related to property purchase  ",
+          "–  Deposit for a home or land (incl. investment)  ",
+          "  ",
+          "DEBT CONSOLIDATION  ",
+          "–  Debt consolidation   ",
+          "–  Release equity in home",
+          "–  Refinance or switch home loan to BNZ   ",
+          "–  Restructure or re-document BNZ home loan  ",
+          "–  Transfer home loan to new property (Portability)   ",
+          "–  Personal investment (incl. shares)   ",
+          "   ",
+          "HOME IMPROVEMENTS AND MAINTENANCE",
+          "–  Renovations   ",
+          "–  Home maintenance    ",
+          "–  Install technology (incl. alarm systems)  ",
+          "–  Furniture   ",
+          "–  Whiteware   ",
+          "    ",
+          "VEHICLES",
+          "–  Buy a vehicle/car ",
+          "–  Vehicle repairs and maintenance     ",
+          "–  Buy other large asset (incl. boats, jet ski, and tiny home)  ",
+          "      ",
+          "FAMILY, HEALTH, AND SUPPORT ",
+          "–  Medical and dental treatment and expenses  ",
+          "–  Care for Family Members (incl. care facilities, in home help)",
+          "–  Funds to help family and friends   ",
+          "–  Training and education costs (incl. early childhood)  ",
+          "–  Relationship settlement   ",
+          "–  Pet and vet expenses   ",
+          "     ",
+          "LIFE EVENTS AND TRAVEL",
+          "–  Funeral   ",
+          "–  Engagement and wedding   ",
+          "–  Civil partnership ceremony   ",
+          "–  Travel - main costs (incl. flights, accommodation) "
+        ]
+      },
+      "Select the main purpose for each facility 2": {
+        "kind": "combo",
+        "states": [
+          "Please select the main bullet pointed purpose here",
+          " ",
+          "NEW PROPERTY AND MOVING  ",
+          "–  Buy a home or land (incl. investment)",
+          "–  Build a home (incl. investment)",
+          "–  Costs related to property purchase  ",
+          "–  Deposit for a home or land (incl. investment)  ",
+          "  ",
+          "DEBT CONSOLIDATION  ",
+          "–  Debt consolidation   ",
+          "–  Release equity in home",
+          "–  Refinance or switch home loan to BNZ   ",
+          "–  Restructure or re-document BNZ home loan  ",
+          "–  Transfer home loan to new property (Portability)   ",
+          "–  Personal investment (incl. shares)   ",
+          "   ",
+          "HOME IMPROVEMENTS AND MAINTENANCE",
+          "–  Renovations   ",
+          "–  Home maintenance    ",
+          "–  Install technology (incl. alarm systems)  ",
+          "–  Furniture   ",
+          "–  Whiteware   ",
+          "    ",
+          "VEHICLES",
+          "–  Buy a vehicle/car ",
+          "–  Vehicle repairs and maintenance     ",
+          "–  Buy other large asset (incl. boats, jet ski, and tiny home)  ",
+          "      ",
+          "FAMILY, HEALTH, AND SUPPORT ",
+          "–  Medical and dental treatment and expenses  ",
+          "–  Care for Family Members (incl. care facilities, in home help)",
+          "–  Funds to help family and friends   ",
+          "–  Training and education costs (incl. early childhood)  ",
+          "–  Relationship settlement   ",
+          "–  Pet and vet expenses   ",
+          "     ",
+          "LIFE EVENTS AND TRAVEL",
+          "–  Funeral   ",
+          "–  Engagement and wedding   ",
+          "–  Civil partnership ceremony   ",
+          "–  Travel - main costs (incl. flights, accommodation) "
+        ]
+      },
+      "Select the main purpose for each facility 3": {
+        "kind": "combo",
+        "states": [
+          "Please select the main bullet pointed purpose here",
+          " ",
+          "NEW PROPERTY AND MOVING  ",
+          "–  Buy a home or land (incl. investment)",
+          "–  Build a home (incl. investment)",
+          "–  Costs related to property purchase  ",
+          "–  Deposit for a home or land (incl. investment)  ",
+          "  ",
+          "DEBT CONSOLIDATION  ",
+          "–  Debt consolidation   ",
+          "–  Release equity in home",
+          "–  Refinance or switch home loan to BNZ   ",
+          "–  Restructure or re-document BNZ home loan  ",
+          "–  Transfer home loan to new property (Portability)   ",
+          "–  Personal investment (incl. shares)   ",
+          "   ",
+          "HOME IMPROVEMENTS AND MAINTENANCE",
+          "–  Renovations   ",
+          "–  Home maintenance    ",
+          "–  Install technology (incl. alarm systems)  ",
+          "–  Furniture   ",
+          "–  Whiteware   ",
+          "    ",
+          "VEHICLES",
+          "–  Buy a vehicle/car ",
+          "–  Vehicle repairs and maintenance     ",
+          "–  Buy other large asset (incl. boats, jet ski, and tiny home)  ",
+          "      ",
+          "FAMILY, HEALTH, AND SUPPORT ",
+          "–  Medical and dental treatment and expenses  ",
+          "–  Care for Family Members (incl. care facilities, in home help)",
+          "–  Funds to help family and friends   ",
+          "–  Training and education costs (incl. early childhood)  ",
+          "–  Relationship settlement   ",
+          "–  Pet and vet expenses   ",
+          "     ",
+          "LIFE EVENTS AND TRAVEL",
+          "–  Funeral   ",
+          "–  Engagement and wedding   ",
+          "–  Civil partnership ceremony   ",
+          "–  Travel - main costs (incl. flights, accommodation) "
+        ]
+      },
+      "Select the main purpose for each facility 4": {
+        "kind": "combo",
+        "states": [
+          "Please select the main bullet pointed purpose here",
+          " ",
+          "NEW PROPERTY AND MOVING  ",
+          "–  Buy a home or land (incl. investment)",
+          "–  Build a home (incl. investment)",
+          "–  Costs related to property purchase  ",
+          "–  Deposit for a home or land (incl. investment)  ",
+          "  ",
+          "DEBT CONSOLIDATION  ",
+          "–  Debt consolidation   ",
+          "–  Release equity in home",
+          "–  Refinance or switch home loan to BNZ   ",
+          "–  Restructure or re-document BNZ home loan  ",
+          "–  Transfer home loan to new property (Portability)   ",
+          "–  Personal investment (incl. shares)   ",
+          "   ",
+          "HOME IMPROVEMENTS AND MAINTENANCE",
+          "–  Renovations   ",
+          "–  Home maintenance    ",
+          "–  Install technology (incl. alarm systems)  ",
+          "–  Furniture   ",
+          "–  Whiteware   ",
+          "    ",
+          "VEHICLES",
+          "–  Buy a vehicle/car ",
+          "–  Vehicle repairs and maintenance     ",
+          "–  Buy other large asset (incl. boats, jet ski, and tiny home)  ",
+          "      ",
+          "FAMILY, HEALTH, AND SUPPORT ",
+          "–  Medical and dental treatment and expenses  ",
+          "–  Care for Family Members (incl. care facilities, in home help)",
+          "–  Funds to help family and friends   ",
+          "–  Training and education costs (incl. early childhood)  ",
+          "–  Relationship settlement   ",
+          "–  Pet and vet expenses   ",
+          "     ",
+          "LIFE EVENTS AND TRAVEL",
+          "–  Funeral   ",
+          "–  Engagement and wedding   ",
+          "–  Civil partnership ceremony   ",
+          "–  Travel - main costs (incl. flights, accommodation) "
+        ]
+      },
+      "Select the main purpose for each facility 5": {
+        "kind": "combo",
+        "states": [
+          "Please select the main bullet pointed purpose here",
+          " ",
+          "NEW PROPERTY AND MOVING  ",
+          "–  Buy a home or land (incl. investment)",
+          "–  Build a home (incl. investment)",
+          "–  Costs related to property purchase  ",
+          "–  Deposit for a home or land (incl. investment)  ",
+          "  ",
+          "DEBT CONSOLIDATION  ",
+          "–  Debt consolidation   ",
+          "–  Release equity in home",
+          "–  Refinance or switch home loan to BNZ   ",
+          "–  Restructure or re-document BNZ home loan  ",
+          "–  Transfer home loan to new property (Portability)   ",
+          "–  Personal investment (incl. shares)   ",
+          "   ",
+          "HOME IMPROVEMENTS AND MAINTENANCE",
+          "–  Renovations   ",
+          "–  Home maintenance    ",
+          "–  Install technology (incl. alarm systems)  ",
+          "–  Furniture   ",
+          "–  Whiteware   ",
+          "    ",
+          "VEHICLES",
+          "–  Buy a vehicle/car ",
+          "–  Vehicle repairs and maintenance     ",
+          "–  Buy other large asset (incl. boats, jet ski, and tiny home)  ",
+          "      ",
+          "FAMILY, HEALTH, AND SUPPORT ",
+          "–  Medical and dental treatment and expenses  ",
+          "–  Care for Family Members (incl. care facilities, in home help)",
+          "–  Funds to help family and friends   ",
+          "–  Training and education costs (incl. early childhood)  ",
+          "–  Relationship settlement   ",
+          "–  Pet and vet expenses   ",
+          "     ",
+          "LIFE EVENTS AND TRAVEL",
+          "–  Funeral   ",
+          "–  Engagement and wedding   ",
+          "–  Civil partnership ceremony   ",
+          "–  Travel - main costs (incl. flights, accommodation) "
+        ]
+      },
+      "Select the main purpose for each facility 6": {
+        "kind": "combo",
+        "states": [
+          "Please select the main bullet pointed purpose here",
+          " ",
+          "NEW PROPERTY AND MOVING  ",
+          "–  Buy a home or land (incl. investment)",
+          "–  Build a home (incl. investment)",
+          "–  Costs related to property purchase  ",
+          "–  Deposit for a home or land (incl. investment)  ",
+          "  ",
+          "DEBT CONSOLIDATION  ",
+          "–  Debt consolidation   ",
+          "–  Release equity in home",
+          "–  Refinance or switch home loan to BNZ   ",
+          "–  Restructure or re-document BNZ home loan  ",
+          "–  Transfer home loan to new property (Portability)   ",
+          "–  Personal investment (incl. shares)   ",
+          "   ",
+          "HOME IMPROVEMENTS AND MAINTENANCE",
+          "–  Renovations   ",
+          "–  Home maintenance    ",
+          "–  Install technology (incl. alarm systems)  ",
+          "–  Furniture   ",
+          "–  Whiteware   ",
+          "    ",
+          "VEHICLES",
+          "–  Buy a vehicle/car ",
+          "–  Vehicle repairs and maintenance     ",
+          "–  Buy other large asset (incl. boats, jet ski, and tiny home)  ",
+          "      ",
+          "FAMILY, HEALTH, AND SUPPORT ",
+          "–  Medical and dental treatment and expenses  ",
+          "–  Care for Family Members (incl. care facilities, in home help)",
+          "–  Funds to help family and friends   ",
+          "–  Training and education costs (incl. early childhood)  ",
+          "–  Relationship settlement   ",
+          "–  Pet and vet expenses   ",
+          "     ",
+          "LIFE EVENTS AND TRAVEL",
+          "–  Funeral   ",
+          "–  Engagement and wedding   ",
+          "–  Civil partnership ceremony   ",
+          "–  Travel - main costs (incl. flights, accommodation) "
+        ]
+      },
+      "Suburb 1": {
+        "kind": "text"
+      },
+      "Suburb 2": {
+        "kind": "text"
+      },
+      "Suburb 3": {
+        "kind": "text"
+      },
+      "Suburb 4": {
+        "kind": "text"
+      },
+      "Surburb 5": {
+        "kind": "text"
+      },
+      "Yes (please provide an explanation below)": {
+        "kind": "text"
+      },
+      "other purpose 1": {
+        "kind": "text"
+      },
+      "other purpose 2": {
+        "kind": "text"
+      },
+      "other purpose 3": {
+        "kind": "text"
+      },
+      "other purpose 4": {
+        "kind": "text"
+      },
+      "other purpose 5": {
+        "kind": "text"
+      },
+      "other purpose 6": {
+        "kind": "text"
+      }
+    }
+  },
+  "fields": [
+    {
+      "pdfField": "Additional information from adviser",
+      "kind": "text",
+      "source": {
+        "key": "Comments"
+      },
+      "legacy": {
+        "field": "Additional information from adviser",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "Address 1",
+      "kind": "text",
+      "source": {
+        "key": "Applicant 1 Physical Address Street"
+      },
+      "legacy": {
+        "field": "Address 1",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "Adviser name",
+      "kind": "text",
+      "source": {
+        "key": "Adviser name"
+      },
+      "legacy": {
+        "field": "Adviser name",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "Agreed Interest 1",
+      "kind": "text",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 1,
+          "path": [
+            "values",
+            "Interest rate (%)"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "Agreed Interest 1",
+        "mapping": "line_item",
+        "lineItem": "LineItems.Interest rate_1"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
+    },
+    {
+      "pdfField": "Agreed Interest 2",
+      "kind": "text",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 2,
+          "path": [
+            "values",
+            "Interest rate (%)"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "Agreed Interest 2",
+        "mapping": "line_item",
+        "lineItem": "LineItems.Interest rate_2"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
+    },
+    {
+      "pdfField": "Agreed Interest 3",
+      "kind": "text",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 3,
+          "path": [
+            "values",
+            "Interest rate (%)"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "Agreed Interest 3",
+        "mapping": "line_item",
+        "lineItem": "LineItems.Interest rate_3"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
+    },
+    {
+      "pdfField": "Agreed Interest 4",
+      "kind": "text",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 4,
+          "path": [
+            "values",
+            "Interest rate (%)"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "Agreed Interest 4",
+        "mapping": "line_item",
+        "lineItem": "LineItems.Interest rate_4"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
+    },
+    {
+      "pdfField": "Agreed Interest 5",
+      "kind": "text",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 5,
+          "path": [
+            "values",
+            "Interest rate (%)"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "Agreed Interest 5",
+        "mapping": "line_item",
+        "lineItem": "LineItems.Interest rate_5"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
+    },
+    {
+      "pdfField": "Agreed Interest 6",
+      "kind": "text",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 6,
+          "path": [
+            "values",
+            "Interest rate (%)"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "Agreed Interest 6",
+        "mapping": "line_item",
+        "lineItem": "LineItems.Interest rate_6"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
+    },
+    {
+      "pdfField": "BNZ Product dropdown 1",
+      "kind": "combo",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 1,
+          "path": [
+            "values",
+            "BNZ product"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "BNZ Product dropdown 1",
+        "mapping": "line_item",
+        "lineItem": "LineItems.BNZ product_1"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
+    },
+    {
+      "pdfField": "BNZ Product dropdown 2",
+      "kind": "combo",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 2,
+          "path": [
+            "values",
+            "BNZ product"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "BNZ Product dropdown 2",
+        "mapping": "line_item",
+        "lineItem": "LineItems.BNZ product_2"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
+    },
+    {
+      "pdfField": "BNZ Product dropdown 3",
+      "kind": "combo",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 3,
+          "path": [
+            "values",
+            "BNZ product"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "BNZ Product dropdown 3",
+        "mapping": "line_item",
+        "lineItem": "LineItems.BNZ product_3"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
+    },
+    {
+      "pdfField": "BNZ Product dropdown 4",
+      "kind": "combo",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 4,
+          "path": [
+            "values",
+            "BNZ product"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "BNZ Product dropdown 4",
+        "mapping": "line_item",
+        "lineItem": "LineItems.BNZ product_4"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
+    },
+    {
+      "pdfField": "BNZ Product dropdown 5",
+      "kind": "combo",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 5,
+          "path": [
+            "values",
+            "BNZ product"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "BNZ Product dropdown 5",
+        "mapping": "line_item",
+        "lineItem": "LineItems.BNZ product_5"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
+    },
+    {
+      "pdfField": "BNZ Product dropdown 6",
+      "kind": "combo",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 6,
+          "path": [
+            "values",
+            "BNZ product"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "BNZ Product dropdown 6",
+        "mapping": "line_item",
+        "lineItem": "LineItems.BNZ product_6"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
+    },
+    {
+      "pdfField": "Best time to call",
+      "kind": "text",
+      "source": {
+        "key": "Applicant 1 Best time to call"
+      },
+      "legacy": {
+        "field": "Best time to call",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "Borrower name 1",
+      "kind": "text",
+      "source": {
+        "key": "Boarders - Borrower name 2"
+      },
+      "legacy": {
+        "field": "Borrower name 1",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "Borrower name 2",
+      "kind": "text",
+      "source": {
+        "key": "Boarders - Borrower name 1"
+      },
+      "legacy": {
+        "field": "Borrower name 2",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "Borrower(s) who are refinancing drop down",
+      "kind": "combo",
+      "source": {
+        "key": "Borrower refinancing objectives BNZ"
+      },
+      "legacy": {
+        "field": "Borrower(s) who are refinancing drop down",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "Borrowing Entity",
+      "kind": "text",
+      "source": {
+        "key": "Borrowing Entity"
+      },
+      "legacy": {
+        "field": "Borrowing Entity",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "Cash contribution",
+      "kind": "text",
+      "source": {
+        "key": "Cash contribution"
+      },
+      "legacy": {
+        "field": "Cash contribution",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "Check Box 1",
+      "kind": "checkbox",
+      "source": {
+        "constant": false
+      },
+      "legacy": {
+        "field": "Check Box 1",
+        "mapping": "unchecked"
+      },
+      "reviewRequired": "constant checkbox state: confirm it is not a client declaration/consent"
+    },
+    {
+      "pdfField": "Check Box 1",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "Type of request",
+          "operator": "equals",
+          "value": "New"
+        }
+      },
+      "legacy": {
+        "field": "Check Box 1#New",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "New"
+    },
+    {
+      "pdfField": "Check Box 1",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "Type of request",
+          "operator": "equals",
+          "value": "Refinance"
+        }
+      },
+      "legacy": {
+        "field": "Check Box 1#Refinance",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "Refinance"
+    },
+    {
+      "pdfField": "Check Box 1",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "Type of request",
+          "operator": "equals",
+          "value": "Restructure"
+        }
+      },
+      "legacy": {
+        "field": "Check Box 1#Restructure",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "Restructure"
+    },
+    {
+      "pdfField": "Check Box 1",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "Type of request",
+          "operator": "equals",
+          "value": "Top Up"
+        }
+      },
+      "legacy": {
+        "field": "Check Box 1#Top#20Up",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "Top Up"
+    },
+    {
+      "pdfField": "Check Box 10",
+      "kind": "checkbox",
+      "source": {
+        "constant": true
+      },
+      "legacy": {
+        "field": "Check Box 10",
+        "mapping": "checked"
+      },
+      "reviewRequired": "constant checkbox state: confirm it is not a client declaration/consent"
+    },
+    {
+      "pdfField": "Check Box 11",
+      "kind": "checkbox",
+      "source": {
+        "constant": true
+      },
+      "legacy": {
+        "field": "Check Box 11",
+        "mapping": "checked"
+      },
+      "reviewRequired": "constant checkbox state: confirm it is not a client declaration/consent"
+    },
+    {
+      "pdfField": "Check Box 13",
+      "kind": "checkbox",
+      "source": {
+        "constant": false
+      },
+      "legacy": {
+        "field": "Check Box 13",
+        "mapping": "unchecked"
+      },
+      "reviewRequired": "constant checkbox state: confirm it is not a client declaration/consent"
+    },
+    {
+      "pdfField": "Check Box 14",
+      "kind": "checkbox",
+      "source": {
+        "constant": false
+      },
+      "legacy": {
+        "field": "Check Box 14",
+        "mapping": "unchecked"
+      },
+      "reviewRequired": "constant checkbox state: confirm it is not a client declaration/consent"
+    },
+    {
+      "pdfField": "Check Box 14",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "Loan term_interest rate new lending greater remaining rate_loan term existing debt?",
+          "operator": "equals",
+          "value": "No"
+        }
+      },
+      "legacy": {
+        "field": "Check Box 14#No",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "No"
+    },
+    {
+      "pdfField": "Check Box 14",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "Loan term_interest rate new lending greater remaining rate_loan term existing debt?",
+          "operator": "equals",
+          "value": "Yes"
+        }
+      },
+      "legacy": {
+        "field": "Check Box 14#Yes",
+        "mapping": "conditional"
+      },
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "option": "Yes"
+    },
+    {
+      "pdfField": "Check Box 15",
+      "kind": "checkbox",
+      "source": {
+        "constant": false
+      },
+      "legacy": {
+        "field": "Check Box 15",
+        "mapping": "unchecked"
+      },
+      "reviewRequired": "constant checkbox state: confirm it is not a client declaration/consent"
+    },
+    {
+      "pdfField": "Check Box 16",
+      "kind": "checkbox",
+      "source": {
+        "constant": true
+      },
+      "legacy": {
+        "field": "Check Box 16",
+        "mapping": "checked"
+      },
+      "reviewRequired": "constant checkbox state: confirm it is not a client declaration/consent"
+    },
+    {
+      "pdfField": "Check Box 17",
+      "kind": "checkbox",
+      "source": {
+        "constant": false
+      },
+      "legacy": {
+        "field": "Check Box 17",
+        "mapping": "unchecked"
+      },
+      "reviewRequired": "constant checkbox state: confirm it is not a client declaration/consent"
+    },
+    {
+      "pdfField": "Check Box 19",
+      "kind": "checkbox",
+      "source": {
+        "constant": true
+      },
+      "legacy": {
+        "field": "Check Box 19#1",
+        "mapping": "checked"
+      },
+      "reviewRequired": "constant checkbox state: confirm it is not a client declaration/consent",
+      "option": "1"
+    },
+    {
+      "pdfField": "Check Box 28",
+      "kind": "checkbox",
+      "source": {
+        "constant": true
+      },
+      "legacy": {
+        "field": "Check Box 28",
+        "mapping": "checked"
+      },
+      "reviewRequired": "constant checkbox state: confirm it is not a client declaration/consent"
+    },
+    {
+      "pdfField": "Check Box 29",
+      "kind": "checkbox",
+      "source": {
+        "constant": true
+      },
+      "legacy": {
+        "field": "Check Box 29",
+        "mapping": "checked"
+      },
+      "reviewRequired": "constant checkbox state: confirm it is not a client declaration/consent"
+    },
+    {
+      "pdfField": "Check Box 30",
+      "kind": "checkbox",
+      "source": {
+        "constant": true
+      },
+      "legacy": {
+        "field": "Check Box 30",
+        "mapping": "checked"
+      },
+      "reviewRequired": "constant checkbox state: confirm it is not a client declaration/consent"
+    },
+    {
+      "pdfField": "Check Box 31",
+      "kind": "checkbox",
+      "source": {
+        "constant": false
+      },
+      "legacy": {
+        "field": "Check Box 31",
+        "mapping": "unchecked"
+      },
+      "reviewRequired": "constant checkbox state: confirm it is not a client declaration/consent"
+    },
+    {
+      "pdfField": "Check Box 31",
+      "kind": "checkbox",
+      "source": {
+        "constant": true
+      },
+      "legacy": {
+        "field": "Check Box 31#I#20have",
+        "mapping": "checked"
+      },
+      "reviewRequired": "constant checkbox state: confirm it is not a client declaration/consent",
+      "option": "I have"
+    },
+    {
+      "pdfField": "Contact name",
+      "kind": "text",
+      "source": {
+        "key": "Applicant 1 Full Name"
+      },
+      "legacy": {
+        "field": "Contact name",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "Date 1",
+      "kind": "text",
+      "source": {
+        "key": "Expected settlement date"
+      },
+      "legacy": {
+        "field": "Date 1",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "Date 3",
+      "kind": "text",
+      "source": {
+        "generated": "today",
+        "format": "ddMMyy",
+        "zone": "Pacific/Auckland"
+      },
+      "legacy": {
+        "field": "Date 3",
+        "mapping": "direct_text"
+      },
+      "reviewRequired": "MacroForge '[TODAY]' output format is not documented in the export; format derived from comb MaxLen"
+    },
+    {
+      "pdfField": "Email address 1",
+      "kind": "text",
+      "source": {
+        "key": "Applicant 1 Primary Email Address"
+      },
+      "legacy": {
+        "field": "Email address 1",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "Email address 2",
+      "kind": "text",
+      "source": {
+        "key": "Applicant 2 Primary Email Address"
+      },
+      "legacy": {
+        "field": "Email address 2",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "Email address 3",
+      "kind": "text",
+      "source": {
+        "key": "Adviser Contact email"
+      },
+      "legacy": {
+        "field": "Email address 3",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "Establishment fee",
+      "kind": "text",
+      "source": {
+        "key": "Establishment fee"
+      },
+      "legacy": {
+        "field": "Establishment fee",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "Firm",
+      "kind": "text",
+      "source": {
+        "key": "Adviser firm"
+      },
+      "legacy": {
+        "field": "Firm",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "First Repayment Date 1",
+      "kind": "text",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 1,
+          "path": [
+            "values",
+            "First repayment date"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "First Repayment Date 1",
+        "mapping": "line_item",
+        "lineItem": "LineItems.First repayment date_1"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
+    },
+    {
+      "pdfField": "First Repayment Date 2",
+      "kind": "text",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 2,
+          "path": [
+            "values",
+            "First repayment date"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "First Repayment Date 2",
+        "mapping": "line_item",
+        "lineItem": "LineItems.First repayment date_2"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
+    },
+    {
+      "pdfField": "First Repayment Date 3",
+      "kind": "text",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 3,
+          "path": [
+            "values",
+            "First repayment date"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "First Repayment Date 3",
+        "mapping": "line_item",
+        "lineItem": "LineItems.First repayment date_3"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
+    },
+    {
+      "pdfField": "First Repayment Date 4",
+      "kind": "text",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 4,
+          "path": [
+            "values",
+            "First repayment date"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "First Repayment Date 4",
+        "mapping": "line_item",
+        "lineItem": "LineItems.First repayment date_4"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
+    },
+    {
+      "pdfField": "First Repayment Date 5",
+      "kind": "text",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 5,
+          "path": [
+            "values",
+            "First repayment date"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "First Repayment Date 5",
+        "mapping": "line_item",
+        "lineItem": "LineItems.First repayment date_5"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
+    },
+    {
+      "pdfField": "First Repayment Date 6",
+      "kind": "text",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 6,
+          "path": [
+            "values",
+            "First repayment date"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "First Repayment Date 6",
+        "mapping": "line_item",
+        "lineItem": "LineItems.First repayment date_6"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
+    },
+    {
+      "pdfField": "First names 1",
+      "kind": "text",
+      "source": {
+        "key": "Applicant 1 First Name(s)"
+      },
+      "legacy": {
+        "field": "First names 1",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "First names 2`",
+      "kind": "text",
+      "source": {
+        "key": "Applicant 2 First Name(s)"
+      },
+      "legacy": {
+        "field": "First names 2`",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "Last names 1",
+      "kind": "text",
+      "source": {
+        "key": "Applicant 1 Last Name"
+      },
+      "legacy": {
+        "field": "Last names 1",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "Last names 2",
+      "kind": "text",
+      "source": {
+        "key": "Applicant 2 Last Name"
+      },
+      "legacy": {
+        "field": "Last names 2",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "Loan Amount 1",
+      "kind": "text",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 1,
+          "path": [
+            "values",
+            "Loan amount"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "Loan Amount 1",
+        "mapping": "line_item",
+        "lineItem": "LineItems.Loan amount_1"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
+    },
+    {
+      "pdfField": "Loan Amount 2",
+      "kind": "text",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 2,
+          "path": [
+            "values",
+            "Loan amount"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "Loan Amount 2",
+        "mapping": "line_item",
+        "lineItem": "LineItems.Loan amount_2"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
+    },
+    {
+      "pdfField": "Loan Amount 3",
+      "kind": "text",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 3,
+          "path": [
+            "values",
+            "Loan amount"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "Loan Amount 3",
+        "mapping": "line_item",
+        "lineItem": "LineItems.Loan amount_3"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
+    },
+    {
+      "pdfField": "Loan Amount 4",
+      "kind": "text",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 4,
+          "path": [
+            "values",
+            "Loan amount"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "Loan Amount 4",
+        "mapping": "line_item",
+        "lineItem": "LineItems.Loan amount_4"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
+    },
+    {
+      "pdfField": "Loan Amount 5",
+      "kind": "text",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 5,
+          "path": [
+            "values",
+            "Loan amount"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "Loan Amount 5",
+        "mapping": "line_item",
+        "lineItem": "LineItems.Loan amount_5"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
+    },
+    {
+      "pdfField": "Loan Amount 6",
+      "kind": "text",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 6,
+          "path": [
+            "values",
+            "Loan amount"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "Loan Amount 6",
+        "mapping": "line_item",
+        "lineItem": "LineItems.Loan amount_6"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
+    },
+    {
+      "pdfField": "Location",
+      "kind": "text",
+      "source": {
+        "key": "Adviser Address"
+      },
+      "legacy": {
+        "field": "Location",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "Name",
+      "kind": "text",
+      "source": {
+        "key": "Adviser name"
+      },
+      "legacy": {
+        "field": "Name",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "Payment Rate Period 1",
+      "kind": "combo",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 1,
+          "path": [
+            "values",
+            "Repayment frequency"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "Payment Rate Period 1",
+        "mapping": "line_item",
+        "lineItem": "LineItems.Repayment frequency_1"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
+    },
+    {
+      "pdfField": "Payment Rate Period 2",
+      "kind": "combo",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 2,
+          "path": [
+            "values",
+            "Repayment frequency"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "Payment Rate Period 2",
+        "mapping": "line_item",
+        "lineItem": "LineItems.Repayment frequency_2"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
+    },
+    {
+      "pdfField": "Payment Rate Period 3",
+      "kind": "combo",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 3,
+          "path": [
+            "values",
+            "Repayment frequency"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "Payment Rate Period 3",
+        "mapping": "line_item",
+        "lineItem": "LineItems.Repayment frequency_3"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
+    },
+    {
+      "pdfField": "Payment Rate Period 4",
+      "kind": "combo",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 4,
+          "path": [
+            "values",
+            "Repayment frequency"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "Payment Rate Period 4",
+        "mapping": "line_item",
+        "lineItem": "LineItems.Repayment frequency_4"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
+    },
+    {
+      "pdfField": "Payment Rate Period 5",
+      "kind": "combo",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 5,
+          "path": [
+            "values",
+            "Repayment frequency"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "Payment Rate Period 5",
+        "mapping": "line_item",
+        "lineItem": "LineItems.Repayment frequency_5"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
+    },
+    {
+      "pdfField": "Payment Rate Period 6",
+      "kind": "combo",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 6,
+          "path": [
+            "values",
+            "Repayment frequency"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "Payment Rate Period 6",
+        "mapping": "line_item",
+        "lineItem": "LineItems.Repayment frequency_6"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
+    },
+    {
+      "pdfField": "Phone 1",
+      "kind": "text",
+      "source": {
+        "key": "Adviser Contact phone"
+      },
+      "legacy": {
+        "field": "Phone 1",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "Phone 2",
+      "kind": "text",
+      "source": {
+        "key": "Applicant 1 Mobile"
+      },
+      "legacy": {
+        "field": "Phone 2",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "Preferred BNZ branch",
+      "kind": "text",
+      "source": {
+        "key": "Preferred BNZ branch"
+      },
+      "legacy": {
+        "field": "Preferred BNZ branch",
+        "mapping": "source_key"
+      }
+    },
+    {
+      "pdfField": "Select the main purpose for each facility 1",
+      "kind": "combo",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 1,
+          "path": [
+            "values",
+            "Main purpose for each facility"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "Select the main purpose for each facility 1",
+        "mapping": "line_item",
+        "lineItem": "LineItems.Main purpose for each facility_1"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
+    },
+    {
+      "pdfField": "Select the main purpose for each facility 2",
+      "kind": "combo",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 2,
+          "path": [
+            "values",
+            "Main purpose for each facility"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "Select the main purpose for each facility 2",
+        "mapping": "line_item",
+        "lineItem": "LineItems.Main purpose for each facility_2"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
+    },
+    {
+      "pdfField": "Select the main purpose for each facility 3",
+      "kind": "combo",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 3,
+          "path": [
+            "values",
+            "Main purpose for each facility"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "Select the main purpose for each facility 3",
+        "mapping": "line_item",
+        "lineItem": "LineItems.Main purpose for each facility_3"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
+    },
+    {
+      "pdfField": "Select the main purpose for each facility 4",
+      "kind": "combo",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 4,
+          "path": [
+            "values",
+            "Main purpose for each facility"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "Select the main purpose for each facility 4",
+        "mapping": "line_item",
+        "lineItem": "LineItems.Main purpose for each facility_4"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
+    },
+    {
+      "pdfField": "Select the main purpose for each facility 5",
+      "kind": "combo",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 5,
+          "path": [
+            "values",
+            "Main purpose for each facility"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "Select the main purpose for each facility 5",
+        "mapping": "line_item",
+        "lineItem": "LineItems.Main purpose for each facility_5"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
+    },
+    {
+      "pdfField": "Select the main purpose for each facility 6",
+      "kind": "combo",
+      "source": {
+        "lineItem": {
+          "array": "Subitems",
+          "position": 6,
+          "path": [
+            "values",
+            "Main purpose for each facility"
+          ]
+        }
+      },
+      "legacy": {
+        "field": "Select the main purpose for each facility 6",
+        "mapping": "line_item",
+        "lineItem": "LineItems.Main purpose for each facility_6"
+      },
+      "reviewRequired": "row order = order of the Make Subitems array (inferred)"
+    },
+    {
+      "pdfField": "Suburb 1",
+      "kind": "text",
+      "source": {
+        "key": "Applicant 1 Physical Address Suburb"
+      },
+      "legacy": {
+        "field": "Suburb 1",
+        "mapping": "source_key"
+      }
+    }
+  ],
+  "overlays": [],
+  "unsupported": [
+    {
+      "pdfField": "Check Box 3",
+      "legacyType": "line_item_condition",
+      "reason": "condition on a LineItems column without a row index; which subitem it tests is not recorded in the export"
+    },
+    {
+      "pdfField": "Check Box 4",
+      "legacyType": "line_item_condition",
+      "reason": "condition on a LineItems column without a row index; which subitem it tests is not recorded in the export"
+    },
+    {
+      "pdfField": "Check Box 5",
+      "legacyType": "line_item_condition",
+      "reason": "condition on a LineItems column without a row index; which subitem it tests is not recorded in the export"
+    }
+  ],
+  "unresolvedLegacyMappings": [
+    {
+      "pdfField": "Check Box 12",
+      "mapping": "checked",
+      "category": "ambiguous_checked_state",
+      "evidence": {
+        "onStates": [
+          "No",
+          "Yes"
+        ]
+      },
+      "reason": "legacy 'checked' without a state on a field with several on-states does not say which box to tick"
+    },
+    {
+      "pdfField": "Loan Term 1",
+      "mapping": "line_item",
+      "category": "line_item_name_conflict",
+      "evidence": {
+        "subfield": "Loan term in years",
+        "position": 1,
+        "knownSubfields": [
+          "ASB Facility type",
+          "Additional purposes",
+          "BNZ product",
+          "Borrowers",
+          "First repayment date",
+          "Fixed term months",
+          "Fixed term yrs",
+          "Interest only period months",
+          "Interest only term years",
+          "Interest rate",
+          "Loan amount",
+          "Loan term years",
+          "Main purpose for each facility",
+          "Repayment frequency",
+          "Request to ratelock RLA",
+          "WBC Loan product",
+          "name"
+        ]
+      },
+      "reason": "subfield not produced by the current line_items_configs"
+    },
+    {
+      "pdfField": "Loan Term 2",
+      "mapping": "line_item",
+      "category": "line_item_name_conflict",
+      "evidence": {
+        "subfield": "Loan term in years",
+        "position": 2,
+        "knownSubfields": [
+          "ASB Facility type",
+          "Additional purposes",
+          "BNZ product",
+          "Borrowers",
+          "First repayment date",
+          "Fixed term months",
+          "Fixed term yrs",
+          "Interest only period months",
+          "Interest only term years",
+          "Interest rate",
+          "Loan amount",
+          "Loan term years",
+          "Main purpose for each facility",
+          "Repayment frequency",
+          "Request to ratelock RLA",
+          "WBC Loan product",
+          "name"
+        ]
+      },
+      "reason": "subfield not produced by the current line_items_configs"
+    },
+    {
+      "pdfField": "Loan Term 3",
+      "mapping": "line_item",
+      "category": "line_item_name_conflict",
+      "evidence": {
+        "subfield": "Loan term in years",
+        "position": 3,
+        "knownSubfields": [
+          "ASB Facility type",
+          "Additional purposes",
+          "BNZ product",
+          "Borrowers",
+          "First repayment date",
+          "Fixed term months",
+          "Fixed term yrs",
+          "Interest only period months",
+          "Interest only term years",
+          "Interest rate",
+          "Loan amount",
+          "Loan term years",
+          "Main purpose for each facility",
+          "Repayment frequency",
+          "Request to ratelock RLA",
+          "WBC Loan product",
+          "name"
+        ]
+      },
+      "reason": "subfield not produced by the current line_items_configs"
+    },
+    {
+      "pdfField": "Loan Term 4",
+      "mapping": "line_item",
+      "category": "line_item_name_conflict",
+      "evidence": {
+        "subfield": "Loan term in years",
+        "position": 4,
+        "knownSubfields": [
+          "ASB Facility type",
+          "Additional purposes",
+          "BNZ product",
+          "Borrowers",
+          "First repayment date",
+          "Fixed term months",
+          "Fixed term yrs",
+          "Interest only period months",
+          "Interest only term years",
+          "Interest rate",
+          "Loan amount",
+          "Loan term years",
+          "Main purpose for each facility",
+          "Repayment frequency",
+          "Request to ratelock RLA",
+          "WBC Loan product",
+          "name"
+        ]
+      },
+      "reason": "subfield not produced by the current line_items_configs"
+    },
+    {
+      "pdfField": "Loan Term 5",
+      "mapping": "line_item",
+      "category": "line_item_name_conflict",
+      "evidence": {
+        "subfield": "Loan term in years",
+        "position": 5,
+        "knownSubfields": [
+          "ASB Facility type",
+          "Additional purposes",
+          "BNZ product",
+          "Borrowers",
+          "First repayment date",
+          "Fixed term months",
+          "Fixed term yrs",
+          "Interest only period months",
+          "Interest only term years",
+          "Interest rate",
+          "Loan amount",
+          "Loan term years",
+          "Main purpose for each facility",
+          "Repayment frequency",
+          "Request to ratelock RLA",
+          "WBC Loan product",
+          "name"
+        ]
+      },
+      "reason": "subfield not produced by the current line_items_configs"
+    },
+    {
+      "pdfField": "Loan Term 6",
+      "mapping": "line_item",
+      "category": "line_item_name_conflict",
+      "evidence": {
+        "subfield": "Loan term in years",
+        "position": 6,
+        "knownSubfields": [
+          "ASB Facility type",
+          "Additional purposes",
+          "BNZ product",
+          "Borrowers",
+          "First repayment date",
+          "Fixed term months",
+          "Fixed term yrs",
+          "Interest only period months",
+          "Interest only term years",
+          "Interest rate",
+          "Loan amount",
+          "Loan term years",
+          "Main purpose for each facility",
+          "Repayment frequency",
+          "Request to ratelock RLA",
+          "WBC Loan product",
+          "name"
+        ]
+      },
+      "reason": "subfield not produced by the current line_items_configs"
+    },
+    {
+      "pdfField": "Interest Only Period? 1",
+      "mapping": "line_item",
+      "category": "line_item_name_conflict",
+      "evidence": {
+        "subfield": "Interest only period in months",
+        "position": 1,
+        "knownSubfields": [
+          "ASB Facility type",
+          "Additional purposes",
+          "BNZ product",
+          "Borrowers",
+          "First repayment date",
+          "Fixed term months",
+          "Fixed term yrs",
+          "Interest only period months",
+          "Interest only term years",
+          "Interest rate",
+          "Loan amount",
+          "Loan term years",
+          "Main purpose for each facility",
+          "Repayment frequency",
+          "Request to ratelock RLA",
+          "WBC Loan product",
+          "name"
+        ]
+      },
+      "reason": "subfield not produced by the current line_items_configs"
+    },
+    {
+      "pdfField": "Interest Only Period? 2",
+      "mapping": "line_item",
+      "category": "line_item_name_conflict",
+      "evidence": {
+        "subfield": "Interest only period in months",
+        "position": 2,
+        "knownSubfields": [
+          "ASB Facility type",
+          "Additional purposes",
+          "BNZ product",
+          "Borrowers",
+          "First repayment date",
+          "Fixed term months",
+          "Fixed term yrs",
+          "Interest only period months",
+          "Interest only term years",
+          "Interest rate",
+          "Loan amount",
+          "Loan term years",
+          "Main purpose for each facility",
+          "Repayment frequency",
+          "Request to ratelock RLA",
+          "WBC Loan product",
+          "name"
+        ]
+      },
+      "reason": "subfield not produced by the current line_items_configs"
+    },
+    {
+      "pdfField": "Interest Only Period? 3",
+      "mapping": "line_item",
+      "category": "line_item_name_conflict",
+      "evidence": {
+        "subfield": "Interest only period in months",
+        "position": 3,
+        "knownSubfields": [
+          "ASB Facility type",
+          "Additional purposes",
+          "BNZ product",
+          "Borrowers",
+          "First repayment date",
+          "Fixed term months",
+          "Fixed term yrs",
+          "Interest only period months",
+          "Interest only term years",
+          "Interest rate",
+          "Loan amount",
+          "Loan term years",
+          "Main purpose for each facility",
+          "Repayment frequency",
+          "Request to ratelock RLA",
+          "WBC Loan product",
+          "name"
+        ]
+      },
+      "reason": "subfield not produced by the current line_items_configs"
+    },
+    {
+      "pdfField": "Interest Only Period? 4",
+      "mapping": "line_item",
+      "category": "line_item_name_conflict",
+      "evidence": {
+        "subfield": "Interest only period in months",
+        "position": 4,
+        "knownSubfields": [
+          "ASB Facility type",
+          "Additional purposes",
+          "BNZ product",
+          "Borrowers",
+          "First repayment date",
+          "Fixed term months",
+          "Fixed term yrs",
+          "Interest only period months",
+          "Interest only term years",
+          "Interest rate",
+          "Loan amount",
+          "Loan term years",
+          "Main purpose for each facility",
+          "Repayment frequency",
+          "Request to ratelock RLA",
+          "WBC Loan product",
+          "name"
+        ]
+      },
+      "reason": "subfield not produced by the current line_items_configs"
+    },
+    {
+      "pdfField": "Interest Only Period? 5",
+      "mapping": "line_item",
+      "category": "line_item_name_conflict",
+      "evidence": {
+        "subfield": "Interest only period in months",
+        "position": 5,
+        "knownSubfields": [
+          "ASB Facility type",
+          "Additional purposes",
+          "BNZ product",
+          "Borrowers",
+          "First repayment date",
+          "Fixed term months",
+          "Fixed term yrs",
+          "Interest only period months",
+          "Interest only term years",
+          "Interest rate",
+          "Loan amount",
+          "Loan term years",
+          "Main purpose for each facility",
+          "Repayment frequency",
+          "Request to ratelock RLA",
+          "WBC Loan product",
+          "name"
+        ]
+      },
+      "reason": "subfield not produced by the current line_items_configs"
+    },
+    {
+      "pdfField": "Interest Only Period? 6",
+      "mapping": "line_item",
+      "category": "line_item_name_conflict",
+      "evidence": {
+        "subfield": "Interest only period in months",
+        "position": 6,
+        "knownSubfields": [
+          "ASB Facility type",
+          "Additional purposes",
+          "BNZ product",
+          "Borrowers",
+          "First repayment date",
+          "Fixed term months",
+          "Fixed term yrs",
+          "Interest only period months",
+          "Interest only term years",
+          "Interest rate",
+          "Loan amount",
+          "Loan term years",
+          "Main purpose for each facility",
+          "Repayment frequency",
+          "Request to ratelock RLA",
+          "WBC Loan product",
+          "name"
+        ]
+      },
+      "reason": "subfield not produced by the current line_items_configs"
+    },
+    {
+      "pdfField": "Fixed Rate Period? 1",
+      "mapping": "line_item",
+      "category": "line_item_name_conflict",
+      "evidence": {
+        "subfield": "Fixed term in months",
+        "position": 1,
+        "knownSubfields": [
+          "ASB Facility type",
+          "Additional purposes",
+          "BNZ product",
+          "Borrowers",
+          "First repayment date",
+          "Fixed term months",
+          "Fixed term yrs",
+          "Interest only period months",
+          "Interest only term years",
+          "Interest rate",
+          "Loan amount",
+          "Loan term years",
+          "Main purpose for each facility",
+          "Repayment frequency",
+          "Request to ratelock RLA",
+          "WBC Loan product",
+          "name"
+        ]
+      },
+      "reason": "subfield not produced by the current line_items_configs"
+    },
+    {
+      "pdfField": "Fixed Rate Period? 2",
+      "mapping": "line_item",
+      "category": "line_item_name_conflict",
+      "evidence": {
+        "subfield": "Fixed term in months",
+        "position": 2,
+        "knownSubfields": [
+          "ASB Facility type",
+          "Additional purposes",
+          "BNZ product",
+          "Borrowers",
+          "First repayment date",
+          "Fixed term months",
+          "Fixed term yrs",
+          "Interest only period months",
+          "Interest only term years",
+          "Interest rate",
+          "Loan amount",
+          "Loan term years",
+          "Main purpose for each facility",
+          "Repayment frequency",
+          "Request to ratelock RLA",
+          "WBC Loan product",
+          "name"
+        ]
+      },
+      "reason": "subfield not produced by the current line_items_configs"
+    },
+    {
+      "pdfField": "Fixed Rate Period? 3",
+      "mapping": "line_item",
+      "category": "line_item_name_conflict",
+      "evidence": {
+        "subfield": "Fixed term in months",
+        "position": 3,
+        "knownSubfields": [
+          "ASB Facility type",
+          "Additional purposes",
+          "BNZ product",
+          "Borrowers",
+          "First repayment date",
+          "Fixed term months",
+          "Fixed term yrs",
+          "Interest only period months",
+          "Interest only term years",
+          "Interest rate",
+          "Loan amount",
+          "Loan term years",
+          "Main purpose for each facility",
+          "Repayment frequency",
+          "Request to ratelock RLA",
+          "WBC Loan product",
+          "name"
+        ]
+      },
+      "reason": "subfield not produced by the current line_items_configs"
+    },
+    {
+      "pdfField": "Fixed Rate Period? 4",
+      "mapping": "line_item",
+      "category": "line_item_name_conflict",
+      "evidence": {
+        "subfield": "Fixed term in months",
+        "position": 4,
+        "knownSubfields": [
+          "ASB Facility type",
+          "Additional purposes",
+          "BNZ product",
+          "Borrowers",
+          "First repayment date",
+          "Fixed term months",
+          "Fixed term yrs",
+          "Interest only period months",
+          "Interest only term years",
+          "Interest rate",
+          "Loan amount",
+          "Loan term years",
+          "Main purpose for each facility",
+          "Repayment frequency",
+          "Request to ratelock RLA",
+          "WBC Loan product",
+          "name"
+        ]
+      },
+      "reason": "subfield not produced by the current line_items_configs"
+    },
+    {
+      "pdfField": "Fixed Rate Period? 5",
+      "mapping": "line_item",
+      "category": "line_item_name_conflict",
+      "evidence": {
+        "subfield": "Fixed term in months",
+        "position": 5,
+        "knownSubfields": [
+          "ASB Facility type",
+          "Additional purposes",
+          "BNZ product",
+          "Borrowers",
+          "First repayment date",
+          "Fixed term months",
+          "Fixed term yrs",
+          "Interest only period months",
+          "Interest only term years",
+          "Interest rate",
+          "Loan amount",
+          "Loan term years",
+          "Main purpose for each facility",
+          "Repayment frequency",
+          "Request to ratelock RLA",
+          "WBC Loan product",
+          "name"
+        ]
+      },
+      "reason": "subfield not produced by the current line_items_configs"
+    },
+    {
+      "pdfField": "Fixed Rate Period? 6",
+      "mapping": "line_item",
+      "category": "line_item_name_conflict",
+      "evidence": {
+        "subfield": "Fixed term in months",
+        "position": 6,
+        "knownSubfields": [
+          "ASB Facility type",
+          "Additional purposes",
+          "BNZ product",
+          "Borrowers",
+          "First repayment date",
+          "Fixed term months",
+          "Fixed term yrs",
+          "Interest only period months",
+          "Interest only term years",
+          "Interest rate",
+          "Loan amount",
+          "Loan term years",
+          "Main purpose for each facility",
+          "Repayment frequency",
+          "Request to ratelock RLA",
+          "WBC Loan product",
+          "name"
+        ]
+      },
+      "reason": "subfield not produced by the current line_items_configs"
+    }
+  ],
+  "inertLegacyMappings": [],
+  "importErrors": [],
+  "importWarnings": [
+    {
+      "code": "CONSTANT_CHECKBOX",
+      "pdfField": "Check Box 1"
+    },
+    {
+      "code": "CONSTANT_CHECKBOX",
+      "pdfField": "Check Box 10"
+    },
+    {
+      "code": "CONSTANT_CHECKBOX",
+      "pdfField": "Check Box 11"
+    },
+    {
+      "code": "CONSTANT_CHECKBOX",
+      "pdfField": "Check Box 13"
+    },
+    {
+      "code": "CONSTANT_CHECKBOX",
+      "pdfField": "Check Box 14"
+    },
+    {
+      "code": "CONSTANT_CHECKBOX",
+      "pdfField": "Check Box 15"
+    },
+    {
+      "code": "CONSTANT_CHECKBOX",
+      "pdfField": "Check Box 16"
+    },
+    {
+      "code": "CONSTANT_CHECKBOX",
+      "pdfField": "Check Box 17"
+    },
+    {
+      "code": "CONSTANT_CHECKBOX",
+      "pdfField": "Check Box 28"
+    },
+    {
+      "code": "CONSTANT_CHECKBOX",
+      "pdfField": "Check Box 29"
+    },
+    {
+      "code": "CONSTANT_CHECKBOX",
+      "pdfField": "Check Box 30"
+    },
+    {
+      "code": "CONSTANT_CHECKBOX",
+      "pdfField": "Check Box 31"
+    },
+    {
+      "code": "TODAY_FORMAT_UNVERIFIED",
+      "pdfField": "Date 3"
+    },
+    {
+      "code": "CONSTANT_CHECKBOX",
+      "pdfField": "Check Box 19#1"
+    },
+    {
+      "code": "CONSTANT_CHECKBOX",
+      "pdfField": "Check Box 31#I#20have"
+    },
+    {
+      "code": "LINE_ITEM_INSTANCES_PRESENT",
+      "count": 1
+    }
+  ],
+  "unmappedPdfFields": [
+    "Address 2",
+    "Address 3",
+    "Address 4",
+    "Address 5",
+    "Borrower(s) who are refinancing more detail",
+    "Capacity 1",
+    "Capacity 2",
+    "Check Box 12",
+    "Check Box 18",
+    "Check Box 21",
+    "Check Box 23",
+    "Check Box 25",
+    "Check Box 27",
+    "Check Box 3",
+    "Check Box 4",
+    "Check Box 5",
+    "Check Box 6",
+    "Check Box 7",
+    "Check Box 8",
+    "Confirmation",
+    "Date 4",
+    "Date 5",
+    "First names 3",
+    "First names 4",
+    "Fixed Rate Period? 1",
+    "Fixed Rate Period? 2",
+    "Fixed Rate Period? 3",
+    "Fixed Rate Period? 4",
+    "Fixed Rate Period? 5",
+    "Fixed Rate Period? 6",
+    "I have recommended BNZ to the borrower(s) due to: drop down",
+    "I have recommended BNZ to the borrower(s) due to: more detail",
+    "Interest Only Period? 1",
+    "Interest Only Period? 2",
+    "Interest Only Period? 3",
+    "Interest Only Period? 4",
+    "Interest Only Period? 5",
+    "Interest Only Period? 6",
+    "Last names 3",
+    "Last names 4",
+    "Loan Term 1",
+    "Loan Term 2",
+    "Loan Term 3",
+    "Loan Term 4",
+    "Loan Term 5",
+    "Loan Term 6",
+    "More assistance required? more detail",
+    "Owning Entity",
+    "Suburb 2",
+    "Suburb 3",
+    "Suburb 4",
+    "Surburb 5",
+    "Yes (please provide an explanation below)",
+    "other purpose 1",
+    "other purpose 2",
+    "other purpose 3",
+    "other purpose 4",
+    "other purpose 5",
+    "other purpose 6"
+  ]
+}
