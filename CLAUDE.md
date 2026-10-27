@@ -32,7 +32,8 @@ docs/04-cloud-run-deployment.md       Cloud Run runbook (prepared, not executed)
 docs/decisions.md                     decision log (ADR-lite)
 tools/import_mforge.py    legacy importer (inventory | extract | manifest)
 tools/stage_deploy.py     builds the minimal, approved build context for Cloud Run (allowlist + SHA + blank check)
-deploy/                   poc-allowlist.json (templates allowed into the image + approvals), cloudbuild.yaml, bucket lifecycle
+deploy/                   poc-allowlist.json (approved templates), cloudbuild.yaml, deploy_poc.sh (end-to-end deployment),
+                          make_bundle.sh (Cloud Shell bundle), verify_pdf.py (post-deploy PDF checks), bucket lifecycle
 engine/                   Maven project: library, CLI (inspect | fill | serve), HTTP API, Dockerfile
 mappings/<lender>/<TEMPLATE_ID>@<version>.json   imported manifests (no client data; reviewed)
 tests/fixtures/           synthetic requests (fictional "Jane Example" data only)
@@ -91,11 +92,11 @@ extracted to `.local/generated/templates/`. A green build without them proves on
 - **LineItems:** BNZ Handover fills 3 synthetic facilities into rows 1–3.
 - **Coverage, Flow C:** 1,013 mappings = 804 imported + 19 unsupported + 138 unresolved + 52 inert. Only 3 templates
   are tested end-to-end. **Equivalence with MacroForge is not proven.**
-- **Cloud Run: prepared, NOT deployed.**
-  - The POC image (target `poc`, BNZ Boarder only) was built locally from the staged context with the official pinned base
-    images, and verified in a local Cloud Run emulation.
-  - The runbook is `docs/04-cloud-run-deployment.md`.
-  - Blocked on: RSFA's approval of the commands and of the allowlist entry in `deploy/poc-allowlist.json`.
+- **Cloud Run: approved by RSFA, NOT yet deployed.**
+  - The allowlist entry for the blank BNZ Boarder template is approved (packaging and testing only).
+  - `deploy/deploy_poc.sh` is ready and tested against a stubbed `gcloud`.
+  - Blocker: this environment has no Google Cloud credentials. Run the script in Cloud Shell (docs/04, option A),
+    then record the results in docs/04 "Deployment record".
 - **Open decisions** (docs/02 "Known gaps"):
   - 36 constant ticks;
   - the DDMMYYYY → 6-cell date transform;

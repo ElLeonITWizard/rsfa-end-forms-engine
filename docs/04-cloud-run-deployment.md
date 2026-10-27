@@ -1,7 +1,62 @@
 # 04 — First Cloud Run deployment (POC), runbook
 
-**Status: prepared, NOT executed.** Every command below needs the explicit approval of RSFA before it is run.
-No Make, Monday or SharePoint change is part of this deployment.
+**Status (2026-10-27): approved by RSFA, NOT yet deployed.**
+- RSFA approved the deployment and the template allowlist entry (Leonardo Melman, 2026-10-27, `RSFA-END-FORMS-POC-2026-10-27`).
+- Blocker: the Claude Code cloud session that prepared it has **no Google Cloud credentials** (`CREDENTIALS_MISSING`).
+  Nothing was created in the project.
+- No Make, Monday or SharePoint change is part of this deployment.
+
+## Fastest path: one script (recommended)
+
+`deploy/deploy_poc.sh` performs every step below, in order:
+1. preflight: account, project, billing, a permission test, and integrity of the staged context;
+2. minimal infrastructure;
+3. the least-privilege build service account;
+4. the Cloud Build image build, with an automatic fallback to a local Docker build if needed;
+5. the Cloud Run deployment with `--no-allow-unauthenticated`;
+6. `run.invoker` for **the identity `gcloud` is logged in as, and nobody else**;
+7. verification: 403 without a token, authenticated `/health` and `/generate`, PDF field and declaration checks,
+   byte-identity with the local build, and logs free of payload values.
+
+It writes `cloudrun-output/deployment-record.json`. It is idempotent, stops at the first blocker with the exact fix,
+and refuses to touch an existing service unless `UPDATE_EXISTING=1` is set.
+
+It was tested end-to-end (2026-10-27) in this environment:
+- with a recording `gcloud` stub and the real POC image behind an authenticating front proxy;
+- 31 commands issued, none forbidden (no `--allow-unauthenticated`, keys, Owner or Editor);
+- every verification passed;
+- a second run stopped without changes.
+
+**Option A: Cloud Shell (no credentials leave Google; recommended).**
+1. Build the bundle from the repo on a machine with the private `.local/` files:
+   `python3 tools/stage_deploy.py --templates .local/generated/templates --out .local/deploy/context && (cd engine && mvn -B package) && bash deploy/make_bundle.sh`
+   The bundle `.local/deploy/rsfa-end-forms-poc-bundle.tar.gz` contains the staged context (1 blank template), the
+   script, the PDF verifier, the synthetic fixture and the expected PDF SHA-256.
+2. In https://shell.cloud.google.com (logged in as the deployer): upload the bundle, then run
+   `tar -xzf rsfa-end-forms-poc-bundle.tar.gz && cd bundle && gcloud config set project rsfa-end-forms-engine && bash deploy_poc.sh`
+3. Hand `cloudrun-output/deployment-record.json` and `cloudrun-output/BNZ_Boarder_cloudrun.pdf` back so the record
+   below can be filled in and committed.
+
+**Option B: a Claude Code session with credentials.**
+- Add a short-lived OAuth access token to the environment settings as `CLOUDSDK_AUTH_ACCESS_TOKEN`
+  (created by the deployer with `gcloud auth print-access-token`; it expires in about 1 hour). Start a new session.
+- Never paste tokens into chat, and do not create service-account keys.
+- Limitation: an access token cannot mint the **ID token** that Cloud Run IAM requires. A session with only an access
+  token can therefore create and deploy, but the authenticated `/health` and `/generate` checks must then be run by the
+  deployer: `gcloud run services proxy` or the curl commands in section 4.
+
+## Deployment record
+
+| Item | Value |
+|---|---|
+| Deployed | **not yet** |
+| Service URL | pending |
+| Revision | pending |
+| Image digest | pending |
+| Invoker | the deployer's own identity only (not recorded here) |
+| Verification | pending (expected PDF SHA-256 for `tests/fixtures/bnz-boarder.request.json`: `2ae7bfacf48b8ee8e63aaf9ce28997650abd2c07b59ddbeade9928ce3269d6f6`) |
+
+The manual runbook follows. The script runs exactly these steps.
 
 Goal: a **private** Cloud Run service that generates the BNZ Boarder PDF from a synthetic JSON payload,
 without MacroForge. Commands were written for and checked against `gcloud` 570.0.0 (flag names verified offline).

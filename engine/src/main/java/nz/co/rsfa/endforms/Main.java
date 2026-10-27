@@ -88,11 +88,17 @@ public final class Main {
             }
         }
         JsonNode data = json.readTree(Path.of(opt.get("data")).toFile());
+        String today = opt.get("today");
         if (data != null && data.has("data") && data.get("data").isObject()) {
-            data = data.get("data"); // accept a full /generate request body as the data file
+            // accept a full /generate request body; honour its pinned "today" like the HTTP API does
+            if (today == null && data.hasNonNull("today")) {
+                today = data.get("today").asText();
+            }
+            data = data.get("data");
         }
-        FormFiller filler = opt.containsKey("today")
-                ? new FormFiller(zone -> LocalDate.parse(opt.get("today")))
+        String pinned = today;
+        FormFiller filler = pinned != null
+                ? new FormFiller(zone -> LocalDate.parse(pinned))
                 : new FormFiller();
         FillResult r = filler.fill(template, manifest, data);
         if (r.ok()) {

@@ -83,12 +83,13 @@ docker run --rm -p 127.0.0.1:8080:8080 -e ENGINE_AUTH=API_KEY -e ENGINE_API_KEY=
 The default target (`docker build -f engine/Dockerfile .`) compiles and tests inside Docker. Proxy and CA options are in
 the Dockerfile header. The verification results are in `docs/02-poc-guide-and-tests.md`.
 
-## Google Cloud Run (prepared, not deployed)
+## Google Cloud Run (approved, not yet deployed)
 
 The first private deployment generates BNZ Boarder only. The full runbook, with exact `gcloud` commands, IAM, the
 authenticated `/health` and `/generate` calls, and rollback, is in [`docs/04-cloud-run-deployment.md`](docs/04-cloud-run-deployment.md).
-In short:
-1. RSFA approves the allowlist entry in `deploy/poc-allowlist.json`.
+Fastest path: build the bundle (`tools/stage_deploy.py`, `mvn package`, `deploy/make_bundle.sh`), upload it to Cloud
+Shell and run `bash deploy_poc.sh`. It performs and verifies everything below. Manual steps:
+1. RSFA approves the allowlist entry in `deploy/poc-allowlist.json` (done 2026-10-27).
 2. `python3 tools/stage_deploy.py --templates .local/generated/templates --out .local/deploy/context`
 3. `gcloud builds submit` the staged context.
 4. `gcloud run deploy --no-allow-unauthenticated` with `ENGINE_AUTH=PLATFORM_IAM`.

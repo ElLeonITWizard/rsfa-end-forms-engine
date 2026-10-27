@@ -169,7 +169,7 @@ Lightweight ADR log, newest last. Status: `proposed` | `accepted` | `superseded`
   (0 placeholder pixels in cell interiors; the rest are neutral digit anti-aliasing).
 
 ### D-018 First Cloud Run deployment: staged context, baked allowlisted templates, IAM-only access
-- **Date:** 2026-10-27 · **Status:** proposed: **awaiting RSFA approval before any command runs**
+- **Date:** 2026-10-27 · **Status:** accepted: approved by RSFA (Leonardo Melman, 2026-10-27, `RSFA-END-FORMS-POC-2026-10-27`); execution pending (D-019)
 - **Decision:**
   - Build from a context staged by `tools/stage_deploy.py`: allowlist, SHA-256, human approval, blank-PDF check and
     content scan, with the output inside `.local/`.
@@ -185,3 +185,21 @@ Lightweight ADR log, newest last. Status: `proposed` | `accepted` | `superseded`
   - `/generate` 200 in 0.9 s cold / 0.2 s warm, about 100 MiB;
   - output byte-identical to host;
   - 0 data values in logs.
+
+### D-019 Deployment executed by one verified script; the deployer's own `gcloud` login provides credentials
+- **Date:** 2026-10-27 · **Status:** accepted
+- **Context:**
+  - RSFA asked for an end-to-end deployment with minimal manual work.
+  - The Claude Code cloud session has no Google Cloud credentials (`CREDENTIALS_MISSING`).
+  - Service-account keys are forbidden.
+  - Cloud Run IAM accepts only ID tokens, which a bare access token cannot provide.
+- **Decision:** `deploy/deploy_poc.sh` automates every step (preflight, infrastructure, build SA, Cloud Build with a Docker
+  fallback, deploy, caller-only invoker, verification, record). It runs where the deployer is logged in, preferably
+  Cloud Shell, from a bundle made by `deploy/make_bundle.sh`.
+  - Invoker is granted only to `gcloud config get-value account`.
+  - The script refuses an existing service unless `UPDATE_EXISTING=1`.
+  - The fill CLI now honours a request's pinned `today`, so the bundle's expected PDF SHA-256 equals the HTTP output.
+  - Dockerfile: removed `required=false` from the secret mounts (it is the default) for compatibility with Cloud Build's
+    Docker 20.10 + BuildKit builder.
+- **Validation:** run end-to-end in this environment with a recording `gcloud` stub, the real POC image and an authenticating
+  front proxy. All checks passed, 0 forbidden commands, and the rerun stopped safely.

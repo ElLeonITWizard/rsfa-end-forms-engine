@@ -7,10 +7,11 @@
       "sha256": "7982ae8cbda97f0be9173c2632839afaa7c0d725349cab32dddbd62520509795",
       "why": "Acceptance goal: generate the BNZ Boarder PDF on Cloud Run from a synthetic payload.",
       "approval": {
-        "approvedBy": "",
-        "approvedOn": "",
-        "reference": ""
-      }
+        "approvedBy": "Leonardo Melman",
+        "approvedOn": "2026-10-27",
+        "reference": "RSFA-END-FORMS-POC-2026-10-27"
+      },
+      "approvalScope": "Packaging and testing the blank BNZ Boarder Form template in the isolated POC deployment, with synthetic data only. Does NOT authorize marking adviser certifications, completing declarations, applying signatures, accessing real client data or deploying additional bank forms."
     }
   ]
 }

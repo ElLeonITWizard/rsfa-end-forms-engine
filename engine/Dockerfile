@@ -22,7 +22,7 @@ FROM ${BUILD_IMAGE} AS build
 WORKDIR /src
 ARG MAVEN_EXTRA_OPTS=
 # Optional extra CA: imported into a throw-away truststore used only by these Maven runs.
-RUN --mount=type=secret,id=build_ca,required=false \
+RUN --mount=type=secret,id=build_ca \
     if [ -f /run/secrets/build_ca ]; then \
       mkdir -p /tmp/ca && cd /tmp/ca \
       && awk '/BEGIN CERT/{n++} {print > ("c" n ".pem")}' /run/secrets/build_ca \
@@ -43,7 +43,7 @@ FROM ${RUNTIME_IMAGE} AS runtime-base
 # (and any future flattening/thumbnails) draws standard-14 fonts correctly: fonts-urw-base35
 # provides a ZapfDingbats substitute (D050000L) for the banks' check marks.
 ARG APT_MIRROR=
-RUN --mount=type=secret,id=build_ca,required=false \
+RUN --mount=type=secret,id=build_ca \
     set -eu; \
     if [ -n "$APT_MIRROR" ]; then \
       sed -i -E "s#http://(archive|security)\.ubuntu\.com/ubuntu/?#$APT_MIRROR/#g" \
