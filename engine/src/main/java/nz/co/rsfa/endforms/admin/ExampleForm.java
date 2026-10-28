@@ -113,6 +113,7 @@ public final class ExampleForm {
             widget(page, sig, 40, 290, 250, 32);
             fields.add(sig);
             fields.add(textField(form, page, "DateSigned", 400, 325, 140, 18));
+            doc.setDocumentId(20261028L); // fixed trailer /ID: identical bytes on every build (reproducible bundles, tests)
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             doc.save(out);
             return out.toByteArray();
