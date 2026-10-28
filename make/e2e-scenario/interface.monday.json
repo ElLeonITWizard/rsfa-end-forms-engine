@@ -1,0 +1,11 @@
+{
+ "input": [
+  {
+   "name": "itemId",
+   "type": "text",
+   "required": true,
+   "help": "Masterboard item id; must be listed in approvedItemIds (module 2)"
+  }
+ ],
+ "output": []
+}
