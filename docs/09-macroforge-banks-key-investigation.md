@@ -280,3 +280,45 @@ Self-test results:
 read-only; RSFA confirms the selected banks' PDFs are filed. **No historical production failure has been
 confirmed.** The change removes the confirmed key incompatibility; whether earlier runs were affected cannot be
 known (no run since the rename).
+
+### Iteration 10b: user authorised `scenarios_update`; still not executed (technical limits)
+
+- **Authorisation (2026-10-28):** the user explicitly authorised submitting the complete current blueprint through
+  `scenarios_update`, embedded webhook URLs and sample data included.
+- **Why the MCP call was not made:** the tool takes the blueprint only inline. That means reproducing ~305,000
+  characters (about 100k tokens) byte-exact in one generated call.
+  - This exceeds what can be emitted reliably.
+  - A single altered character would silently break production, and the rollback needs a call of the same size.
+  - It cannot meet "change absolutely nothing else", so it was not attempted.
+- **Code path prepared instead:** `tools/apply_8731317_change.py` uses the Make API **v2** directly, so the blueprint
+  is never retyped:
+  1. `GET /scenarios/8731317` and `GET /scenarios/8731317/blueprint`; refuse unless the state and the canonical
+     digest equal the verified ones (`ab76a676…`);
+  2. save the complete pre-change response to `.local/` (mode 600);
+  3. insert the 7 lines and require the approved digest `1369b087…`;
+  4. `PATCH /scenarios/8731317` with `{"blueprint": "<JSON string>"}` only (no scheduling or activation fields);
+  5. re-read and run `tools/verify_8731317_change.py` → PASS/FAIL.
+
+  `--dry-run` stops before the PATCH; `--rollback` restores the saved blueprint and verifies it.
+- **Tested against a local mock of those endpoints:**
+  - dry run: no PATCH;
+  - apply: one PATCH with only `blueprint`, then PASS;
+  - re-apply: refused;
+  - rollback: PASS;
+  - a server that also alters another module: FAIL with the rollback hint;
+  - wrong token: refused.
+- **Not verified:** the request and response shapes come from the Make API v2 conventions; the script has not been
+  run against the live API. It fails closed on any unexpected shape or status.
+- **Blocked by this environment:**
+  - the network policy denies `eu2.make.com` (the organisation's zone, from `organizations_get`);
+  - there is no Make API token.
+- **Needed from RSFA:**
+  - allow `eu2.make.com` in the environment's network settings;
+  - store a Make API token with scopes `scenarios:read` and `scenarios:write` as the environment variable
+    `MAKE_API_TOKEN` (never in chat; revoke it after the change);
+  - start a new session.
+
+  In that session: `python3 tools/apply_8731317_change.py --dry-run`, then without the flag. The digest check
+  guarantees the blueprint is still the verified one, even though `.local/` does not survive a new session.
+  Make's own version history keeps the 2026-07-16 version as an extra rollback source.
+- **Production is still unchanged.**

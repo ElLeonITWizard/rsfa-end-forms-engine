@@ -119,9 +119,11 @@ extracted to `.local/generated/templates/`. A green build without them proves on
 - **Iteration 10:**
   - **`8731317` alias approved** (scope: module-8 code only). All pre-save checks passed: the live read is identical
     to the verified backup and 24/24 regression checks pass.
-  - **Not saved by Claude:** the update tool needs the full 305 KB blueprint inline, including webhook URLs and
-    sample data. RSFA applies the 7 lines in the Make UI, then Claude verifies read-only with
-    `tools/verify_8731317_change.py` (tested; also has `--rollback`). **Production is still unchanged** (docs/09).
+  - **Not saved yet.** The MCP update tool needs the full 305 KB blueprint inline, which cannot be reproduced
+    reliably. `tools/apply_8731317_change.py` does it through the Make API from the fetched file, with digest
+    checks, a dry run, PASS/FAIL verification and `--rollback`; it was tested on a mock.
+  - **Blocked by this environment:** `eu2.make.com` is not allowed and there is no `MAKE_API_TOKEN`. Once both are
+    configured, run the script in a new session. **Production is still unchanged** (docs/09).
   - **Revision 3:** deployment approved; **RSFA runs it** from Cloud Shell with the bundle of docs/04. This
     environment never deploys.
 
