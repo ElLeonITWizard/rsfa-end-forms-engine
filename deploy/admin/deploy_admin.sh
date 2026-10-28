@@ -17,6 +17,7 @@
 # NEVER touches the engine service rsfa-end-forms-engine: it is only read, before and after, to prove it is unchanged.
 # Never: --allow-unauthenticated, allUsers/allAuthenticatedUsers, keys, Owner/Editor grants, Make, Monday, SharePoint.
 set -euo pipefail
+export CLOUDSDK_CORE_DISABLE_PROMPTS=1   # never answer an interactive prompt (e.g. "enable API?") during a plan
 
 PROJECT_ID=${PROJECT_ID:-rsfa-end-forms-engine}
 REGION=${REGION:-australia-southeast1}
@@ -86,6 +87,13 @@ PY
 step "1. Preflight (read-only) — mode: $([ "$APPLY" = 1 ] && echo APPLY || echo PLAN), phase: $PHASE"
 for c in gcloud python3 curl sha256sum; do command -v "$c" >/dev/null || die "$c is required (use Cloud Shell)."; done
 gcloud run deploy --help 2>/dev/null | grep -q -- '--\[no-\]iap' || die "this gcloud has no 'run deploy --iap'; run: gcloud components update"
+gcloud beta services identity create --help >/dev/null 2>&1 || die "gcloud beta is not installed (needed to create the IAP service agent): gcloud components install beta"
+# Names: the admin resources can never be the engine's (an override must not point a write or a delete at the engine).
+case "$ADMIN_SERVICE" in *admin*) ;; *) die "ADMIN_SERVICE must contain 'admin' (got $ADMIN_SERVICE)." ;; esac
+[ "$ADMIN_SERVICE" != "$ENGINE_SERVICE" ] || die "ADMIN_SERVICE must not be the engine service."
+case "$ADMIN_SA_NAME" in *admin*) ;; *) die "ADMIN_SA_NAME must contain 'admin'." ;; esac
+case "$ADMIN_BUCKET" in *admin*) ;; *) die "ADMIN_BUCKET must contain 'admin'." ;; esac
+[ "gs://$ADMIN_BUCKET" != "$SRC_BUCKET" ] || die "ADMIN_BUCKET must not be the build-source bucket."
 ACCOUNT=$(gcloud config get-value account 2>/dev/null || true)
 [ -n "$ACCOUNT" ] || die "No authenticated gcloud account. Run: gcloud auth login"
 case "$ACCOUNT" in *.gserviceaccount.com) DEPLOYER="serviceAccount:$ACCOUNT" ;; *) DEPLOYER="user:$ACCOUNT" ;; esac
@@ -121,6 +129,13 @@ print(" ".join(seen))
 PY
 ) || die "ADMIN_USERS is invalid (see the message above)."
   ok "ADMIN_USERS: $(echo "$USER_EMAILS" | wc -w) user(s) (emails are not written to the record)"
+  ACCOUNT_LC=$(echo "$ACCOUNT" | tr '[:upper:]' '[:lower:]')
+  if echo " $USER_EMAILS " | grep -q " $ACCOUNT_LC "; then
+    ok "the authenticated Google identity $ACCOUNT is in ADMIN_USERS: IAP will present this same email"
+  else
+    printf '  [warn] %s is not in ADMIN_USERS. IAP presents the email of the Google account used in the browser;\n' "$ACCOUNT"
+    printf '         every ADMIN_USERS email must be exactly that account email (check with: gcloud auth list).\n'
+  fi
 fi
 case "$SEPARATE_APPROVER" in true|false) ;; *) die "SEPARATE_APPROVER must be true or false" ;; esac
 
@@ -317,6 +332,8 @@ check "bucket: public access prevention, uniform access, versioning" \
   "J '$OUT/bucket.json' 'd.get(\"public_access_prevention\")==\"enforced\" and d.get(\"uniform_bucket_level_access\") and d.get(\"versioning_enabled\")'"
 check "bucket: no public members; admin SA has objectCreator + objectViewer only" \
   "J '$OUT/bucket-iam.json' 'not any(m in (\"allUsers\",\"allAuthenticatedUsers\") for b in d.get(\"bindings\",[]) for m in b[\"members\"]) and sorted(b[\"role\"] for b in d.get(\"bindings\",[]) if \"serviceAccount:$ADMIN_SA\" in b[\"members\"])==[\"roles/storage.objectCreator\",\"roles/storage.objectViewer\"]'"
+check "lifecycle deletes only synthetic test outputs (results/); drafts, approvals and audit are never auto-deleted" \
+  "J '$OUT/bucket.json' 'all(r.get(\"condition\",{}).get(\"matchesPrefix\")==[\"results/\"] for r in (d.get(\"lifecycle_config\") or {}).get(\"rule\",[]))'"
 check "admin SA has no project-level role" \
   "J '$OUT/project-iam.json' 'not any(\"serviceAccount:$ADMIN_SA\" in b[\"members\"] for b in d.get(\"bindings\",[]))'"
 if [ -n "$URL" ]; then

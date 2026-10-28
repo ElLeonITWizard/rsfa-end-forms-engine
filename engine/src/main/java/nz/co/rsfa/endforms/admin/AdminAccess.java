@@ -47,14 +47,17 @@ public final class AdminAccess {
         }
     }
 
-    /** Authentication outcome: a principal, or a refusal code and HTTP status. */
-    public record Outcome(Principal principal, int status, String code) {
+    /**
+     * Authentication outcome: a principal, or a refusal code and HTTP status. {@code email} is the verified identity of
+     * a refused but signed-in user (shown only to that user, so a wrong Google account can be recognised; never logged).
+     */
+    public record Outcome(Principal principal, int status, String code, String email) {
         static Outcome ok(Principal p) {
-            return new Outcome(p, 200, null);
+            return new Outcome(p, 200, null, null);
         }
 
         static Outcome refused(int status, String code) {
-            return new Outcome(null, status, code);
+            return new Outcome(null, status, code, null);
         }
     }
 
@@ -95,7 +98,7 @@ public final class AdminAccess {
                 }
                 String role = allow.get(id.email());
                 if (role == null) {
-                    return Outcome.refused(403, "NOT_AUTHORISED_USER");
+                    return new Outcome(null, 403, "NOT_AUTHORISED_USER", id.email());
                 }
                 return Outcome.ok(new Principal(id.email(), role));
             }

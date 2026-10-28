@@ -1,7 +1,6 @@
 {
   "rule": [
     {"action": {"type": "Delete"}, "condition": {"age": 1, "matchesPrefix": ["results/"]}},
-    {"action": {"type": "Delete"}, "condition": {"daysSinceNoncurrentTime": 1, "matchesPrefix": ["results/"]}},
-    {"action": {"type": "Delete"}, "condition": {"daysSinceNoncurrentTime": 90}}
+    {"action": {"type": "Delete"}, "condition": {"daysSinceNoncurrentTime": 1, "matchesPrefix": ["results/"]}}
   ]
 }

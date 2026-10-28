@@ -11,6 +11,7 @@
 # then disables (not deletes) the admin service account. It keeps: the bucket and its data (unless DELETE_DATA=1),
 # the IAP API, the OAuth client and consent screen (harmless; delete them in the console if wanted), the image.
 set -euo pipefail
+export CLOUDSDK_CORE_DISABLE_PROMPTS=1
 PROJECT_ID=${PROJECT_ID:-rsfa-end-forms-engine}
 REGION=${REGION:-australia-southeast1}
 ADMIN_SERVICE=${ADMIN_SERVICE:-rsfa-end-forms-admin}
@@ -32,6 +33,11 @@ engine_state() {
 }
 
 step "Preflight (read-only) — mode: $([ "$APPLY" = 1 ] && echo APPLY || echo PLAN)"
+# The admin names can never resolve to the engine: a delete must not be pointed at it by an override.
+case "$ADMIN_SERVICE" in *admin*) ;; *) die "ADMIN_SERVICE must contain 'admin' (got $ADMIN_SERVICE)." ;; esac
+[ "$ADMIN_SERVICE" != "$ENGINE_SERVICE" ] || die "ADMIN_SERVICE must not be the engine service."
+case "$ADMIN_SA" in *admin*@*) ;; *) die "ADMIN_SA_NAME must contain 'admin'." ;; esac
+case "$ADMIN_BUCKET" in *admin*) ;; *) die "ADMIN_BUCKET must contain 'admin'." ;; esac
 [ -n "${TO_REVISION:-}" ] || [ "${REMOVE:-0}" = 1 ] || die "Choose TO_REVISION=<earlier admin revision> or REMOVE=1."
 [ "${DELETE_DATA:-0}" != 1 ] || [ "${REMOVE:-0}" = 1 ] || die "DELETE_DATA=1 requires REMOVE=1."
 engine_state "$OUT/engine-before.json"

@@ -224,6 +224,12 @@ class AdminCloudTest {
         c = claims(ADMIN);
         c.put("iat", NOW.getEpochSecond() + 600);
         assertEquals("IAP_NOT_YET_VALID", code(call(baseA, "GET", path, jwt(iapKey, "k1", "ES256", c), null, Map.of())));
+        HttpResponse<byte[]> page = call(baseA, "GET", "/admin/", token("other.account@example.com"), null, Map.of());
+        assertEquals(403, page.statusCode());
+        assertTrue(new String(page.body(), StandardCharsets.UTF_8).contains("signed in as other.account@example.com"),
+                "the refusal page tells a signed-in user which Google account they used (wrong-account diagnosis)");
+        HttpResponse<byte[]> escaped = call(baseA, "GET", "/admin/", token("x<b>@example.com"), null, Map.of());
+        assertEquals(401, escaped.statusCode(), "a malformed email claim is refused before any page is built");
         HttpResponse<byte[]> stranger = call(baseA, "GET", path, token("someone@example.com"), null, Map.of());
         assertEquals(403, stranger.statusCode(), "signed in with Google but not on the allowlist");
         assertEquals("NOT_AUTHORISED_USER", code(stranger));
@@ -404,7 +410,8 @@ class AdminCloudTest {
         call(baseA, "GET", "/admin/api/session", token("someone@example.com"), null, Map.of());
         String all = String.join("\n", logs);
         assertTrue(all.contains("status=201") && all.contains("code=NOT_AUTHORISED_USER"), all);
-        for (String secret : List.of(ADMIN, AUTHOR, "someone@example.com", "Jane Example", "example-bank-form", "Example Street",
+        call(baseA, "GET", "/admin/", token("other.account@example.com"), null, Map.of());
+        for (String secret : List.of(ADMIN, AUTHOR, "someone@example.com", "other.account@example.com", "Jane Example", "example-bank-form", "Example Street",
                 token(AUTHOR).substring(0, 30), id)) {
             assertFalse(all.contains(secret), "log contains " + secret);
         }

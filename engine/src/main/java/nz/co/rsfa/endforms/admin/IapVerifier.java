@@ -126,7 +126,7 @@ public final class IapVerifier {
         }
         String email = claims.path("email").asText("").trim().toLowerCase(Locale.ROOT);
         String sub = claims.path("sub").asText("");
-        if (!email.matches("[^@\\s]{1,64}@[a-z0-9.-]{1,190}") || sub.isEmpty()) {
+        if (!email.matches("[a-z0-9._%+'-]{1,64}@[a-z0-9-]+(\\.[a-z0-9-]+)+") || email.length() > 254 || sub.isEmpty()) {
             throw new Invalid("IAP_NO_EMAIL");
         }
         return new Identity(email, sub);

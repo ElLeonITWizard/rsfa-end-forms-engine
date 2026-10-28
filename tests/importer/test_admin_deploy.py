@@ -33,6 +33,7 @@ FAKE_GCLOUD = r'''#!/usr/bin/env python3
 import json, os, sys
 st_path = os.environ["FAKE_STATE"]; st = json.load(open(st_path))
 argv = [a for a in sys.argv[1:] if not a.startswith("--project=")]
+if os.environ.get("CLOUDSDK_CORE_DISABLE_PROMPTS") != "1": argv = ["PROMPTS-ENABLED"] + argv
 with open(os.environ["FAKE_LOG"], "a") as f: f.write(json.dumps(argv) + "\n")
 def out(x): print(x if isinstance(x, str) else json.dumps(x)); sys.exit(0)
 def save(): json.dump(st, open(st_path, "w"))
@@ -224,6 +225,37 @@ class AdminDeployScriptTest(unittest.TestCase):
         self.assertEqual(0, p.returncode, p.stderr + p.stdout)
         self.assertFalse(any(c[:2] == ["storage", "rm"] for c in calls), "data is deleted only with DELETE_DATA=1")
         self.assertTrue(all("rsfa-end-forms-engine" not in c[3:4] for c in self.mutations(calls)))
+
+    def test_admin_names_can_never_point_at_the_engine(self):
+        for env in ({"ADMIN_SERVICE": "rsfa-end-forms-engine"}, {"ADMIN_BUCKET": "rsfa-end-forms-engine-build-src"},
+                    {"ADMIN_SA_NAME": "rsfa-end-forms-runtime"}):
+            p, calls = self.run_script("deploy_admin.sh", state(), ADMIN_USERS="a@example.org:admin", APPLY="1", **env)
+            self.assertEqual(1, p.returncode, env)
+            self.assertEqual([], self.mutations(calls), env)
+        p, calls = self.run_script("rollback_admin.sh", state(admin=True, bucket=True, sa=True), REMOVE="1", APPLY="1",
+                                   ADMIN_SERVICE="rsfa-end-forms-engine")
+        self.assertEqual(1, p.returncode)
+        self.assertEqual([], self.mutations(calls), "a rollback can never delete the engine")
+
+    def test_prompts_are_disabled_and_the_identity_is_matched(self):
+        p, calls = self.run_script("deploy_admin.sh", state(), ADMIN_USERS="Deployer@example.org:admin")
+        self.assertEqual(0, p.returncode, p.stderr + p.stdout)
+        self.assertFalse(any(c and c[0] == "PROMPTS-ENABLED" for c in calls), "every gcloud call runs with prompts disabled")
+        self.assertIn("the authenticated Google identity deployer@example.org is in ADMIN_USERS", p.stdout)
+        p, _ = self.run_script("deploy_admin.sh", state(), ADMIN_USERS="someone.else@example.org:admin")
+        self.assertIn("[warn] deployer@example.org is not in ADMIN_USERS", p.stdout)
+
+    def test_lifecycle_never_deletes_drafts_approvals_or_audit(self):
+        rules = json.loads((REPO / "deploy" / "admin" / "bucket-lifecycle.json").read_text())["rule"]
+        self.assertTrue(rules)
+        for r in rules:
+            self.assertEqual(["results/"], r["condition"].get("matchesPrefix"), r)
+        bad = state(admin=True, bucket=True, sa=True)
+        bad["bucketJson"] = dict(bad["bucketJson"], lifecycle_config={"rule": [
+            {"action": {"type": "Delete"}, "condition": {"daysSinceNoncurrentTime": 90}}]})
+        p, _ = self.run_script("deploy_admin.sh", bad, PHASE="verify")
+        self.assertEqual(1, p.returncode)
+        self.assertIn("[FAIL] lifecycle deletes only synthetic test outputs", p.stdout)
 
     def test_scripts_never_write_to_the_engine_service(self):
         for script in (DEPLOY, ROLLBACK):

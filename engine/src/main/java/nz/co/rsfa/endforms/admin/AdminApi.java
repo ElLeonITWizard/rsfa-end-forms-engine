@@ -150,8 +150,9 @@ public final class AdminApi {
                         : "sign-in required";
                 status = path.startsWith("/admin/api/") ? send(ex, who.status(), err(who.code(), message))
                         : refusalPage(ex, who.status(), who.status() == 403
-                        ? "Your Google account is signed in but is not on the administration allowlist. Ask an RSFA "
-                        + "administrator for access." : "Sign-in required. Reload the page.");
+                        ? "You are signed in as " + html(who.email()) + ", which is not on the administration allowlist. "
+                        + "If you have access with another Google account, sign out and use that account; otherwise ask "
+                        + "an RSFA administrator." : "Sign-in required. Reload the page.");
                 return;
             }
             AdminAccess.Principal principal = who.principal();
@@ -836,7 +837,11 @@ public final class AdminApi {
         return bytes(ex, b, file[1]);
     }
 
-    /** A browser page for refused identities: fixed text only, no data, no script. */
+    private static String html(String s) {
+        return s == null ? "" : s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;");
+    }
+
+    /** A browser page for refused identities: fixed text (plus the user's own verified email), no data, no script. */
     private int refusalPage(HttpExchange ex, int status, String message) throws IOException {
         byte[] b = ("<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><title>End Forms Administration</title>"
                 + "</head><body style=\"font-family:sans-serif;max-width:560px;margin:80px auto\"><h1>End Forms Administration</h1>"
