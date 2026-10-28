@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>RSFA End Forms — Administration</title>
+  <title>End Forms Administration</title>
   <link rel="stylesheet" href="/admin/admin.css">
   <script src="/admin/admin.js" defer></script>
 </head>
@@ -20,10 +20,10 @@
     <a href="#/library" data-nav="library">Template library</a>
     <a href="#/upload" data-nav="upload">Upload PDF</a>
   </nav>
-  <div class="env" title="Runs only on this computer. Nothing here is deployed, approved for production or sent to an AI provider.">
-    <span class="dot"></span> Local development · not deployed
-  </div>
+  <div class="who" id="who"></div>
+  <div class="env" id="env" data-testid="env">Loading…</div>
 </header>
+<div id="session-banner" class="session-banner" role="alert" hidden>Your sign-in session has ended. Reload the page to sign in again; unsaved changes in this tab are kept until you reload.</div>
 <main id="view" class="view" aria-live="polite"></main>
 <div id="toast" class="toast" role="status" hidden></div>
 <dialog id="modal" class="modal"><form method="dialog" id="modal-form"></form></dialog>

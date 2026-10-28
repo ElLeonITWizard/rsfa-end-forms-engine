@@ -39,14 +39,30 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Local administration area (D-038): template library, upload and validation, field inspector, mapping editor, test
+ * Administration area (D-038, D-041): template library, upload and validation, field inspector, mapping editor, test
  * generation with synthetic data, drafts with versions and audit trail, and (mock) mapping suggestions.
  *
- * <p>Enabled only with {@code ENGINE_ADMIN=local} on a loopback address outside Cloud Run ({@link #requireLocal}); the
- * deployed engine never registers these routes. Nothing here publishes a template or changes the allowlist.
- * Logs carry route, status and codes only.
+ * <p>Two hosts: the local server with {@code ENGINE_ADMIN=local} on a loopback address outside Cloud Run
+ * ({@link #requireLocal}), and the separate private admin service ({@code ENGINE_ROLE=admin}, {@link AdminServer})
+ * behind IAP. The engine service never registers these routes. Every request is authenticated and authorised
+ * server-side ({@link AdminAccess}); writes need the same-origin guard. Nothing here publishes a template or changes
+ * the allowlist. Logs carry route, status, codes and a hashed user id only.
  */
 public final class AdminApi {
+
+    /**
+     * Deployment policy.
+     *
+     * @param environment       label shown in the UI (e.g. "Local development", "Private test environment")
+     * @param syntheticOnly     uploads need the "no client data" confirmation and test values are limited to the
+     *                          generated fictional values and the Monday option labels
+     * @param separateApprover  the approver must not be the person who saved the approved version
+     */
+    public record Policy(String environment, boolean syntheticOnly, boolean separateApprover) {
+        public static Policy local() {
+            return new Policy("Local development", false, false);
+        }
+    }
 
     private static final Logger LOG = Logger.getLogger(AdminApi.class.getName());
     private static final Pattern TEMPLATE = Pattern.compile("/admin/api/templates/([0-9a-f]{64})(/pages/(\\d{1,3})\\.png|/file\\.pdf)?");
@@ -64,7 +80,8 @@ public final class AdminApi {
     private final Path repoRoot;
     private final MappingSuggestions.SuggestionProvider suggestions;
     private final Clock clock;
-    private final String actor;
+    private final AdminAccess.Authenticator auth;
+    private final Policy policy;
     private final ObjectMapper json = TemplateCatalog.json();
     private final Map<String, TemplateAnalysis.Report> analyses = new HashMap<>();
     private final Map<String, byte[]> renders = new LinkedHashMap<>(16, 0.75f, true) {
@@ -73,30 +90,29 @@ public final class AdminApi {
             return size() > 96;
         }
     };
-    private final Map<String, TestRun> results = new LinkedHashMap<>(16, 0.75f, true) {
-        @Override
-        protected boolean removeEldestEntry(Map.Entry<String, TestRun> e) {
-            return size() > 20;
-        }
-    };
-
-    private record TestRun(String templateSha, byte[] pdf) {
-    }
 
     /**
+     * Local development: one identity ({@code actor}, from ADMIN_ACTOR) with the admin role.
+     *
      * @param repoRoot repository root, for {@code curation/}, {@code deploy/poc-allowlist.json} and
      *                 {@code deploy/deployment-state.json} (library statuses)
-     * @param actor    name recorded in the audit trail (local development: from ADMIN_ACTOR)
      */
     public AdminApi(Workspace workspace, TemplateCatalog catalog, MondaySchema schema, Path repoRoot,
                     MappingSuggestions.SuggestionProvider suggestions, Clock clock, String actor) {
+        this(workspace, catalog, schema, repoRoot, suggestions, clock, AdminAccess.local(actor), Policy.local());
+    }
+
+    public AdminApi(Workspace workspace, TemplateCatalog catalog, MondaySchema schema, Path repoRoot,
+                    MappingSuggestions.SuggestionProvider suggestions, Clock clock, AdminAccess.Authenticator auth,
+                    Policy policy) {
         this.workspace = workspace;
         this.catalog = catalog;
         this.schema = schema;
         this.repoRoot = repoRoot;
         this.suggestions = suggestions;
         this.clock = clock;
-        this.actor = Workspace.safeText(actor, 80);
+        this.auth = auth;
+        this.policy = policy;
     }
 
     /** Refuses to enable the administration area anywhere but a loopback address outside Cloud Run. */
@@ -110,13 +126,39 @@ public final class AdminApi {
         }
     }
 
+    /** Entry point of the private admin service (no outer authentication layer besides IAP). */
+    public void handle(HttpExchange ex) throws IOException {
+        handle(ex, true);
+    }
+
+    /** @param authorised the hosting server's own authentication result (local server: its API key mode) */
     public void handle(HttpExchange ex, boolean authorised) throws IOException {
         String path = ex.getRequestURI().getPath();
         String method = ex.getRequestMethod();
         int status = 500;
+        String user = "-";
+        String code = "";
         try {
             if (!authorised) {
                 status = send(ex, 401, err("UNAUTHORISED", "authentication required"));
+                return;
+            }
+            AdminAccess.Outcome who = auth.authenticate(ex);
+            if (who.principal() == null) {
+                code = who.code();
+                String message = who.status() == 403 ? "this account is not on the administration allowlist"
+                        : "sign-in required";
+                status = path.startsWith("/admin/api/") ? send(ex, who.status(), err(who.code(), message))
+                        : refusalPage(ex, who.status(), who.status() == 403
+                        ? "Your Google account is signed in but is not on the administration allowlist. Ask an RSFA "
+                        + "administrator for access." : "Sign-in required. Reload the page.");
+                return;
+            }
+            AdminAccess.Principal principal = who.principal();
+            user = principal.logId();
+            if (!AdminAccess.sameOriginWrite(ex)) {
+                code = "CROSS_SITE_REFUSED";
+                status = send(ex, 403, err(code, "write requests must come from the administration page"));
                 return;
             }
             if (path.equals("/admin")) {
@@ -129,18 +171,29 @@ public final class AdminApi {
                 status = staticFile(ex, STATIC.get(path));
                 return;
             }
-            status = route(ex, path, method);
+            status = route(ex, path, method, principal);
         } catch (Workspace.Conflict e) {
-            status = send(ex, 409, err("VERSION_CONFLICT", e.getMessage()));
+            code = "VERSION_CONFLICT";
+            status = send(ex, 409, err(code, e.getMessage()));
         } catch (Workspace.Refused e) {
+            code = e.code;
             status = send(ex, 422, err(e.code, e.getMessage()));
+        } catch (Forbidden e) {
+            code = e.code;
+            status = send(ex, 403, err(e.code, e.getMessage()));
         } catch (BadRequest e) {
+            code = "BAD_REQUEST";
             status = send(ex, 400, err("BAD_REQUEST", e.getMessage()));
+        } catch (IOException e) {
+            code = "STORAGE";
+            status = send(ex, 503, err("STORAGE_UNAVAILABLE", "storage is unavailable; try again"));
         } catch (RuntimeException e) {
+            code = e.getClass().getSimpleName();
             status = send(ex, 500, err("INTERNAL", e.getClass().getSimpleName()));
         } finally {
             ex.close(); // after the catch blocks: try-with-resources would close the exchange before an error is sent
-            LOG.info(String.format("admin %s %s status=%d", method, path.replaceAll("[0-9a-f]{32,64}", "<id>"), status));
+            LOG.info(String.format("admin %s %s status=%d user=%s%s", method, path.replaceAll("[0-9a-f]{12,64}", "<id>"),
+                    status, user, code == null || code.isEmpty() ? "" : " code=" + code));
         }
     }
 
@@ -150,7 +203,52 @@ public final class AdminApi {
         }
     }
 
-    private int route(HttpExchange ex, String path, String method) throws IOException, Workspace.Conflict, Workspace.Refused {
+    private static final class Forbidden extends RuntimeException {
+        final String code;
+
+        Forbidden(String code, String m) {
+            super(m);
+            this.code = code;
+        }
+    }
+
+    private static void require(AdminAccess.Principal p, AdminAccess.Permission perm) {
+        if (!p.may(perm)) {
+            throw new Forbidden("ROLE_NOT_PERMITTED", "your role (" + p.role() + ") may not " + switch (perm) {
+                case READ -> "read";
+                case EDIT -> "edit templates or drafts";
+                case APPROVE -> "record or revoke approvals";
+            });
+        }
+    }
+
+    private ObjectNode session(AdminAccess.Principal p) {
+        ObjectNode o = json.createObjectNode();
+        o.put("email", p.email()).put("role", p.role()).put("environment", policy.environment())
+                .put("authentication", auth.kind()).put("storage", workspace.storageKind())
+                .put("syntheticOnly", policy.syntheticOnly()).put("separateApprover", policy.separateApprover())
+                .put("suggestions", "mock").put("publication", "disabled");
+        ArrayNode perms = o.putArray("permissions");
+        for (AdminAccess.Permission x : AdminAccess.Permission.values()) {
+            if (p.may(x)) {
+                perms.add(x.name().toLowerCase(java.util.Locale.ROOT));
+            }
+        }
+        return o;
+    }
+
+    private int route(HttpExchange ex, String path, String method, AdminAccess.Principal principal)
+            throws IOException, Workspace.Conflict, Workspace.Refused {
+        String actor = principal.email();
+        if (!method.equals("GET") && !path.endsWith("/status")) {
+            require(principal, AdminAccess.Permission.EDIT); // status changes are checked per transition (statusChange)
+        }
+        if (path.equals("/admin/api/session") && method.equals("GET")) {
+            return send(ex, 200, session(principal));
+        }
+        if (path.equals("/admin/api/example-form.pdf") && method.equals("GET")) {
+            return bytes(ex, ExampleForm.build(), "application/pdf"); // FICTIONAL blank form for trying the workflow
+        }
         if (path.equals("/admin/api/library") && method.equals("GET")) {
             return send(ex, 200, library());
         }
@@ -161,7 +259,7 @@ public final class AdminApi {
             return send(ex, 200, o);
         }
         if (path.equals("/admin/api/templates") && method.equals("POST")) {
-            return upload(ex);
+            return upload(ex, actor);
         }
         Matcher t = TEMPLATE.matcher(path);
         if (t.matches() && method.equals("GET")) {
@@ -188,7 +286,7 @@ public final class AdminApi {
             return send(ex, 201, state);
         }
         if (path.equals("/admin/api/drafts/from-manifest") && method.equals("POST")) {
-            return fromManifest(ex, body(ex));
+            return fromManifest(ex, body(ex), actor);
         }
         Matcher d = DRAFT.matcher(path);
         if (d.matches()) {
@@ -215,7 +313,9 @@ public final class AdminApi {
                 }
                 case "/status POST" -> {
                     JsonNode b = body(ex);
-                    ObjectNode s = workspace.setStatus(id, b.path("baseVersion").asInt(-1), b.path("status").asText(),
+                    String to = b.path("status").asText();
+                    statusChange(principal, state, to);
+                    ObjectNode s = workspace.setStatus(id, b.path("baseVersion").asInt(-1), to,
                             b.path("approval").isObject() ? b.path("approval") : null, actor);
                     return send(ex, 200, draftView(s));
                 }
@@ -223,7 +323,7 @@ public final class AdminApi {
                     return send(ex, 200, synthetic(state));
                 }
                 case "/test POST" -> {
-                    return send(ex, 200, test(state, body(ex)));
+                    return send(ex, 200, test(state, body(ex), actor));
                 }
                 case "/suggestions POST" -> {
                     return send(ex, 200, json.valueToTree(suggest(state)));
@@ -235,29 +335,49 @@ public final class AdminApi {
         }
         Matcher r = RESULT.matcher(path);
         if (r.matches() && method.equals("GET")) {
-            TestRun run;
-            synchronized (results) {
-                run = results.get(r.group(1));
-            }
-            if (run == null) {
+            Optional<Workspace.Result> run = workspace.result(r.group(1));
+            if (run.isEmpty()) {
                 return send(ex, 404, err("NOT_FOUND", "test result expired; generate again"));
             }
             if (r.group(2).equals(".pdf")) {
-                return bytes(ex, run.pdf(), "application/pdf");
+                return bytes(ex, run.get().pdf(), "application/pdf");
             }
             if (r.group(3) != null) {
-                return png(ex, "result-" + r.group(1), run.pdf(), Integer.parseInt(r.group(3)), dpi(ex));
+                return png(ex, "result-" + r.group(1), run.get().pdf(), Integer.parseInt(r.group(3)), dpi(ex));
             }
-            byte[] tpl = workspace.templateBytes(run.templateSha()).orElseThrow();
-            return png(ex, run.templateSha(), tpl, Integer.parseInt(r.group(4)), dpi(ex));
+            byte[] tpl = workspace.templateBytes(run.get().templateSha256()).orElseThrow();
+            return png(ex, run.get().templateSha256(), tpl, Integer.parseInt(r.group(4)), dpi(ex));
         }
         return send(ex, 404, err("NOT_FOUND", "unknown admin route"));
     }
 
+    /**
+     * Who may move a draft where: authors (and admins) between draft and ready-for-review; approvers (and admins) to
+     * approved and away from approved. Optionally the approver must not be the person who saved that version.
+     */
+    private void statusChange(AdminAccess.Principal p, ObjectNode state, String to) {
+        String from = state.path("status").asText();
+        if (to.equals("approved") || from.equals("approved")) {
+            require(p, AdminAccess.Permission.APPROVE);
+            String savedBy = state.path("updatedBy").asText(state.path("createdBy").asText(""));
+            if (to.equals("approved") && policy.separateApprover() && savedBy.equalsIgnoreCase(p.email())) {
+                throw new Forbidden("SEPARATE_APPROVER_REQUIRED", "the approver must be a different person from the "
+                        + "one who saved this version");
+            }
+        } else {
+            require(p, AdminAccess.Permission.EDIT);
+        }
+    }
+
     // ------------------------------------------------------------------------------------------- operations
 
-    private int upload(HttpExchange ex) throws IOException {
+    private int upload(HttpExchange ex, String actor) throws IOException {
         Map<String, String> q = query(ex);
+        if (policy.syntheticOnly() && !"true".equals(q.get("confirmNoClientData"))) {
+            ex.getRequestBody().readNBytes((int) TemplateAnalysis.MAX_UPLOAD_BYTES + 1); // drain, never stored or analysed
+            throw new Forbidden("CONFIRMATION_REQUIRED", "confirm that the PDF is a blank or synthetic form without "
+                    + "client data (this environment accepts synthetic test documents only)");
+        }
         byte[] pdf = ex.getRequestBody().readNBytes((int) TemplateAnalysis.MAX_UPLOAD_BYTES + 1);
         TemplateAnalysis.Report report = TemplateAnalysis.analyse(pdf);
         ObjectNode o = json.createObjectNode();
@@ -357,7 +477,7 @@ public final class AdminApi {
     }
 
     /** Copies a repository manifest into a new draft: template from the catalog, keys resolved to column IDs. */
-    private int fromManifest(HttpExchange ex, JsonNode b) throws IOException, Workspace.Refused {
+    private int fromManifest(HttpExchange ex, JsonNode b, String actor) throws IOException, Workspace.Refused {
         Manifest m = catalog.manifest(b.path("templateId").asText(), b.path("templateVersion").asText())
                 .orElseThrow(() -> new Workspace.Refused("UNKNOWN_TEMPLATE", "no such manifest"));
         byte[] pdf = catalog.templateBytes(m).orElseThrow(() -> new Workspace.Refused("TEMPLATE_UNAVAILABLE",
@@ -464,6 +584,40 @@ public final class AdminApi {
         return o;
     }
 
+    /**
+     * Synthetic-only policy: a test value must be empty, the generated fictional value for its column, a Monday option
+     * label of the column (or a comma-joined set of labels for multi-selects), or a label the draft's own conditions
+     * test. Free text typed by a person (which could be a real client's data) is refused.
+     */
+    private boolean syntheticValue(String colId, JsonNode value, JsonNode mapping) {
+        if (value == null || value.isNull()) {
+            return true;
+        }
+        if (!value.isTextual()) {
+            return false;
+        }
+        String v = value.asText().trim();
+        if (v.isEmpty()) {
+            return true;
+        }
+        Optional<MondaySchema.Column> c = schema.column(colId);
+        java.util.Set<String> allowed = new java.util.HashSet<>(List.of("Yes", "No"));
+        c.ifPresent(x -> {
+            allowed.addAll(x.labels());
+            allowed.add(fictional(x.title(), x.type(), x.labels()));
+        });
+        for (JsonNode f : mapping.path("fields")) {
+            JsonNode s = f.path("source");
+            if (s.path("columnId").asText("").equals(colId) && !s.path("value").asText("").isEmpty()) {
+                allowed.add(s.path("value").asText());
+            }
+        }
+        if (allowed.contains(v)) {
+            return true;
+        }
+        return java.util.Arrays.stream(v.split(",")).map(String::trim).allMatch(allowed::contains);
+    }
+
     static String fictional(String title, String type, List<String> labels) {
         String t = title.toLowerCase(java.util.Locale.ROOT);
         if (!labels.isEmpty()) return labels.get(0);
@@ -481,7 +635,7 @@ public final class AdminApi {
     }
 
     /** Compiles the current version, fills it with the given synthetic data, records the outcome (codes only). */
-    private ObjectNode test(ObjectNode state, JsonNode body) throws IOException {
+    private ObjectNode test(ObjectNode state, JsonNode body, String actor) throws IOException {
         String id = state.path("draftId").asText();
         int version = state.path("version").asInt();
         ObjectNode mapping = workspace.mapping(id, version).orElseThrow();
@@ -512,6 +666,18 @@ public final class AdminApi {
         if (!unknown.isEmpty()) {
             throw new BadRequest("unknown column ids in the test data: " + unknown.size());
         }
+        if (policy.syntheticOnly()) {
+            List<String> refused = new ArrayList<>();
+            in.fieldNames().forEachRemaining(colId -> {
+                if (!syntheticValue(colId, in.get(colId), mapping)) {
+                    refused.add(colId);
+                }
+            });
+            if (!refused.isEmpty()) {
+                throw new Forbidden("NON_SYNTHETIC_VALUE", "this environment tests with generated fictional values and "
+                        + "Monday option labels only (" + refused.size() + " column(s): " + String.join(", ", refused) + ")");
+            }
+        }
         String today = body.path("today").asText(LocalDate.now(clock).toString());
         LocalDate day;
         try {
@@ -538,9 +704,7 @@ public final class AdminApi {
             byte[] token = new byte[16];
             new java.security.SecureRandom().nextBytes(token);
             String tok = java.util.HexFormat.of().formatHex(token);
-            synchronized (results) {
-                results.put(tok, new TestRun(sha, r.pdf()));
-            }
+            workspace.saveResult(tok, sha, r.pdf()); // shared storage: any instance can serve the preview and download
             o.put("resultId", tok).put("pdfSha256", pdfSha).put("pages", report.pages());
         }
         workspace.recordTest(id, version, r.ok(), errors, warnings, pdfSha, actor);
@@ -670,6 +834,22 @@ public final class AdminApi {
             b = in.readAllBytes();
         }
         return bytes(ex, b, file[1]);
+    }
+
+    /** A browser page for refused identities: fixed text only, no data, no script. */
+    private int refusalPage(HttpExchange ex, int status, String message) throws IOException {
+        byte[] b = ("<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><title>End Forms Administration</title>"
+                + "</head><body style=\"font-family:sans-serif;max-width:560px;margin:80px auto\"><h1>End Forms Administration</h1>"
+                + "<p data-testid=\"not-authorised\">" + message + "</p></body></html>").getBytes(StandardCharsets.UTF_8);
+        ex.getResponseHeaders().set("Content-Type", "text/html; charset=utf-8");
+        ex.getResponseHeaders().set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'");
+        ex.getResponseHeaders().set("Cache-Control", "no-store");
+        ex.getResponseHeaders().set("X-Content-Type-Options", "nosniff");
+        ex.sendResponseHeaders(status, b.length);
+        try (OutputStream os = ex.getResponseBody()) {
+            os.write(b);
+        }
+        return status;
     }
 
     private int bytes(HttpExchange ex, byte[] body, String type) throws IOException {

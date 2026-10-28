@@ -1,10 +1,12 @@
 'use strict';
-// RSFA End Forms — local administration area (D-038). Plain JS, no dependencies, no inline handlers (strict CSP).
+// RSFA End Forms — administration area (D-038, D-041). Plain JS, no dependencies, no inline handlers (strict CSP).
+// Authorisation is decided by the server; the page only hides actions the signed-in role cannot use.
 // All text from files or the server is inserted with textContent, never as HTML.
 
 const API = '/admin/api';
 const view = document.getElementById('view');
-const S = { schema: null, schemaById: new Map() };
+const S = { schema: null, schemaById: new Map(), session: null };
+const can = (p) => !!(S.session && S.session.permissions.includes(p));
 
 // ---------------------------------------------------------------------------------------------- helpers
 function h(tag, attrs, ...children) {
@@ -21,10 +23,43 @@ function h(tag, attrs, ...children) {
   return el;
 }
 async function api(path, opts = {}) {
-  const res = await fetch(API + path, { headers: opts.body && !(opts.body instanceof Blob) ? { 'Content-Type': 'application/json' } : {}, ...opts });
+  // X-RSFA-Admin marks requests from this page; the server refuses writes without it (cross-site request guard).
+  const headers = { 'X-RSFA-Admin': '1' };
+  if (opts.body && !(opts.body instanceof Blob)) headers['Content-Type'] = 'application/json';
+  let res;
+  try {
+    res = await fetch(API + path, { ...opts, headers, redirect: 'manual' });
+  } catch (e) {
+    sessionLost(); throw new Error('network error');
+  }
+  // An expired IAP session answers with a redirect to Google sign-in, which fetch cannot follow.
+  if (res.type === 'opaqueredirect' || res.status === 0) { sessionLost(); throw new Error('signed out'); }
   let body = null;
   try { body = await res.json(); } catch (e) { body = null; }
-  return { status: res.status, ok: res.ok, body };
+  if (res.status === 401) sessionLost();
+  return { status: res.status, ok: res.ok, body: body || {} };
+}
+function sessionLost() {
+  const b = document.getElementById('session-banner');
+  if (b) b.hidden = false;
+}
+async function loadSession() {
+  const r = await api('/session');
+  if (!r.ok) {
+    view.replaceChildren(h('div', { class: 'panel banner bad', dataset: { testid: 'not-authorised' },
+      text: r.status === 403 ? 'Your Google account is signed in but is not on the administration allowlist. Ask an RSFA administrator for access.'
+        : 'Sign-in required. Reload the page.' }));
+    return false;
+  }
+  S.session = r.body;
+  const env = document.getElementById('env');
+  env.replaceChildren(h('span', { class: 'dot' + (S.session.authentication === 'iap' ? ' private' : '') }),
+    `${S.session.environment} · ${S.session.syntheticOnly ? 'synthetic documents only · ' : ''}not production`);
+  env.title = 'Storage: ' + S.session.storage + '. Suggestions: mock (no AI). Publication: disabled.';
+  const who = document.getElementById('who');
+  who.replaceChildren(h('span', { class: 'mono', text: S.session.email, dataset: { testid: 'user' } }), ' ', h('span', { class: 'chip draft', text: S.session.role, dataset: { testid: 'role' } }));
+  document.querySelectorAll('[data-nav=upload]').forEach(a => { a.hidden = !can('edit'); });
+  return true;
 }
 function toast(msg, bad) {
   const t = document.getElementById('toast');
@@ -66,6 +101,7 @@ function modal(title, bodyEls, okText, onOk) {
 
 // ---------------------------------------------------------------------------------------------- router
 async function route() {
+  if (!S.session) return;
   const hash = location.hash || '#/library';
   const [, page, id] = hash.split('/');
   try {
@@ -77,7 +113,7 @@ async function route() {
   }
 }
 window.addEventListener('hashchange', route);
-window.addEventListener('DOMContentLoaded', route);
+window.addEventListener('DOMContentLoaded', async () => { if (await loadSession()) route(); });
 
 // ---------------------------------------------------------------------------------------------- library
 async function libraryView() {
@@ -103,19 +139,20 @@ async function libraryView() {
   }
   function action(i) {
     if (i.kind === 'draft') return h('a', { class: 'btn small primary', href: '#/draft/' + i.draftId, text: 'Open', dataset: { testid: 'open-draft' } });
+    if (!can('edit')) return h('span', { class: 'muted', text: '—' });
     if (i.kind === 'template') return h('button', { class: 'btn small', text: 'Create draft', onclick: () => newDraftModal(i.templateSha256, i) });
     if (i.templateAvailable) return h('button', { class: 'btn small', text: 'Copy to draft', title: 'Creates an editable local draft from this manifest; the manifest itself is not changed',
       onclick: async () => {
         const res = await api('/drafts/from-manifest', { method: 'POST', body: JSON.stringify({ templateId: i.templateId, templateVersion: i.templateVersion }) });
         if (res.ok) location.hash = '#/draft/' + res.body.draftId; else toast(res.body.message || 'Could not copy', true);
       } });
-    return h('span', { class: 'muted', text: 'template not available locally' });
+    return h('span', { class: 'muted', text: 'blank template not in this environment' });
   }
   render();
   view.replaceChildren(
     h('div', { class: 'row' }, h('div', {}, h('h1', { text: 'Template library' }),
       h('p', { class: 'lead', text: 'Bank forms, their mapping coverage and review status. "Deployed" and "Approved" come only from recorded RSFA approvals; local drafts are never published from here.' })),
-      h('span', { class: 'spacer' }), h('a', { class: 'btn primary', href: '#/upload', text: 'Upload bank PDF' })),
+      h('span', { class: 'spacer' }), can('edit') ? h('a', { class: 'btn primary', href: '#/upload', text: 'Upload bank PDF' }) : null),
     h('div', { class: 'panel' }, bar, h('table', { dataset: { testid: 'library' } },
       h('thead', {}, h('tr', {}, ['Bank', 'Template', 'Status', 'Coverage', 'Source', ''].map(t => h('th', { text: t })))), tbody)),
     h('p', { class: 'muted', text: `Monday schema: ${r.body.schemaSource}` }));
@@ -127,7 +164,7 @@ function newDraftModal(sha, meta) {
   const idIn = h('input', { value: (bank + '_' + name).slice(0, 60), dataset: { testid: 'draft-template-id' } });
   const verIn = h('input', { value: meta.templateVersion || '1', dataset: { testid: 'draft-template-version' } });
   modal('Create mapping draft', [
-    h('p', { class: 'muted', text: 'The draft is stored locally with versions and an audit trail. It is not approved or deployed.' }),
+    h('p', { class: 'muted', text: 'The draft is stored with versions and an audit trail. It is not approved or deployed.' }),
     h('div', { class: 'form-grid' }, h('label', { class: 'field' }, 'Template ID', idIn), h('label', { class: 'field' }, 'Template version', verIn)),
   ], 'Create draft', async () => {
     const res = await api('/drafts', { method: 'POST', body: JSON.stringify({ templateSha256: sha, templateId: idIn.value.trim(), templateVersion: verIn.value.trim() }) });
@@ -150,7 +187,11 @@ async function uploadView() {
   const version = h('input', { placeholder: 'e.g. 02-24', dataset: { testid: 'template-version' } });
   const go = h('button', { class: 'btn primary', text: 'Validate and upload', disabled: true, dataset: { testid: 'upload' } });
   const pick = (f) => { file = f; chosen.textContent = f ? `${f.name} · ${(f.size / 1024).toFixed(0)} KB` : ''; check(); };
-  const check = () => { go.disabled = !(file && bank.value && name.value.trim()); };
+  const confirmBox = h('input', { type: 'checkbox', dataset: { testid: 'confirm-no-client-data' } });
+  const confirmRow = S.session.syntheticOnly ? h('label', { class: 'row' }, confirmBox,
+    'I confirm this PDF is a blank or synthetic form and contains no client data.') : null;
+  const check = () => { go.disabled = !(file && bank.value && name.value.trim() && (!confirmRow || confirmBox.checked)); };
+  confirmBox.addEventListener('change', () => check());
   zone.addEventListener('click', () => fileIn.click());
   zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('over'); });
   zone.addEventListener('dragleave', () => zone.classList.remove('over'));
@@ -160,16 +201,21 @@ async function uploadView() {
   go.addEventListener('click', async () => {
     go.disabled = true; go.textContent = 'Checking…';
     const q = new URLSearchParams({ fileName: file.name, bank: bank.value, templateName: name.value.trim(), templateVersion: version.value.trim() });
+    if (confirmRow) q.set('confirmNoClientData', 'true');
     const res = await api('/templates?' + q, { method: 'POST', body: file });
     go.textContent = 'Validate and upload'; check();
+    if (!res.body.analysis) { out.replaceChildren(h('div', { class: 'panel banner bad', text: res.body.message || 'Upload refused' })); return; }
     out.replaceChildren(report(res.body.analysis, res.body.stored, res.body.meta));
   });
   view.replaceChildren(h('h1', { text: 'Upload a bank PDF template' }),
-    h('p', { class: 'lead', text: 'Only the bank\'s blank form. Files with customer values or signatures are refused. Templates are stored on this computer only.' }),
+    h('p', { class: 'lead', text: 'Only the bank\'s blank form. Files with customer values or signatures are refused. '
+      + (S.session.storage === 'gcs' ? 'Templates are stored in RSFA\'s private administration storage.' : 'Templates are stored on this computer only.') }),
     h('div', { class: 'panel grid' }, zone, fileIn, chosen,
       h('div', { class: 'form-grid' }, h('label', { class: 'field' }, 'Bank', bank), h('label', { class: 'field' }, 'Template name', name),
         h('label', { class: 'field' }, 'Bank version / date (optional)', version)),
-      h('div', { class: 'row' }, go)), out);
+      confirmRow, h('div', { class: 'row' }, go,  h('span', { class: 'spacer' }),
+        h('a', { class: 'btn', href: API + '/example-form.pdf', download: 'example-bank-form.pdf', text: 'Download a fictional test form',
+          title: 'Example Bank — a fictional blank form for trying the workflow', dataset: { testid: 'example-form' } }))), out);
 }
 
 function report(a, stored, meta) {
@@ -177,7 +223,7 @@ function report(a, stored, meta) {
   (a.fields || []).forEach(f => { kinds[f.kind] = (kinds[f.kind] || 0) + 1; });
   const panel = h('div', { class: 'panel grid', dataset: { testid: 'report', accepted: String(a.accepted) } },
     h('div', { class: 'banner ' + (a.accepted ? 'ok' : 'bad'), text: a.accepted
-      ? 'Accepted: a blank fillable form. Stored locally for mapping.' : 'Refused: this file cannot be used as a template (see below). Nothing was stored.' }),
+      ? 'Accepted: a blank fillable form. Stored for mapping.' : 'Refused: this file cannot be used as a template (see below). Nothing was stored.' }),
     h('div', { class: 'stats' }, [['Pages', a.pages], ['Fields', (a.fields || []).length], ...Object.entries(kinds)
       .map(([k, n]) => [k, n]), ['Encrypted', a.encrypted ? 'owner' : 'no'], ['Text chars', a.textChars]].map(([k, v]) => h('div', { class: 'stat' }, h('b', { text: v }), h('span', { class: 'muted', text: k })))),
     a.findings.length ? h('ul', { class: 'findings' }, a.findings.map(f => h('li', { class: f.severity, dataset: { code: f.code } },
@@ -211,7 +257,7 @@ function renderDraft(W, keepScroll) {
       h('div', { class: 'muted mono', text: `${st.templateId}@${st.templateVersion} · version ${st.version}${W.dirty ? ' · unsaved changes' : ''} · ${W.d.meta.bank || ''}` })),
     h('span', { class: 'spacer' }),
     h('a', { class: 'btn', href: '#/library', text: '← Library' }),
-    h('button', { class: 'btn primary', text: W.dirty ? 'Save new version' : 'Saved', disabled: !W.dirty, dataset: { testid: 'save' }, onclick: () => save(W) }),
+    can('edit') ? h('button', { class: 'btn primary', text: W.dirty ? 'Save new version' : 'Saved', disabled: !W.dirty, dataset: { testid: 'save' }, onclick: () => save(W) }) : null,
     statusActions(W));
   const errors = W.d.problems.filter(p => p.severity === 'error').length;
   const summary = h('div', { class: 'banner ' + (W.dirty ? 'warn' : errors ? 'bad' : 'info'), dataset: { testid: 'summary' }, text: W.dirty
@@ -224,12 +270,12 @@ function renderDraft(W, keepScroll) {
 function statusActions(W) {
   const st = W.d.state;
   const wrap = h('span', { class: 'row' });
-  if (st.status === 'draft') wrap.append(h('button', { class: 'btn', text: 'Mark ready for review', disabled: W.dirty, dataset: { testid: 'ready' }, onclick: () => setStatus(W, 'ready-for-review') }));
+  if (st.status === 'draft' && can('edit')) wrap.append(h('button', { class: 'btn', text: 'Mark ready for review', disabled: W.dirty, dataset: { testid: 'ready' }, onclick: () => setStatus(W, 'ready-for-review') }));
   if (st.status === 'ready-for-review') {
-    wrap.append(h('button', { class: 'btn', text: 'Back to draft', onclick: () => setStatus(W, 'draft') }));
-    wrap.append(h('button', { class: 'btn', text: 'Record approval…', dataset: { testid: 'approve' }, onclick: () => approveModal(W) }));
+    if (can('edit')) wrap.append(h('button', { class: 'btn', text: 'Back to draft', onclick: () => setStatus(W, 'draft') }));
+    if (can('approve')) wrap.append(h('button', { class: 'btn', text: 'Record approval…', dataset: { testid: 'approve' }, onclick: () => approveModal(W) }));
   }
-  if (st.status === 'approved') wrap.append(h('button', { class: 'btn', text: 'Revoke approval', onclick: () => setStatus(W, 'draft') }));
+  if (st.status === 'approved' && can('approve')) wrap.append(h('button', { class: 'btn', text: 'Revoke approval', onclick: () => setStatus(W, 'draft') }));
   wrap.append(h('button', { class: 'btn', text: 'Publish', disabled: true, title: 'Publishing is not available here: production templates go through the reviewed allowlist and deployment procedure (docs/04, docs/13).' }));
   return wrap;
 }
@@ -466,7 +512,9 @@ function suggestionsTab(W) {
 function testTab(W) {
   const out = h('div', { class: 'grid', dataset: { testid: 'test' } });
   if (W.dirty) return h('div', { class: 'banner warn', text: 'Save first: tests always run on a saved version.' });
-  out.append(h('div', { class: 'banner info', text: 'Synthetic data only. Never type a real client\'s details here.' }));
+  out.append(h('div', { class: 'banner info', text: S.session.syntheticOnly
+    ? 'Synthetic data only: text values are generated and fixed; option columns use Monday\'s labels.'
+    : 'Synthetic data only. Never type a real client\'s details here.' }));
   const load = h('button', { class: 'btn', text: 'Fill with fictional values', dataset: { testid: 'synthetic' },
     onclick: async () => { const r = await api(`/drafts/${W.id}/synthetic`, { method: 'POST', body: '{}' }); W.synthetic = r.body; renderDraft(W, true); } });
   out.append(h('div', { class: 'row' }, load));
@@ -474,7 +522,14 @@ function testTab(W) {
     const inputs = [];
     const rows = Object.entries(W.synthetic.data).map(([colId, v]) => {
       const c = S.schemaById.get(colId);
-      const inp = h('input', { value: v, dataset: { column: colId } });
+      // Synthetic-only environments: free text is generated (read-only); option columns pick from Monday's labels.
+      let inp;
+      if (S.session.syntheticOnly && c && c.labels && c.labels.length) {
+        const opts = [...new Set(['', v, ...c.labels])];
+        inp = h('select', { dataset: { column: colId } }, opts.map(o => h('option', { value: o, text: o || '(empty)', selected: o === v })));
+      } else {
+        inp = h('input', { value: v, readonly: !!S.session.syntheticOnly, dataset: { column: colId } });
+      }
       inputs.push(inp);
       return h('tr', {}, h('td', {}, c ? c.title : colId, h('div', { class: 'muted mono', text: colId })), h('td', {}, inp));
     });

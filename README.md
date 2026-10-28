@@ -7,6 +7,8 @@ bank end forms. Mappings are version-controlled and the service can run on Cloud
   `rsfa-end-forms-engine-00005-rih` (revision 3, 2026-10-28; docs/04).
 - A **local-only administration area** (template upload and validation, field inspector, mapping editor, synthetic test
   PDFs, versioned drafts, review status, *mock* mapping suggestions) runs with `ENGINE_ADMIN=local` (docs/13).
+- A **private administration service** (separate Cloud Run service behind Google IAP, verified identity and roles,
+  write-once private storage, synthetic documents only) is **prepared and tested locally, not deployed** (docs/14).
 - Two more forms are *ready for acceptance testing* locally (GHL Individual and Trust); ASB and ANZ Boarder are
   *blocked* pending RSFA decisions (docs/06).
 - The Make integration contract and an authenticating relay are implemented but not connected (docs/07, docs/10, docs/11).
@@ -181,6 +183,19 @@ ENGINE_AUTH=NONE ENGINE_ADMIN=local ADMIN_ACTOR="Your name" java -jar engine/tar
   `contracts/mapping-suggestions.v1.schema.json`).
 - Browser test: `node tests/ui/admin_smoke.js http://127.0.0.1:8080/ .local/output/admin-smoke`, with the example form
   in that directory and a fresh workspace.
+
+### Private administration service (prepared, not deployed)
+
+The same area as a permanent private URL: a separate Cloud Run service `rsfa-end-forms-admin` behind Identity-Aware
+Proxy (Google sign-in), with an `ADMIN_USERS` allowlist and roles checked by the server, and storage in a private,
+versioned bucket. The engine is not changed. Deployment (run by RSFA, plan by default), first-time IAP setup, IAM
+inventory, cost, rollback and checklists: [`docs/14-private-admin-deployment.md`](docs/14-private-admin-deployment.md).
+
+```bash
+bash tests/admin/run_private_env.sh up          # production-like: real admin image x2 + IAP stand-in + fake Cloud Storage
+node tests/admin/private_admin_e2e.js            # 42 browser checks; open http://127.0.0.1:8443/ to try it by hand
+bash tests/admin/run_private_env.sh down
+```
 
 ## Docker (local only, nothing deployed)
 

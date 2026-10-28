@@ -103,7 +103,8 @@ class AdminApiTest {
 
     static HttpResponse<String> send(String method, String path, byte[] body) throws Exception {
         HttpRequest.Builder b = HttpRequest.newBuilder(URI.create(base + path))
-                .method(method, body == null ? HttpRequest.BodyPublishers.noBody() : HttpRequest.BodyPublishers.ofByteArray(body));
+                .method(method, body == null ? HttpRequest.BodyPublishers.noBody() : HttpRequest.BodyPublishers.ofByteArray(body))
+                .header("X-RSFA-Admin", "1"); // the page's same-origin marker (cross-site write guard)
         return HTTP.send(b.build(), HttpResponse.BodyHandlers.ofString());
     }
 

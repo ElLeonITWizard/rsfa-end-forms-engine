@@ -18,6 +18,11 @@ button, select, input, textarea { font: inherit; }
 .nav a.active, .nav a:hover { background: rgba(255, 255, 255, .14); color: #fff; }
 .env { margin-left: auto; font-size: 12px; background: rgba(255, 255, 255, .12); padding: 6px 10px; border-radius: 99px; display: flex; align-items: center; gap: 6px; }
 .env .dot { width: 8px; height: 8px; border-radius: 50%; background: #ffd33d; }
+.env .dot.private { background: #4ade80; }
+.who { margin-left: auto; font-size: 12px; display: flex; align-items: center; gap: 6px; }
+.who + .env { margin-left: 8px; }
+.session-banner { background: #b42318; color: #fff; padding: 10px 24px; font-size: 14px; }
+.session-banner[hidden] { display: none; }
 .view { padding: 20px 24px 40px; max-width: 1500px; margin: 0 auto; }
 h1 { font-size: 20px; margin: 0 0 4px; }
 h2 { font-size: 15px; margin: 0 0 10px; }
@@ -110,3 +115,5 @@ label.field input, label.field select, label.field textarea { padding: 7px 9px; 
 .timeline li { padding: 6px 0 6px 14px; border-left: 2px solid var(--line); position: relative; font-size: 13px; }
 .timeline li::before { content: ""; position: absolute; left: -5px; top: 11px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
 @media (max-width: 1050px) { .workspace { grid-template-columns: 1fr; } .viewer { position: static; } }
+
+[hidden] { display: none !important; }

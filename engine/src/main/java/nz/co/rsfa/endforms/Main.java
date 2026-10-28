@@ -149,6 +149,9 @@ public final class Main {
         if ("relay".equals(role)) {
             return relay(env);
         }
+        if ("admin".equals(role)) {
+            return adminService(env);
+        }
         String host = env.getOrDefault("ENGINE_BIND", "127.0.0.1");
         int port = Integer.parseInt(env.getOrDefault("PORT", "8080"));
         String apiKey = env.get("ENGINE_API_KEY");
@@ -214,9 +217,26 @@ public final class Main {
     }
 
     /**
-     * {@code relay} or {@code engine} (default). Fails closed on a misspelt role, and refuses to run the engine on a
-     * Cloud Run service named like the relay: a forgotten ENGINE_ROLE there would expose the engine publicly.
+     * Private administration service behind IAP (D-041): its own Cloud Run service, service account and bucket; it never
+     * calls the engine. Configuration and fail-closed checks: {@link nz.co.rsfa.endforms.admin.AdminService}.
      */
+    /** Strong references: java.util.logging keeps loggers weakly, and a collected logger loses its level. */
+    private static final List<java.util.logging.Logger> QUIET = List.of(java.util.logging.Logger.getLogger("org.apache.pdfbox"),
+            java.util.logging.Logger.getLogger("org.apache.fontbox"));
+
+    private static int adminService(Map<String, String> env) throws Exception {
+        // PDFBox may log details of uploaded templates (object numbers, font names): keep only its severe messages.
+        QUIET.forEach(l -> l.setLevel(java.util.logging.Level.SEVERE));
+        nz.co.rsfa.endforms.admin.AdminServer server = new nz.co.rsfa.endforms.admin.AdminServer(
+                nz.co.rsfa.endforms.admin.AdminService.build(env, java.time.Clock.systemUTC()));
+        String host = env.getOrDefault("ENGINE_BIND", "127.0.0.1");
+        int bound = server.start(host, Integer.parseInt(env.getOrDefault("PORT", "8080")));
+        System.err.printf("end-forms admin service listening on %s:%d%n", host, bound);
+        Runtime.getRuntime().addShutdownHook(new Thread(server::stop));
+        Thread.currentThread().join();
+        return 0;
+    }
+
     /**
      * Local administration area (D-038): loopback only, never on Cloud Run. Env: ADMIN_WORKSPACE (default
      * .local/admin-workspace), ADMIN_SCHEMA (Monday column export, default the newest .local/reference/masterboard-columns-*.json),
@@ -246,15 +266,20 @@ public final class Main {
         }
     }
 
+    /**
+     * {@code engine} (default), {@code relay} or {@code admin}. Fails closed on a misspelt role, and refuses to run the
+     * engine on a Cloud Run service named like the relay or the admin service: a forgotten ENGINE_ROLE there would
+     * expose the engine through that service's access path.
+     */
     static String roleOf(Map<String, String> env) {
         String role = env.getOrDefault("ENGINE_ROLE", "engine").trim();
-        if (!role.equals("engine") && !role.equals("relay")) {
-            throw new IllegalStateException("ENGINE_ROLE must be 'engine' or 'relay'");
+        if (!role.equals("engine") && !role.equals("relay") && !role.equals("admin")) {
+            throw new IllegalStateException("ENGINE_ROLE must be 'engine', 'relay' or 'admin'");
         }
         String service = env.getOrDefault("K_SERVICE", "");
-        if (role.equals("engine") && service.contains("relay")) {
-            throw new IllegalStateException("Cloud Run service '" + service + "' looks like the relay but ENGINE_ROLE is not "
-                    + "'relay'; refusing to start the engine there");
+        if (role.equals("engine") && (service.contains("relay") || service.contains("admin"))) {
+            throw new IllegalStateException("Cloud Run service '" + service + "' looks like the relay or the admin service "
+                    + "but ENGINE_ROLE is 'engine'; refusing to start the engine there");
         }
         return role;
     }
@@ -297,7 +322,9 @@ public final class Main {
                   inspect --pdf FILE
                   fill --manifest FILE --data FILE --out FILE [--templates DIR[:DIR]] [--today YYYY-MM-DD]
                   render --pdf FILE --out-dir DIR [--dpi N]
-                  serve   (env: PORT, ENGINE_BIND, ENGINE_AUTH, ENGINE_API_KEY, ENGINE_HMAC_SECRET, ENGINE_MAPPINGS_DIR, ENGINE_TEMPLATE_DIRS)""");
+                  serve   (env: PORT, ENGINE_BIND, ENGINE_AUTH, ENGINE_API_KEY, ENGINE_HMAC_SECRET, ENGINE_MAPPINGS_DIR, ENGINE_TEMPLATE_DIRS;
+                           ENGINE_ROLE=relay | admin for the relay and the private admin service)
+                  example-form [--out FILE]""");
         return 1;
     }
 }

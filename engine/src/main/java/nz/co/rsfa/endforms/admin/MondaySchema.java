@@ -38,7 +38,12 @@ public final class MondaySchema {
 
     /** Reads {@code {"board":{"columns":[{id,title,type,settings:{labels:[{label}]}}]}}} (Monday connector export). */
     public static MondaySchema load(Path file) throws IOException {
-        JsonNode root = new ObjectMapper().readTree(file.toFile());
+        return parse(java.nio.file.Files.readAllBytes(file), file.getFileName().toString());
+    }
+
+    /** Same format from bytes (e.g. {@code config/monday-schema.json} in the admin bucket). */
+    public static MondaySchema parse(byte[] bytes, String source) throws IOException {
+        JsonNode root = new ObjectMapper().readTree(bytes);
         JsonNode cols = root.path("board").path("columns");
         if (!cols.isArray()) {
             cols = root.path("columns");
@@ -67,7 +72,7 @@ public final class MondaySchema {
             out.put(c.path("id").asText(), new Column(c.path("id").asText(), title, c.path("type").asText(),
                     List.copyOf(labels), titles.get(title) > 1));
         }
-        return new MondaySchema(file.getFileName().toString(), Map.copyOf(out));
+        return new MondaySchema(source, Map.copyOf(out));
     }
 
     public String source() {

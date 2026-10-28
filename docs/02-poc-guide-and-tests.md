@@ -128,21 +128,28 @@ Unresolved items (138) are listed per manifest in `unresolvedLegacyMappings`.
 
 | Suite | Command | Count |
 |---|---|---|
-| Importer (synthetic .mforge, incl. `--curation` and **corrections**) + deployment staging + coverage report + schema drift + contract examples vs JSON Schema | `python3 -m unittest discover -s tests/importer -v` | 14 + 7 + 1 + 1 + 2 |
+| Importer (synthetic .mforge, incl. `--curation` and **corrections**) + deployment staging + coverage report + schema drift + contract examples vs JSON Schema + **admin deployment scripts (stubbed gcloud) and admin staging** | `python3 -m unittest discover -s tests/importer -v` | 14 + 7 + 1 + 1 + 2 + 10 |
 | Engine unit (synthetic AcroForm): widget kinds, errors, normalisation, line items, overlays, fonts, approval validation, template presets, comb appearance, rendering, no value echo, closed options and preconditions, **`includes`/`absent` operators, `when` requirements** | `cd engine && mvn -B test` | 32 |
 | HTTP API (PLATFORM_IAM only with `K_SERVICE`, `X-Engine`/`X-Template`, demo page allowlist, CSP and auth, `/health` usable templates) | (same) | 9 |
 | Make contract `/v1/masterboard/documents` (several forms per record, determinism, all-or-nothing/per-document, bank routing + `notMigrated`, invalid contracts, HMAC) | (same) | 5 |
 | Relay (`ENGINE_ROLE=relay`): signed request → IAM stand-in → engine; rotation; tampered/stale/replayed/unsigned; rate limit; wrong identity; size; unsafe config | (same) | 4 |
 | Administration area (iteration 10): upload validation (non-PDF, filled values, scanned/flattened, encrypted, signed), inspector (kinds, options, geometry, labels, protected), compiler refusals, versioned conflict-safe audited drafts, approval gates, synthetic test generation (never signs or declares, deterministic), mock suggestions, local-only guard | (same) | 7 |
 | Relay hardening (iteration 8, 9): shared replay store across instances and under concurrency, fail-closed store, malformed JSON and signature headers, future/stale timestamps, timeouts, engine/identity unavailable, 422/partial pass-through, logs without data, Cloud Run store guard, shared test vector | (same) | 13 |
+| Private admin service (iteration 11): IAP JWT verification, allowlist roles, cross-site guard, two instances on one fake bucket (conflicts, gap-free log, shared results), synthetic-only policy, storage outage, logs, unsafe configurations | (same) | 9 |
 | Demo page forms = manifest keys; samples = fixtures. **Skipped without `mappings/`** | (same) | 1 |
 | Legacy templates: BNZ Boarder (+ macrons), BNZ Handover, the DDMMYYYY gap, GHL Trust (2 fixtures, **in/out separation, contradictory transfers**), ASB Boarder, ANZ Boarder, **GHL Individual (reconciled labels, section 5, refusals), boarder amount guards**, no unruled ticks, manifest resolution. **Skipped without `.local` templates**. Iteration 8: ANZ inclusive "Yes" refused, GHL missing names refused, GHL Trust unknown/ambiguous selections | (same) | 17 |
 | Demo page in a real browser (needs a running server and the machine's Playwright) | `node tests/ui/demo_smoke.js <base-url> <out-dir> <forms>` | 27 checks with 5 forms; 21 with 1 |
 | Administration area in a real browser (fictional Example Bank form; library, refused/accepted upload, inspector, column mapping, signature/declaration guards, MOCK suggestions, save, test PDF + comparison, approval gate, audit, no external requests) | `node tests/ui/admin_smoke.js <base-url> <out-dir>` | 27 checks |
+| Private admin service, production-like (real image ×2 + IAP stand-in + fake Cloud Storage; needs Docker) | `bash tests/admin/run_private_env.sh up && node tests/admin/private_admin_e2e.js` | 42 checks |
 | Make material (Node): proposed `8731317` module-8 alias against the production code in `.local` (skipped without it); Code-module signer | `node tests/make/module8_banks_alias_test.js`; `node tests/make/code_module_sign_test.js` | 12; 44 |
 | Make test payloads → signer → relay → IAM stand-in → engine (needs the local chain running) | `RELAY_HMAC_SECRET=… node tests/make/run_payloads_against_relay.js <relay-url>` | 12 |
 
-Last full run (2026-10-28, iteration 10):
+Last full run (2026-10-28, iteration 11):
+- Host: **132 passed** (35 Python + 97 Java, none skipped); Node: 12 + 44 checks; browser: demo 27 checks (5 forms),
+  local admin 27, private admin end-to-end 42 (real image).
+- BNZ Boarder regression: SHA-256 still `2ae7bfac…` (CLI).
+
+Iteration 10 run (2026-10-28):
 - Host: **113 passed** (25 Python + 88 Java, none skipped); Node: 12 + 44 checks; demo browser test 27 checks (5 forms);
   admin browser test 27 checks.
 - BNZ Boarder regression: SHA-256 still `2ae7bfac…` (CLI). `/admin/` returns 404 without `ENGINE_ADMIN=local`.

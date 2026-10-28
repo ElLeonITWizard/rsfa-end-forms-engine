@@ -18,6 +18,10 @@ SharePoint filing are **out of scope**.
 - **Demo page (`engine/src/main/resources/ui/`):** static HTML/CSS/vanilla JS served by the engine at `/`. It only
   collects values and calls `POST /generate`. It holds no mapping logic, no CDN, no data, and has the same
   authentication as the API (D-020). Not a product: no template upload, mapping editor, user management or multi-lender scope.
+- **Admin area (`engine/.../admin`, `ui/admin`):** prepares bank-form mappings with synthetic data. It runs locally
+  (`ENGINE_ADMIN=local`, loopback) or as the separate private service `rsfa-end-forms-admin` (`ENGINE_ROLE=admin`,
+  behind IAP, D-041). It never calls or publishes to the engine. Production manifests still go through review, the
+  allowlist and an RSFA deployment (docs/04).
 - **Importer (`tools/import_mforge.py`):** a one-off Python CLI. It converts the legacy `.mforge`
   export into manifests and inventories, and extracts embedded PDFs into `.local/`.
 - **Make** (scenario `8731317`) stays the orchestrator. Future cutover means Make calls
@@ -41,6 +45,8 @@ docs/10-relay-security-and-infrastructure.md   relay security architecture, dura
 docs/11-make-test-scenario.md         isolated Make test scenario, module by module (designed, not created)
 docs/12-acceptance-checklists.md      business acceptance checklists for Rod (GHL Individual / Trust)
 docs/13-admin-platform-architecture.md local admin MVP, AI-suggestion contract (mock), production storage design, IAP access plan
+docs/14-private-admin-deployment.md   private admin service (Cloud Run + IAP): architecture, verified/unverified GCP facts,
+                                      IAM inventory, first-time IAP setup, deploy, rollback, checklists, cost (NOT deployed)
 docs/generated/template-coverage.md   GENERATED per-form coverage report (tools/coverage_report.py)
 docs/generated/monday-schema-drift.md GENERATED ID-by-ID schema comparison (tools/schema_drift.py)
 docs/decisions.md                     decision log (ADR-lite)
@@ -50,6 +56,7 @@ tools/coverage_report.py  per-form coverage report from manifests (+ live Monday
 tools/schema_drift.py     Monday schema drift report (column IDs, titles, types, options vs key contract and manifests)
 tools/reimport_curated.sh re-imports the four curated forms (optionally a .local preview of pending decisions)
 tools/make_like_client.py signs /v1 requests like Make (HMAC) for local relay tests; prints a summary only
+tools/stage_admin.py      stages the admin build context (no PDF) and the SANITISED Monday schema (D-041)
 curation/                 reviewed per-form validation (closedOptions, requires), corrections (evidence | decision, D-028)
                           and review status, merged by the importer
 contracts/                Make contract JSON Schema (masterboard.v1) + fictional example requests + HMAC test vector;
@@ -57,16 +64,19 @@ contracts/                Make contract JSON Schema (masterboard.v1) + fictional
 make/                     Make material prepared here, never applied automatically: proposed 8731317 module-8 snippet,
                           test-scenario Code module (build + HMAC sign) and synthetic payloads T1–T12
 deploy/                   poc-allowlist.json (approved templates), deployment-state.json (what RSFA deployed), cloudbuild.yaml, deploy_poc.sh (end-to-end deployment),
-                          make_bundle.sh (Cloud Shell bundle), verify_pdf.py (post-deploy PDF checks), bucket lifecycle
+                          make_bundle.sh (Cloud Shell bundle), verify_pdf.py (post-deploy PDF checks), bucket lifecycle;
+                          admin/: private admin service Dockerfile, cloudbuild.yaml, deploy_admin.sh + rollback_admin.sh
+                          (plan by default; never write to the engine), make_admin_bundle.sh, bucket lifecycle
 engine/                   Maven project: library, CLI (inspect | fill | render | serve | example-form), HTTP API (/health,
                           /generate, /v1/masterboard/documents), relay (ENGINE_ROLE=relay, D-027), demo page, routing table
-                          (resources/routing), local admin area (package admin, resources/ui/admin; ENGINE_ADMIN=local,
-                          D-038), Dockerfile
+                          (resources/routing), admin area (package admin, resources/ui/admin): local with
+                          ENGINE_ADMIN=local (D-038), private service with ENGINE_ROLE=admin behind IAP (D-041), Dockerfile
 mappings/<lender>/<TEMPLATE_ID>@<version>.json   imported manifests (no client data; reviewed)
 tests/fixtures/           synthetic requests (fictional "Jane Example" data only)
 tests/importer/           importer + staging unit tests (synthetic .mforge)
 tests/ui/                 browser smoke tests of the demo page and the admin area (Playwright from the machine) + PDF checker
 tests/make/               Node tests of the make/ material (+ a runner for the local relay chain)
+tests/admin/              production-like private admin environment: IAP stand-in, fake Cloud Storage, runner, browser e2e
 .local/                   GIT-IGNORED: reference exports, lender PDFs, generated output
 ```
 
@@ -89,6 +99,9 @@ node tests/ui/demo_smoke.js http://127.0.0.1:8080/ .local/output/ui-smoke 5     
 java -jar engine/target/end-forms-engine.jar example-form --out .local/output/admin-smoke/example-bank-form.pdf   # fictional form
 ENGINE_AUTH=NONE ENGINE_ADMIN=local java -jar engine/target/end-forms-engine.jar serve   # + admin area at /admin/ (local only, D-038)
 node tests/ui/admin_smoke.js http://127.0.0.1:8080/ .local/output/admin-smoke       # admin browser test (fresh ADMIN_WORKSPACE)
+bash tests/admin/run_private_env.sh up && node tests/admin/private_admin_e2e.js      # private admin service, production-like (Docker)
+python3 tools/stage_admin.py --schema .local/reference/masterboard-columns-<date>.json --out .local/deploy-admin
+bash deploy/admin/make_admin_bundle.sh                                              # admin Cloud Shell bundle (clean commit; docs/14)
 bash tools/reimport_curated.sh ".local/reference/<file>.mforge" <YYYY-MM-DD> [--preview-pending .local/preview]
 python3 tools/schema_drift.py --help                                               # schema drift report (docs/08)
 node tests/make/code_module_sign_test.js && node tests/make/module8_banks_alias_test.js   # Make material (docs/09, docs/11)
@@ -122,7 +135,32 @@ extracted to `.local/generated/templates/`. A green build without them proves on
 8. Nothing is deployed or changed in Google Cloud without RSFA's explicit approval of the exact commands (docs/04).
    Never build from the repo root for deployment: only from the staged context.
 
-## Current status (2026-10-28, iteration 10 — platform)
+## Current status (2026-10-28, iteration 11 — private admin deployment preparation)
+
+- **Private admin service: prepared and tested locally, NOT deployed** (docs/14, D-041, D-042).
+  - Separate Cloud Run service `rsfa-end-forms-admin` (`ENGINE_ROLE=admin`) behind IAP on the default `run.app` URL.
+    - Own service account with object create + read on one private, versioned bucket only.
+    - No access to the engine; the engine (`00005-rih`, `PLATFORM_IAM`) and its IAM are unchanged.
+  - Identity: verified IAP JWT + `ADMIN_USERS` allowlist with roles (viewer / author / approver / admin), checked
+    server-side.
+    - Cross-site write guard.
+    - Logs carry a hashed user only.
+  - Storage is write-once: draft event logs, create-if-absent across instances (409 on stale saves).
+    - Results are shared across instances.
+    - The local admin uses the same store.
+  - Synthetic documents only (upload confirmation; fictional or label-only test values); no publication; mock
+    suggestions only.
+  - Deployment: `deploy/admin/deploy_admin.sh` (plan by default; engine fingerprinted before and after).
+    - Projects without a Google organization need a one-time console step to enable IAP.
+    - Rollback script and validation checklist in docs/14.
+  - IAP facts come from the local gcloud CLI and from search summaries: the official docs host is blocked here.
+    **Verify them at deployment.**
+  - Tests: 97 Java + 35 Python; production-like environment (real image ×2 + IAP stand-in + fake GCS): 42 browser
+    checks. BNZ Boarder bytes unchanged.
+  - **Needs from RSFA:** approval of the plan output; the `ADMIN_USERS` emails and roles (Google accounts); an Owner to
+    run it and the console IAP step; the bucket name, retention and separate-approver defaults.
+
+## Status of iteration 10 — platform
 
 - **Production: revision 3 `rsfa-end-forms-engine-00005-rih` deployed by RSFA (2026-10-28, all checks ok).**
   - Image `sha256:e0d8ed0e…`, previous `00002-nan`. BNZ Boarder only, IAM required, `/v1` present.

@@ -1,0 +1,13 @@
+# Cloud Build config for the private admin image (D-041). Submit ONLY the staged admin context produced by
+# tools/stage_admin.py (docs/14); never the repository root. Unit tests run inside the image build.
+steps:
+  - id: build-admin-image
+    name: gcr.io/cloud-builders/docker
+    env:
+      - DOCKER_BUILDKIT=1
+    args: ["build", "--target", "admin", "-f", "deploy/admin/Dockerfile", "-t", "${_IMAGE}", "."]
+images:
+  - "${_IMAGE}"
+options:
+  logging: CLOUD_LOGGING_ONLY   # required with a user-specified build service account
+timeout: 2400s

@@ -1,7 +1,12 @@
 # 13 — Administration platform: local MVP, AI suggestions, production design and private access
 
-Status 2026-10-28 (iteration 10). **Part A runs locally only. Parts C and D are designs: no Google Cloud resource,
-endpoint, AI service or identity provider has been created or changed.** Production stays revision
+Status 2026-10-28 (iteration 10; updated in iteration 11). **Part A runs locally only.**
+- Parts C and D are designs; no Google Cloud resource, endpoint, AI service or identity provider has been created or
+  changed.
+- **Iteration 11 prepared Part D and the storage half of Part C** as a deployable private service: IAP, verified
+  identity, roles, write-once GCS storage. Deployment steps, inventory, cost and checklists are in
+  [docs/14](14-private-admin-deployment.md).
+- Where docs/14 differs from §3–§4 below, docs/14 is current. Production stays revision
 `rsfa-end-forms-engine-00005-rih` (BNZ Boarder only, IAM required; docs/04).
 
 ## 1. What exists now (local MVP, D-038)

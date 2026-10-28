@@ -603,3 +603,52 @@ Lightweight ADR log, newest last. Status: `proposed` | `accepted` | `superseded`
   - live Monday schema reads.
 - **To verify before any change:** the IAP-on-Cloud-Run documentation and prices. The docs host was not reachable
   from this environment; facts come from search summaries.
+
+### D-041 Private admin service: separate Cloud Run service behind IAP, verified identity, write-once GCS storage
+- **Date:** 2026-10-28 · **Status:** accepted for preparation; deployment awaits RSFA's approval (docs/14)
+- **Decision:**
+  - **A separate service** `rsfa-end-forms-admin` (`ENGINE_ROLE=admin`, same jar, own image `deploy/admin/Dockerfile`):
+    - own service account: object create + read on one bucket, nothing else;
+    - IAP directly on Cloud Run, on the default `run.app` URL (no load balancer, no custom domain);
+    - invoker granted only to the IAP service agent.
+    - The engine and its IAM stay unchanged: IAP would replace the relay's identity.
+  - **Identity in the application:**
+    - every request needs a valid IAP JWT (`IapVerifier`: ES256, issuer, this service's audience, expiry) and an
+      entry in `ADMIN_USERS`;
+    - roles are viewer, author, approver and admin, checked server-side;
+    - the unsigned email header is never trusted;
+    - writes need the page's `X-RSFA-Admin` marker (CSRF guard; it also applies locally).
+  - **Storage is write-once:**
+    - each draft is an event log (one object per event, created with `ifGenerationMatch=0`); a stale base version
+      gives 409 across instances;
+    - the log is the audit trail;
+    - test results are in the bucket, so every instance serves them;
+    - the local layout uses the same store (`ObjectStore.Local`, hard-link create-once). Iteration-10 local
+      workspaces are not read (development data under `.local/`).
+  - **Fail-closed configuration:** service name, emulation overrides, engine secrets, users, audience, bucket and schema.
+  - **Logs:** route, status, code and hashed user only. The service has no secrets.
+  - **Deployment tooling:** `tools/stage_admin.py` (no PDF; sanitised Monday schema), `deploy/admin/make_admin_bundle.sh`,
+    `deploy_admin.sh` and `rollback_admin.sh`.
+    - Both scripts are a plan by default.
+    - They fingerprint the engine before and after and fail on any difference.
+    - Neither ever writes to the engine.
+- **Not verified here** (the docs host is blocked): the IAP facts marked "search" in docs/14 §2. Verify them at
+  deployment.
+- **Tests:**
+  - `AdminCloudTest` (9);
+  - `test_admin_deploy.py` (10, stubbed gcloud);
+  - production-like environment (real image ×2 + IAP stand-in + fake GCS): `private_admin_e2e.js` 42 checks.
+
+### D-042 First private release: synthetic documents only, no publication, mock suggestions only
+- **Date:** 2026-10-28 · **Status:** accepted
+- **Decision:**
+  - The admin service always runs with the synthetic-only policy:
+    - uploads need the "no client data" confirmation (and remain blank-only, D-038);
+    - test values must be generated fictional values, Monday labels, or labels the draft tests (`NON_SYNTHETIC_VALUE`
+      otherwise).
+  - The approval workflow is unchanged and stops at a development approval: there is no publication path.
+  - `ADMIN_SUGGESTIONS` accepts only `mock`.
+  - Optional `ADMIN_SEPARATE_APPROVER=true` requires a different approver from the person who saved the version.
+    Default false; RSFA decides.
+- **Revisit when:** RSFA decides on real templates in this environment, a publication step (PR-based, docs/13),
+  Entra ID sign-in, or an AI provider.
