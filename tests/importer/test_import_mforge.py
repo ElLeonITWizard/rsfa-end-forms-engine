@@ -212,6 +212,58 @@ class ImporterTest(unittest.TestCase):
         self.assertNotEqual(self.manifest_with(self.curation(fields=[]))[0].returncode, 0, "only validation/review merge")
         self.assertNotEqual(self.manifest_with(self.curation(validation={"requires": [{"id": "x"}]}))[0].returncode, 0)
 
+    def correction_curation(self, decision=None, basis="decision"):
+        return self.curation(validation={}, corrections=[
+            {"id": "C-1", "type": "replace-source", "basis": basis, "reason": "r", "evidence": "e",
+             "target": {"pdfField": "Name", "option": None, "source": {"key": "Applicant 1 Full Name"}},
+             "source": {"key": "Applicant 1/Legal Name"}, **({"decision": decision} if decision else {})}])
+
+    def test_decision_corrections_stay_pending_without_a_recorded_decision(self):
+        r, m = self.manifest_with(self.correction_curation())
+        self.assertEqual(r.returncode, 0, r.stderr)
+        name = [f for f in m["fields"] if f["pdfField"] == "Name"][0]
+        self.assertEqual(name["source"], {"key": "Applicant 1 Full Name"}, "not applied")
+        self.assertEqual(m["corrections"], [{"id": "C-1", "type": "replace-source", "basis": "decision",
+                                             "status": "pending", "pdfField": "Name"}])
+
+    def test_evidence_and_recorded_decision_corrections_are_applied_with_normalised_keys(self):
+        for cur in (self.correction_curation(basis="evidence"),
+                    self.correction_curation({"approvedBy": "Test Approver (fictional)", "approvedOn": "2026-01-01",
+                                              "reference": "TEST-1"})):
+            r, m = self.manifest_with(cur)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            name = [f for f in m["fields"] if f["pdfField"] == "Name"][0]
+            self.assertEqual(name["source"], {"key": "Applicant 1_Legal Name"}, "keys normalised like imported keys")
+            self.assertEqual(name["correction"], "C-1")
+            self.assertEqual(m["corrections"][0]["status"], "applied")
+
+    def test_future_or_incomplete_decisions_and_stale_targets_are_refused(self):
+        r, m = self.manifest_with(self.correction_curation({"approvedBy": "x", "approvedOn": "2999-01-01", "reference": "y"}))
+        self.assertEqual(m["corrections"][0]["status"], "pending", "a future-dated decision is not a decision")
+        stale = self.curation(validation={}, corrections=[
+            {"id": "C-2", "type": "replace-source", "basis": "evidence", "reason": "r", "evidence": "e",
+             "target": {"pdfField": "Name", "option": None, "source": {"key": "Something else"}}, "source": {"key": "X"}}])
+        self.assertNotEqual(self.manifest_with(stale)[0].returncode, 0)
+        constant = self.curation(validation={}, corrections=[
+            {"id": "C-3", "type": "add-rule", "basis": "evidence", "reason": "r", "evidence": "e",
+             "rule": {"pdfField": "Box", "kind": "checkbox", "source": {"constant": True}}}])
+        self.assertNotEqual(self.manifest_with(constant)[0].returncode, 0, "constant ticks need D-016 approvals")
+
+    def test_preview_applies_pending_corrections_only_outside_mappings(self):
+        cur = self.correction_curation()
+        out = self.dir / "preview.json"
+        r = self.run_cli("manifest", self.mforge, "--pdf", "Test Form.pdf", "--template-id", "T", "--template-version", "1",
+                         "--curation", cur, "--preview-pending", "--out", out)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        m = json.loads(out.read_text())
+        self.assertIn("NOT APPROVED", m["preview"])
+        self.assertEqual(m["corrections"][0]["status"], "PREVIEW-NOT-APPROVED")
+        bad = REPO / "mappings" / "zz-test-preview.json"
+        r = self.run_cli("manifest", self.mforge, "--pdf", "Test Form.pdf", "--template-id", "T", "--template-version", "1",
+                         "--curation", cur, "--preview-pending", "--out", bad)
+        self.assertNotEqual(r.returncode, 0)
+        self.assertFalse(bad.exists(), "a preview manifest must never be written into mappings/")
+
     def test_strict_mode_fails_on_import_errors(self):
         r = self.run_cli("manifest", self.mforge, "--pdf", "Test Form.pdf", "--template-id", "T",
                          "--template-version", "1", "--strict", "--out", self.dir / "s.json")

@@ -49,15 +49,259 @@
         "multiSelect": false,
         "onUnmapped": "error"
       }
+    ],
+    "requires": [
+      {
+        "id": "GHL-TRUST-IN-NEVER-AVG",
+        "when": {
+          "key": "International Money Transfers – In frequency",
+          "operator": "equals",
+          "value": "Never"
+        },
+        "require": {
+          "key": "Int Transfers IN - Average Value per Payment (GHL Trust)",
+          "operator": "absent"
+        },
+        "reason": "transfers IN are 'Never' but an IN average value is given (contradictory)"
+      },
+      {
+        "id": "GHL-TRUST-IN-NEVER-DETAILS",
+        "when": {
+          "key": "International Money Transfers – In frequency",
+          "operator": "equals",
+          "value": "Never"
+        },
+        "require": {
+          "key": "International Money Transfers – In activity details (including countries)",
+          "operator": "absent"
+        },
+        "reason": "transfers IN are 'Never' but IN activity details are given (contradictory)"
+      },
+      {
+        "id": "GHL-TRUST-OUT-NEVER-AVG",
+        "when": {
+          "key": "International Money Transfers – Out frequency",
+          "operator": "equals",
+          "value": "Never"
+        },
+        "require": {
+          "key": "Int Transfers OUT - Average Value per Payment (GHL Trust)",
+          "operator": "absent"
+        },
+        "reason": "transfers OUT are 'Never' but an OUT average value is given (contradictory)"
+      },
+      {
+        "id": "GHL-TRUST-OUT-NEVER-DETAILS",
+        "when": {
+          "key": "International Money Transfers – Out frequency",
+          "operator": "equals",
+          "value": "Never"
+        },
+        "require": {
+          "key": "International Money Transfers – Out activity details (including countries)",
+          "operator": "absent"
+        },
+        "reason": "transfers OUT are 'Never' but OUT activity details are given (contradictory)"
+      },
+      {
+        "id": "GHL-TRUST-CASH-NEVER-DETAILS",
+        "when": {
+          "key": "Cash deposits frequency (GHL Trust)",
+          "operator": "equals",
+          "value": "Never"
+        },
+        "require": {
+          "key": "Cash deposits activity details",
+          "operator": "absent"
+        },
+        "reason": "cash deposits are 'Never' but cash activity details are given (contradictory)"
+      },
+      {
+        "id": "GHL-TRUST-THIRD-PARTY-NO",
+        "when": {
+          "key": "Receive transactions/funds from third parties?",
+          "operator": "equals",
+          "value": "No"
+        },
+        "require": {
+          "key": "If yes, purpose",
+          "operator": "absent"
+        },
+        "reason": "third-party funds are 'No' but a purpose is given (contradictory)"
+      }
     ]
   },
   "review": {
-    "status": "candidate",
-    "meaning": "synthetic tests pass and every rule was checked against the printed label and the live Monday labels; not approved by RSFA, not compared with a MacroForge output",
+    "status": "ready-for-acceptance-testing",
+    "meaning": "the in/out details defect is corrected from dedicated Monday columns; every rule checked against the printed form and the live Monday schema; contradictory inputs are refused. Not approved by RSFA; not compared with a MacroForge output.",
     "openQuestions": [
-      "BLOCKING for RSFA review: the legacy configuration writes the same key, 'International payments activity details (including countries involved)', into BOTH the 3d (transfers IN) and 3e (transfers OUT) detail boxes, so details appear under OUT even when OUT is 'Never'; the 3c cash-deposit details box and average value are not mapped. The engine reproduces the legacy rules; RSFA must decide the intended keys before this form is used.",
-      "Live label '$1,000-$10,000' (international transfers in and out, average value) has no rule; the legacy rule tests '$1,000-$5,000' for the box printed '$1,000-$10,000'. Refused (UNMAPPED_OPTION) until RSFA decides.",
-      "'Sources of credits' and 'GHL Why have you come to Sovereign Home Loans?' are multi-select on Monday; only one label can be represented by the legacy equals rules (two are refused)."
+      "3c 'Average value per deposit' (Check Box100: <$1,000 / $1,000-$10,000 / >$10,000) has no matching Monday column (the ASB cash column uses different bands): left blank for the adviser, as in the legacy configuration.",
+      "'GHL Why have you come to Sovereign Home Loans?' is multi-select on Monday but its two boxes are one checkbox field: selecting both is refused.",
+      "The board also has unused near-duplicates 'International Money Transfers – In/Out average value per payment' (no labels configured) and 'International payments activity details (including countries)'; the engine uses the GHL Trust columns and the dedicated In/Out detail columns. Confirm these are the columns advisers fill.",
+      "Expected differences from MacroForge in a parallel run: 3d/3e details (MacroForge copies one text into both), 3c details, the $1,000-$10,000 band and multi-source ticks."
     ]
-  }
+  },
+  "corrections": [
+    {
+      "id": "GHL-TRUST-3D-IN-DETAILS",
+      "type": "replace-source",
+      "basis": "evidence",
+      "target": {
+        "pdfField": "Please provide details of the activity including countries involved",
+        "option": null,
+        "source": {
+          "key": "International payments activity details (including countries involved)"
+        }
+      },
+      "source": {
+        "key": "International Money Transfers – In activity details (including countries)"
+      },
+      "reason": "Legacy defect: the same generic key filled both the 3d (in) and 3e (out) detail boxes.",
+      "evidence": "This widget is the 3d box (page 2, y 609-667, under '3d. International Money Transfers – In'); dedicated column text_mkzvrtbd 'International Money Transfers – In activity details (including countries)' is in the Make contract and live Monday schema of board 5026186805 (read-only, 2026-10-27)."
+    },
+    {
+      "id": "GHL-TRUST-3E-OUT-DETAILS",
+      "type": "replace-source",
+      "basis": "evidence",
+      "target": {
+        "pdfField": "Please provide details of the activity including countries involved_2",
+        "option": null,
+        "source": {
+          "key": "International payments activity details (including countries involved)"
+        }
+      },
+      "source": {
+        "key": "International Money Transfers – Out activity details (including countries)"
+      },
+      "reason": "Legacy defect: inbound details were copied into the outbound box.",
+      "evidence": "This widget is the 3e box (page 2, y 424-481, under '3e. International Money Transfers – Out'); dedicated column text_mkzv7p7p is in the Make contract and live Monday schema of board 5026186805 (read-only, 2026-10-27)."
+    },
+    {
+      "id": "GHL-TRUST-3C-DETAILS",
+      "type": "add-rule",
+      "basis": "evidence",
+      "rule": {
+        "pdfField": "Please provide details of the activity",
+        "kind": "text",
+        "source": {
+          "key": "Cash deposits activity details"
+        }
+      },
+      "reason": "The 3c cash-deposit details box is not mapped in the legacy configuration.",
+      "evidence": "This widget is the only box under '3c. Cash Deposits' (page 1, y 191-249); column text_mkzvk0r9 'Cash deposits activity details' is in the Make contract and live Monday schema of board 5026186805 (read-only, 2026-10-27) (the same column feeds the GHL Individual cash-details box)."
+    },
+    {
+      "id": "GHL-TRUST-LABEL-3D-AVG",
+      "type": "add-when-value",
+      "basis": "evidence",
+      "target": {
+        "pdfField": "Check Box102",
+        "option": "2",
+        "source": {
+          "when": {
+            "key": "Int Transfers IN - Average Value per Payment (GHL Trust)",
+            "operator": "equals",
+            "value": "$1,000-$5,000"
+          }
+        }
+      },
+      "value": "$1,000-$10,000",
+      "reason": "Legacy rule tests '$1,000-$5,000', which is neither the printed band nor a live label, so the box is never ticked.",
+      "evidence": "Box 2 is printed '$1,000-$10,000'; the live labels are 'Less than $1,000', '$1,000-$10,000', 'More than $10,000' (live Monday schema of board 5026186805 (read-only, 2026-10-27)); boxes 1 and 3 match exactly."
+    },
+    {
+      "id": "GHL-TRUST-LABEL-3E-AVG",
+      "type": "add-when-value",
+      "basis": "evidence",
+      "target": {
+        "pdfField": "Check Box104",
+        "option": "2",
+        "source": {
+          "when": {
+            "key": "Int Transfers OUT - Average Value per Payment (GHL Trust)",
+            "operator": "equals",
+            "value": "$1,000-$5,000"
+          }
+        }
+      },
+      "value": "$1,000-$10,000",
+      "reason": "As GHL-TRUST-LABEL-3D-AVG, for 3e.",
+      "evidence": "As GHL-TRUST-LABEL-3D-AVG."
+    },
+    {
+      "id": "GHL-TRUST-3B-MULTI-96",
+      "type": "replace-source",
+      "basis": "evidence",
+      "target": {
+        "pdfField": "Check Box96",
+        "option": null,
+        "source": {
+          "when": {
+            "key": "Sources of credits",
+            "operator": "equals",
+            "value": "Dividends from investments"
+          }
+        }
+      },
+      "source": {
+        "when": {
+          "key": "Sources of credits",
+          "operator": "includes",
+          "value": "Dividends from investments"
+        }
+      },
+      "reason": "'Sources of credits' is multi-select on Monday; with 'equals' two selections tick nothing.",
+      "evidence": "Column 'Sources of credits' allows several labels (live Monday schema of board 5026186805 (read-only, 2026-10-27)); each source has its own independent checkbox field on the PDF (Check Box96/97/98), so each selected label can be ticked."
+    },
+    {
+      "id": "GHL-TRUST-3B-MULTI-97",
+      "type": "replace-source",
+      "basis": "evidence",
+      "target": {
+        "pdfField": "Check Box97",
+        "option": null,
+        "source": {
+          "when": {
+            "key": "Sources of credits",
+            "operator": "equals",
+            "value": "Donations"
+          }
+        }
+      },
+      "source": {
+        "when": {
+          "key": "Sources of credits",
+          "operator": "includes",
+          "value": "Donations"
+        }
+      },
+      "reason": "'Sources of credits' is multi-select on Monday; with 'equals' two selections tick nothing.",
+      "evidence": "Column 'Sources of credits' allows several labels (live Monday schema of board 5026186805 (read-only, 2026-10-27)); each source has its own independent checkbox field on the PDF (Check Box96/97/98), so each selected label can be ticked."
+    },
+    {
+      "id": "GHL-TRUST-3B-MULTI-98",
+      "type": "replace-source",
+      "basis": "evidence",
+      "target": {
+        "pdfField": "Check Box98",
+        "option": null,
+        "source": {
+          "when": {
+            "key": "Sources of credits",
+            "operator": "equals",
+            "value": "Other (please specify)"
+          }
+        }
+      },
+      "source": {
+        "when": {
+          "key": "Sources of credits",
+          "operator": "includes",
+          "value": "Other (please specify)"
+        }
+      },
+      "reason": "'Sources of credits' is multi-select on Monday; with 'equals' two selections tick nothing.",
+      "evidence": "Column 'Sources of credits' allows several labels (live Monday schema of board 5026186805 (read-only, 2026-10-27)); each source has its own independent checkbox field on the PDF (Check Box96/97/98), so each selected label can be ticked."
+    }
+  ]
 }

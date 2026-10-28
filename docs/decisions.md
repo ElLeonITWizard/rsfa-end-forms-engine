@@ -351,7 +351,7 @@ Lightweight ADR log, newest last. Status: `proposed` | `accepted` | `superseded`
 - **Validation:** MasterboardApiTest (5), local calls with the real templates and the `contracts/examples` payloads.
 
 ### D-026 Make → Cloud Run authentication: keep IAM; recommend an authenticated intermediary; optional HMAC
-- **Date:** 2026-10-27 · **Status:** proposed (needs RSFA decision; nothing created)
+- **Date:** 2026-10-27 · **Status:** proposed; **recommendation superseded by D-027** (relay instead of API Gateway)
 - **Context:**
   - Cloud Run IAM needs a Google-signed ID token.
   - Make cannot mint one without a service-account key, and keys are forbidden.
@@ -369,3 +369,57 @@ Lightweight ADR log, newest last. Status: `proposed` | `accepted` | `superseded`
   - API Gateway payload limits.
 
   These must be checked before Phase 1 (docs/07).
+
+### D-027 Make → engine authentication: signed requests through a Cloud Run relay (Option B)
+- **Date:** 2026-10-28 · **Status:** proposed (needs RSFA decision; nothing created in GCP or Make)
+- **Context:**
+  - D-026 recommended API Gateway. A closer comparison (docs/07 section 3) shows API Gateway authenticates Make only by
+    possession of a static API key: no integrity, no freshness, no replay protection.
+  - The fewest new dependencies is a stated requirement.
+- **Decision:**
+  - Recommend **Option B**: a relay in the same image (`ENGINE_ROLE=relay`), the only public endpoint.
+  - Make signs each request: `X-RSFA-Timestamp`, `X-RSFA-Signature: v1=<HMAC-SHA256(secret, ts + "." + body)>`.
+  - Skew ±300 s; per-instance replay cache (`409`); 1 MiB request limit; per-instance rate limit (`429`); two secrets
+    accepted during rotation.
+  - The relay calls the IAM-private engine with an ID token from the metadata server (no key file). The engine stays
+    `--no-allow-unauthenticated`.
+  - The engine's own optional HMAC (D-026) stays available but is not needed with the relay.
+- **Accepted risks:** a public `allUsers` endpoint on the relay only; a replay inside 5 min on another instance
+  (max 2 instances, idempotent result).
+- **Unverified:** Make's native HMAC (`sha256` with a key; test vector in docs/07); where Make hides the secret best.
+  Fallbacks: Make's Code module, or a static bearer key (same strength as Option A).
+- **Validation:** `RelayServerTest` (4); a local chain with the real jar, an IAM stand-in and `tools/make_like_client.py`.
+
+### D-028 Curation corrections: evidence applied, decisions pending until recorded
+- **Date:** 2026-10-28 · **Status:** accepted (technical policy)
+- **Context:** the legacy rules contain defects (GHL Trust in/out details, renamed Monday labels) and business choices
+  (ASB/ANZ "property" address, pre-filled signature dates). CLAUDE.md forbids silently changing a business rule.
+- **Decision:**
+  - `curation/*.json` holds `corrections` of type `replace-source`, `add-when-value`, `add-rule`, `remove-rule`.
+  - Basis `evidence` → applied by the importer, listed in the manifest's `corrections` status.
+  - Basis `decision` → applied only with a valid `decision{approvedBy, approvedOn ≤ today, reference}`, never written
+    on RSFA's behalf. `--preview-pending` writes a preview manifest under `.local/` only.
+  - A correction must match the imported rule exactly; it cannot add a constant tick or target a signature.
+- **Validation:** importer tests (+4); `tools/reimport_curated.sh` reproduces the four curated manifests.
+
+### D-029 Form readiness for iteration 7
+- **Date:** 2026-10-28 · **Status:** proposed (RSFA acceptance testing pending)
+- **Decision:**
+  - GHL Individual and GHL Trust → `ready-for-acceptance-testing` (routing status `acceptance`; routed only with
+    `includeCandidates`). Not in the Cloud Run allowlist.
+  - ASB Boarder and ANZ Boarder → **blocked** (routing status `blocked`, never routed): RSFA-DECISION-1 (which address
+    is "the property"); ASB also RSFA-DECISION-2 (pre-filled signature dates).
+  - ANZ `B1/B2 Inclusive`: both widgets export `No` (`/Opt ['No','No']`), a bank template defect. Not filled.
+- **Validation:** `LegacyTemplatesTest` (GHL in/out separation, contradictory data, boarder amount guards); docs/06.
+
+### D-030 Monday keys are live column titles; schema drift is checked by script
+- **Date:** 2026-10-28 · **Status:** accepted (finding); remediation of the production risk is RSFA's decision
+- **Context:** `8731317` module 8 builds keys with `col.title || col.id` (read live). Iteration 6 assumed fixed keys.
+- **Decision:**
+  - Treat column titles as the contract keys; `tools/schema_drift.py` compares a read-only schema export with the
+    key contract and the manifests before each release (docs/08).
+  - The `/v1` contract takes the bank selection explicitly (`selection.banks`), so the `Banks to Send` →
+    `Selected Banks` rename does not affect the engine.
+  - Report, not fix: MacroForge's `Banks to Send Contains` conditions probably no longer match (inference, unobserved).
+- **Possible future change (RSFA):** key `data` by column ID in a later contract version.
+

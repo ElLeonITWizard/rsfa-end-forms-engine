@@ -482,4 +482,37 @@ class FormFillerTest {
         Manifest m = manifest("\"validation\":{\"closedOptions\":[{\"key\":\"Nope\"}]},", ALL_RULES, template);
         assertEquals(List.of("INVALID_RULE"), codes(FILLER.fill(template, m, data(JANE))));
     }
+
+    @Test
+    void includesTicksEverySelectedLabelOfAMultiSelectAndClosedOptionsCheckEachLabel() throws IOException {
+        String rules = """
+                [{"pdfField":"Frequency","kind":"checkbox","option":"1","source":{"when":{"key":"Freq","operator":"includes","value":"Weekly"}}},
+                 {"pdfField":"Consent box","kind":"checkbox","source":{"when":{"key":"Freq","operator":"includes","value":"Monthly"}}}]""";
+        Manifest m = manifest("\"validation\":{\"closedOptions\":[{\"key\":\"Freq\",\"multiSelect\":true}]},", rules, template);
+        FillResult both = FILLER.fill(template, m, data("{\"Freq\":\"Weekly, Monthly\"}"));
+        assertTrue(both.ok(), () -> both.issues().toString());
+        assertEquals("1", values(both.pdf()).get("Frequency"));
+        assertEquals("Yes", values(both.pdf()).get("Consent box"));
+        assertEquals("Off", values(FILLER.fill(template, m, data("{\"Freq\":\"Weekly\"}")).pdf()).get("Consent box"));
+        assertEquals(List.of("UNMAPPED_OPTION"), codes(FILLER.fill(template, m, data("{\"Freq\":\"Weekly Plus\"}"))),
+                "includes matches whole labels only");
+        assertEquals(List.of("UNMAPPED_OPTION"), codes(FILLER.fill(template, m, data("{\"Freq\":\"Weekly, Daily\"}"))),
+                "every selected label must be represented");
+    }
+
+    @Test
+    void conditionalRequirementsRefuseContradictoryData() throws IOException {
+        Manifest m = manifest("""
+                "validation":{"requires":[{"id":"T-NEVER","when":{"key":"Freq","operator":"equals","value":"Never"},
+                  "require":{"key":"Postcode","operator":"absent"},"reason":"never but details given"}]},""", ALL_RULES, template);
+        FillResult r = FILLER.fill(template, m, data(JANE.replace("Fortnightly", "Never")));
+        assertEquals(List.of("PRECONDITION_FAILED"), codes(r));
+        assertTrue(r.issues().getFirst().message().contains("T-NEVER"));
+        assertTrue(FILLER.fill(template, m, data(JANE.replace("Fortnightly", "Never").replace("\"Postcode\":\"0999\",", ""))).ok());
+        assertTrue(FILLER.fill(template, m, data(JANE)).ok(), "condition not met: no requirement");
+        Manifest both = manifest("""
+                "validation":{"requires":[{"id":"T-BAD","ifPresent":"Postcode","when":{"key":"Freq","operator":"present"},
+                  "require":{"key":"Postcode","operator":"present"},"reason":"x"}]},""", ALL_RULES, template);
+        assertEquals(List.of("INVALID_RULE"), codes(FILLER.fill(template, both, data(JANE))));
+    }
 }

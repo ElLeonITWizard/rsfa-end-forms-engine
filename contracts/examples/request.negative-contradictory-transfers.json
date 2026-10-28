@@ -1,0 +1,40 @@
+{
+  "contractVersion": "masterboard.v1",
+  "today": "2026-10-28",
+  "correlationId": "mb-5026186805-1000000005-exec0005",
+  "idempotencyKey": "1000000005-20261028T020000Z",
+  "source": {
+    "boardId": "5026186805",
+    "itemId": "1000000005"
+  },
+  "selection": {
+    "templates": [
+      {
+        "templateId": "GHL_NP_TRUST_FORM",
+        "templateVersion": "8-19"
+      }
+    ]
+  },
+  "options": {
+    "includePdf": true
+  },
+  "data": {
+    "Applicant 1 Organisation legal name (entity/company/trust/branch)": "Example Family Trust",
+    "What is the objective of your trust/organisation?": "Hold the family home for fictional beneficiaries",
+    "GHL Why have you come to Sovereign Home Loans?": "Other (please specify)",
+    "GHL Other reasons to come": "Fictional: refinance from another lender",
+    "Total credits or deposits (next 12 months) (GHL Trust)": "Less than $250K",
+    "Sources of credits": "Dividends from investments, Donations",
+    "GHL Other sources of credits": "",
+    "Cash deposits frequency (GHL Trust)": "Occasionally (monthly / quarterly)",
+    "International Money Transfers – In frequency": "Frequently (daily / weekly / fortnightly)",
+    "Int Transfers IN - Average Value per Payment (GHL Trust)": "$1,000-$10,000",
+    "International Money Transfers – Out frequency": "Never",
+    "Int Transfers OUT - Average Value per Payment (GHL Trust)": "Less than $1,000",
+    "Receive transactions/funds from third parties?": "Yes",
+    "If yes, purpose": "Fictional: family contributions to the mortgage",
+    "Cash deposits activity details": "Fictional: quarterly cash donations at a fete",
+    "International Money Transfers – In activity details (including countries)": "Fictional: rental income from Australia",
+    "International Money Transfers – Out activity details (including countries)": "Fictional: annual fee paid to a UK trustee service"
+  }
+}

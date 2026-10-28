@@ -159,8 +159,8 @@ class MasterboardApiTest {
         JsonNode asb = JSON.readTree(post(request("{\"banks\":[\"ASB\"]}", JANE, "{}")).body());
         assertEquals("NOTHING_TO_GENERATE", asb.get("code").asText(), "candidates need includeCandidates=true");
         JsonNode asbCandidates = JSON.readTree(post(request("{\"banks\":[\"ASB\"]}", JANE, "{\"includeCandidates\":true}")).body());
-        assertEquals(List.of("ASB_BOARDER_DECLARATION", "GHL_NP_INDIVIDUAL_FORM"),
-                asbCandidates.get("documents").findValuesAsText("templateId"), "blocked GHL Trust is never routed");
+        assertEquals(List.of("GHL_NP_INDIVIDUAL_FORM", "GHL_NP_TRUST_FORM"),
+                asbCandidates.get("documents").findValuesAsText("templateId"), "blocked ASB Boarder is never routed");
 
         HttpResponse<String> unknown = post(request("{\"banks\":[\"Westpac\"]}", JANE, "{}"));
         assertEquals(422, unknown.statusCode());

@@ -55,6 +55,8 @@ Facts and caveats:
     Its labels are `ASB, ANZ, BNZ, KiwiBank, WBC`.
   - Some dropdown labels differ from the values that MacroForge rules test (docs/06).
   - Subitem titles are e.g. `Fixed term (months)`, `Loan term (years)`.
+- **[live, blueprint read 2026-10-28]** Module 8 keys `result` by `col.title || col.id`, so keys follow the **live
+  column titles**: the rename above changes the key MacroForge receives. Full drift analysis: docs/08 (D-030).
 - **[live]** Error handling: GetItem/HTTP retry 3× every 5 min (incomplete-executions queue on). An OpenAI failure resumes
   with `{}` (address parts silently missing). A Code-module failure emails via `8732008`.
 

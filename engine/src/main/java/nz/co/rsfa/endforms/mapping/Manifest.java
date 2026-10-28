@@ -93,13 +93,15 @@ public record Manifest(
     }
 
     /**
-     * When {@code ifPresent} has a value, {@code require} must hold, otherwise the document is refused.
+     * When {@code ifPresent} has a value (or the {@code when} condition holds), {@code require} must hold, otherwise the
+     * document is refused. Exactly one of {@code ifPresent} / {@code when} is set.
      *
      * @param id     stable identifier reported in issues
      * @param reason why, in business terms (reported; must not contain data)
      */
     @JsonIgnoreProperties(ignoreUnknown = true)
-    public record Requirement(String id, String ifPresent, FieldRule.Condition require, String reason) {
+    public record Requirement(String id, String ifPresent, FieldRule.Condition when, FieldRule.Condition require,
+                              String reason) {
     }
 
     public Manifest {

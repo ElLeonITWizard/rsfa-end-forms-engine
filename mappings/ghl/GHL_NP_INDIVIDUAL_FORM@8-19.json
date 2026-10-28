@@ -8,7 +8,7 @@
   "sourceKeyNormalization": "macroforge-v1",
   "fontFallback": "unicode",
   "provenance": {
-    "importer": "tools/import_mforge.py 0.3.0",
+    "importer": "tools/import_mforge.py 0.4.0",
     "sourceFile": "RSFA End Forms Filling BluePrint 271026.mforge",
     "sourceSha256": "8052c17b374b551272e17f5036de1ebfa9a295328eb8a6d079d30eec788b9a51",
     "flow": "Flow C",
@@ -16,8 +16,8 @@
     "node": 3,
     "legacyPdfName": "GHL_N&P Individual_8 19.pdf",
     "lenderCondition": "Banks to Send Contains ASB",
-    "importedOn": "2026-10-27",
-    "curation": "curation/GHL_NP_INDIVIDUAL_FORM@8-19.json sha256 5ab602ae3b3e"
+    "importedOn": "2026-10-28",
+    "curation": "curation/GHL_NP_INDIVIDUAL_FORM@8-19.json sha256 197cbf237f97"
   },
   "pdf": {
     "pages": 2,
@@ -233,6 +233,23 @@
         "when": {
           "key": "Total credits or deposits (next 12 months) (ASB)",
           "operator": "equals",
+          "value": "$150,001-$250,000"
+        }
+      },
+      "legacy": {
+        "field": "Check Box85#3",
+        "mapping": "conditional"
+      },
+      "option": "3",
+      "correction": "GHL-IND-LABEL-3A"
+    },
+    {
+      "pdfField": "Check Box85",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "Total credits or deposits (next 12 months) (ASB)",
+          "operator": "equals",
           "value": "More than $250,000"
         }
       },
@@ -276,6 +293,23 @@
       },
       "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
       "option": "2"
+    },
+    {
+      "pdfField": "Check Box86",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "Cash deposits frequency (ASB)",
+          "operator": "equals",
+          "value": "Occasionally (monthly / quarterly)"
+        }
+      },
+      "legacy": {
+        "field": "Check Box86#3",
+        "mapping": "conditional"
+      },
+      "option": "3",
+      "correction": "GHL-IND-LABEL-3B"
     },
     {
       "pdfField": "Check Box86",
@@ -420,6 +454,23 @@
         "when": {
           "key": "International payments frequency (ASB)",
           "operator": "equals",
+          "value": "Occasionally (monthly / quarterly)"
+        }
+      },
+      "legacy": {
+        "field": "Check Box88#3",
+        "mapping": "conditional"
+      },
+      "option": "3",
+      "correction": "GHL-IND-LABEL-4"
+    },
+    {
+      "pdfField": "Check Box88",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "International payments frequency (ASB)",
+          "operator": "equals",
           "value": "Occasionally (monthly/quarterly)"
         }
       },
@@ -516,6 +567,32 @@
       "option": "4"
     },
     {
+      "pdfField": "Check Box90",
+      "kind": "checkbox",
+      "option": "No",
+      "source": {
+        "when": {
+          "key": "Use account for anything other than personal use?",
+          "operator": "equals",
+          "value": "No"
+        }
+      },
+      "correction": "GHL-IND-SECTION5-NO"
+    },
+    {
+      "pdfField": "Check Box90",
+      "kind": "checkbox",
+      "option": "Yes",
+      "source": {
+        "when": {
+          "key": "Use account for anything other than personal use?",
+          "operator": "equals",
+          "value": "Yes"
+        }
+      },
+      "correction": "GHL-IND-SECTION5"
+    },
+    {
       "pdfField": "Please specify your full name",
       "kind": "text",
       "source": {
@@ -549,6 +626,14 @@
       }
     },
     {
+      "pdfField": "Text83",
+      "kind": "text",
+      "source": {
+        "key": "Other account use details (GHL)"
+      },
+      "correction": "GHL-IND-SECTION5-DETAILS"
+    },
+    {
       "pdfField": "What is your primary occupation",
       "kind": "text",
       "source": {
@@ -567,14 +652,12 @@
   "importErrors": [],
   "importWarnings": [],
   "unmappedPdfFields": [
-    "Check Box90",
     "Check Box92",
     "Customer internal number",
     "D",
     "Date",
     "M",
     "M_2",
-    "Text83",
     "Y",
     "Y_2",
     "Y_3",
@@ -611,15 +694,119 @@
         "key": "International payments average value per payment (ASB)",
         "multiSelect": false,
         "onUnmapped": "error"
+      },
+      {
+        "key": "Use account for anything other than personal use?",
+        "multiSelect": false,
+        "onUnmapped": "error"
+      }
+    ],
+    "requires": [
+      {
+        "id": "GHL-IND-CASH-NEVER-AVG",
+        "when": {
+          "key": "Cash deposits frequency (ASB)",
+          "operator": "equals",
+          "value": "Never"
+        },
+        "require": {
+          "key": "Cash deposits average value per deposit (ASB)",
+          "operator": "absent"
+        },
+        "reason": "cash deposits are 'Never' but an average deposit value is given (contradictory)"
+      },
+      {
+        "id": "GHL-IND-CASH-NEVER-DETAILS",
+        "when": {
+          "key": "Cash deposits frequency (ASB)",
+          "operator": "equals",
+          "value": "Never"
+        },
+        "require": {
+          "key": "Cash deposits activity details",
+          "operator": "absent"
+        },
+        "reason": "cash deposits are 'Never' but cash activity details are given (contradictory)"
+      },
+      {
+        "id": "GHL-IND-INTL-NEVER-AVG",
+        "when": {
+          "key": "International payments frequency (ASB)",
+          "operator": "equals",
+          "value": "Never"
+        },
+        "require": {
+          "key": "International payments average value per payment (ASB)",
+          "operator": "absent"
+        },
+        "reason": "international payments are 'Never' but an average payment value is given (contradictory)"
+      },
+      {
+        "id": "GHL-IND-OTHER-USE-NO",
+        "when": {
+          "key": "Use account for anything other than personal use?",
+          "operator": "equals",
+          "value": "No"
+        },
+        "require": {
+          "key": "Other account use details (GHL)",
+          "operator": "absent"
+        },
+        "reason": "'Use account for anything other than personal use?' is 'No' but other-use details are given (contradictory)"
       }
     ]
   },
+  "corrections": [
+    {
+      "id": "GHL-IND-LABEL-3A",
+      "type": "add-when-value",
+      "basis": "evidence",
+      "status": "applied",
+      "pdfField": "Check Box85"
+    },
+    {
+      "id": "GHL-IND-LABEL-3B",
+      "type": "add-when-value",
+      "basis": "evidence",
+      "status": "applied",
+      "pdfField": "Check Box86"
+    },
+    {
+      "id": "GHL-IND-LABEL-4",
+      "type": "add-when-value",
+      "basis": "evidence",
+      "status": "applied",
+      "pdfField": "Check Box88"
+    },
+    {
+      "id": "GHL-IND-SECTION5",
+      "type": "add-rule",
+      "basis": "evidence",
+      "status": "applied",
+      "pdfField": "Check Box90"
+    },
+    {
+      "id": "GHL-IND-SECTION5-NO",
+      "type": "add-rule",
+      "basis": "evidence",
+      "status": "applied",
+      "pdfField": "Check Box90"
+    },
+    {
+      "id": "GHL-IND-SECTION5-DETAILS",
+      "type": "add-rule",
+      "basis": "evidence",
+      "status": "applied",
+      "pdfField": "Text83"
+    }
+  ],
   "review": {
-    "status": "candidate",
-    "meaning": "synthetic tests pass and every rule was checked against the printed label and the live Monday labels; not approved by RSFA, not compared with a MacroForge output",
+    "status": "ready-for-acceptance-testing",
+    "meaning": "every rule checked against the printed form and the live Monday schema; evidence-based corrections applied; contradictory and unrepresentable inputs are refused. Not approved by RSFA; not compared with a MacroForge output.",
     "openQuestions": [
-      "Live Monday labels with no rule (label drift since the legacy configuration): '$150,001-$250,000' and 'Occasionally (monthly / quarterly)' (cash deposits and international payments). The engine refuses these values (UNMAPPED_OPTION) until RSFA decides whether to update the rules; MacroForge would leave the boxes blank.",
-      "'What do you intend to use your accounts for?' is multi-select on Monday; the legacy equals rules represent one label only, so two labels are refused (MULTI_SELECT_NOT_REPRESENTABLE)."
+      "Source column for 4. 'Average value per payment': the legacy rule uses 'International payments average value per payment (ASB)'; the board also has 'Average value per payment (GHL Individual)' with the same four labels. Which column do advisers fill for GHL? (legacy kept).",
+      "'What do you intend to use your accounts for?' is multi-select on Monday but the PDF's two boxes are one checkbox field (one state only): selecting both is refused (MULTI_SELECT_NOT_REPRESENTABLE); the adviser must complete it by hand.",
+      "Expected differences from MacroForge in a parallel run: the three relabelled bands and section 5 are filled by the engine and left blank by MacroForge."
     ]
   }
 }

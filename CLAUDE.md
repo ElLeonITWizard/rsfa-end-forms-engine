@@ -34,18 +34,25 @@ docs/03-migration-inventory.md        evidence-based inventory of the legacy .mf
 docs/04-cloud-run-deployment.md       Cloud Run runbook (run by RSFA: revisions 1 and 2), deployment record, rollback
 docs/05-demo-script.md                demo page: secure access (gcloud run services proxy) + what to click
 docs/06-template-coverage.md          form selection, readiness levels, open questions, forms not chosen
-docs/07-make-integration.md           Make contract masterboard.v1, auth options, filing, Monday status, test plan
+docs/07-make-integration.md           Make contract masterboard.v1, auth A vs B (relay recommended), Make test scenario design
+docs/08-monday-schema-drift.md        live Monday schema vs key contract: renames, replaced IDs, option drift (read-only)
 docs/generated/template-coverage.md   GENERATED per-form coverage report (tools/coverage_report.py)
+docs/generated/monday-schema-drift.md GENERATED ID-by-ID schema comparison (tools/schema_drift.py)
 docs/decisions.md                     decision log (ADR-lite)
 tools/import_mforge.py    legacy importer (inventory | extract | manifest)
 tools/stage_deploy.py     builds the minimal, approved build context for Cloud Run (allowlist + SHA + blank check)
 tools/coverage_report.py  per-form coverage report from manifests (+ live Monday column schema, Make key contract)
-curation/                 reviewed per-form validation (closedOptions, requires) + review status, merged by the importer
+tools/schema_drift.py     Monday schema drift report (column IDs, titles, types, options vs key contract and manifests)
+tools/reimport_curated.sh re-imports the four curated forms (optionally a .local preview of pending decisions)
+tools/make_like_client.py signs /v1 requests like Make (HMAC) for local relay tests; prints a summary only
+curation/                 reviewed per-form validation (closedOptions, requires), corrections (evidence | decision, D-028)
+                          and review status, merged by the importer
 contracts/                Make contract JSON Schema (masterboard.v1) + fictional example requests
 deploy/                   poc-allowlist.json (approved templates), cloudbuild.yaml, deploy_poc.sh (end-to-end deployment),
                           make_bundle.sh (Cloud Shell bundle), verify_pdf.py (post-deploy PDF checks), bucket lifecycle
 engine/                   Maven project: library, CLI (inspect | fill | render | serve), HTTP API (/health, /generate,
-                          /v1/masterboard/documents), demo page, routing table (resources/routing), Dockerfile
+                          /v1/masterboard/documents), relay (ENGINE_ROLE=relay, D-027), demo page, routing table
+                          (resources/routing), Dockerfile
 mappings/<lender>/<TEMPLATE_ID>@<version>.json   imported manifests (no client data; reviewed)
 tests/fixtures/           synthetic requests (fictional "Jane Example" data only)
 tests/importer/           importer + staging unit tests (synthetic .mforge)
@@ -69,6 +76,8 @@ java -jar engine/target/end-forms-engine.jar render --pdf .local/output/BNZ_Boar
 docker build --network host -f engine/Dockerfile --target runtime-prebuilt -t end-forms-engine:prebuilt .   # see docs/02
 ENGINE_AUTH=NONE java -jar engine/target/end-forms-engine.jar serve                 # demo page on http://localhost:8080/ (loopback only)
 node tests/ui/demo_smoke.js http://127.0.0.1:8080/ .local/output/ui-smoke 5        # browser smoke test (server running; 5 = forms offered)
+bash tools/reimport_curated.sh ".local/reference/<file>.mforge" <YYYY-MM-DD> [--preview-pending .local/preview]
+python3 tools/schema_drift.py --help                                               # schema drift report (docs/08)
 python3 tools/coverage_report.py --board .local/reference/masterboard-columns-<date>.json \
   --contract .local/reference/8731317_result_key_contract.tsv --date <YYYY-MM-DD> --out docs/generated/template-coverage.md
 ```
@@ -97,9 +106,24 @@ extracted to `.local/generated/templates/`. A green build without them proves on
 8. Nothing is deployed or changed in Google Cloud without RSFA's explicit approval of the exact commands (docs/04).
    Never build from the repo root for deployment: only from the staged context.
 
-## Current status (2026-10-27, iteration 6)
+## Current status (2026-10-28, iteration 7)
 
-- **Iteration 6 (local only; nothing deployed or changed in Make, Monday, SharePoint or GCP):**
+- **Iteration 7 (local only; nothing deployed or changed in Make, Monday, SharePoint or GCP; `00002-nan` untouched):**
+  - Forms (docs/06, D-029):
+    - **GHL Individual and GHL Trust: ready for acceptance testing** (routing `acceptance`). GHL Trust in/out defect
+      fixed: 3d/3e details come from the dedicated In/Out columns; OUT stays empty without OUT data.
+    - **ASB Boarder: blocked** (RSFA-DECISION-1 property address; RSFA-DECISION-2 pre-filled signature dates).
+    - **ANZ Boarder: blocked** (RSFA-DECISION-1; `B1/B2 Inclusive` both export `No`, a bank template defect).
+    - None is in the Cloud Run allowlist; nothing is compared with MacroForge.
+  - Curation corrections (D-028): evidence applied; decisions pending, previewed only under `.local/`.
+  - New operators `includes` (multi-select element) and `absent`; `requires` with `when`.
+  - Monday drift (docs/08, D-030): keys are live titles (module 8). `Banks to Send` → `Selected Banks` probably breaks
+    MacroForge's lender conditions (inference, reported to RSFA, not fixed).
+  - Make auth: **relay (Option B) recommended** and implemented in the same jar (D-027); proven locally only. Make's
+    native HMAC is unverified (test vector in docs/07). Make test scenario T1–T9 designed, not created.
+  - Tests: 65 Java + 25 Python + 27 browser checks passed; BNZ Boarder SHA-256 unchanged.
+
+- **Iteration 6 (local only, superseded where iteration 7 differs; nothing deployed or changed in Make, Monday, SharePoint or GCP):**
   - Forms: ASB Boarder, ANZ Boarder and GHL Individual are **candidates**; GHL Trust is **blocked** (docs/06).
   - Not in the Cloud Run allowlist. The demo page lists only templates `/health` reports usable.
   - Manifest `validation` (D-023):

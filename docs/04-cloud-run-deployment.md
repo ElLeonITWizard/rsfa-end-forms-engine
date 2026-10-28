@@ -4,12 +4,22 @@
 with the revision-2 bundle; this is reported by RSFA and not re-checked from this repository. Its deployment record is
 still to be handed back. Revision 1 (`00001-6qm`) remains the rollback target.
 
-**Iteration 6 changes nothing in Google Cloud.**
-- The new forms are local candidates.
+**Iterations 6 and 7 change nothing in Google Cloud.** Revision `00002-nan` stays untouched.
+- GHL Individual and GHL Trust are ready for acceptance testing locally; ASB and ANZ Boarder are blocked (docs/06).
 - `deploy/poc-allowlist.json` still approves only BNZ Boarder.
 - The `/v1/masterboard/documents` endpoint exists only in the source tree, not in the live revision.
 - A future revision follows the same `UPDATE_EXISTING=1` no-traffic candidate procedure below, after RSFA approves the
   exact bundle, and adding any template to the allowlist needs RSFA's approval record.
+
+**Proposed next deployment (iteration 7, not prepared as commands yet; needs RSFA approval, docs/07 section 3):**
+1. Engine revision 3 with `/v1/masterboard/documents`, same image procedure (`UPDATE_EXISTING=1`, no-traffic tag,
+   verify, promote). The allowlist stays BNZ-only unless RSFA records an approval for GHL Individual/Trust after
+   acceptance testing. Rollback: `update-traffic --to-revisions=rsfa-end-forms-engine-00002-nan=100`.
+2. Secret Manager API, one HMAC secret, service account `rsfa-make-relay@` (secret accessor on that secret; run invoker
+   on the engine only).
+3. Relay service `rsfa-end-forms-relay` from the same image (`ENGINE_ROLE=relay`); the only public endpoint
+   (`--allow-unauthenticated`), so it is created only after RSFA approves the exposure and Make's HMAC is verified.
+4. Isolated Make test scenario T1–T9 (docs/07 section 4), test SharePoint location only.
 
 History:
 - RSFA approved the deployment and the template allowlist entry (Leonardo Melman, 2026-10-27, `RSFA-END-FORMS-POC-2026-10-27`).

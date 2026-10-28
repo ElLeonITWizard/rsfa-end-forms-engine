@@ -33,15 +33,186 @@
         "key": "International payments average value per payment (ASB)",
         "multiSelect": false,
         "onUnmapped": "error"
+      },
+      {
+        "key": "Use account for anything other than personal use?",
+        "multiSelect": false,
+        "onUnmapped": "error"
+      }
+    ],
+    "requires": [
+      {
+        "id": "GHL-IND-CASH-NEVER-AVG",
+        "when": {
+          "key": "Cash deposits frequency (ASB)",
+          "operator": "equals",
+          "value": "Never"
+        },
+        "require": {
+          "key": "Cash deposits average value per deposit (ASB)",
+          "operator": "absent"
+        },
+        "reason": "cash deposits are 'Never' but an average deposit value is given (contradictory)"
+      },
+      {
+        "id": "GHL-IND-CASH-NEVER-DETAILS",
+        "when": {
+          "key": "Cash deposits frequency (ASB)",
+          "operator": "equals",
+          "value": "Never"
+        },
+        "require": {
+          "key": "Cash deposits activity details",
+          "operator": "absent"
+        },
+        "reason": "cash deposits are 'Never' but cash activity details are given (contradictory)"
+      },
+      {
+        "id": "GHL-IND-INTL-NEVER-AVG",
+        "when": {
+          "key": "International payments frequency (ASB)",
+          "operator": "equals",
+          "value": "Never"
+        },
+        "require": {
+          "key": "International payments average value per payment (ASB)",
+          "operator": "absent"
+        },
+        "reason": "international payments are 'Never' but an average payment value is given (contradictory)"
+      },
+      {
+        "id": "GHL-IND-OTHER-USE-NO",
+        "when": {
+          "key": "Use account for anything other than personal use?",
+          "operator": "equals",
+          "value": "No"
+        },
+        "require": {
+          "key": "Other account use details (GHL)",
+          "operator": "absent"
+        },
+        "reason": "'Use account for anything other than personal use?' is 'No' but other-use details are given (contradictory)"
       }
     ]
   },
   "review": {
-    "status": "candidate",
-    "meaning": "synthetic tests pass and every rule was checked against the printed label and the live Monday labels; not approved by RSFA, not compared with a MacroForge output",
+    "status": "ready-for-acceptance-testing",
+    "meaning": "every rule checked against the printed form and the live Monday schema; evidence-based corrections applied; contradictory and unrepresentable inputs are refused. Not approved by RSFA; not compared with a MacroForge output.",
     "openQuestions": [
-      "Live Monday labels with no rule (label drift since the legacy configuration): '$150,001-$250,000' and 'Occasionally (monthly / quarterly)' (cash deposits and international payments). The engine refuses these values (UNMAPPED_OPTION) until RSFA decides whether to update the rules; MacroForge would leave the boxes blank.",
-      "'What do you intend to use your accounts for?' is multi-select on Monday; the legacy equals rules represent one label only, so two labels are refused (MULTI_SELECT_NOT_REPRESENTABLE)."
+      "Source column for 4. 'Average value per payment': the legacy rule uses 'International payments average value per payment (ASB)'; the board also has 'Average value per payment (GHL Individual)' with the same four labels. Which column do advisers fill for GHL? (legacy kept).",
+      "'What do you intend to use your accounts for?' is multi-select on Monday but the PDF's two boxes are one checkbox field (one state only): selecting both is refused (MULTI_SELECT_NOT_REPRESENTABLE); the adviser must complete it by hand.",
+      "Expected differences from MacroForge in a parallel run: the three relabelled bands and section 5 are filled by the engine and left blank by MacroForge."
     ]
-  }
+  },
+  "corrections": [
+    {
+      "id": "GHL-IND-LABEL-3A",
+      "type": "add-when-value",
+      "basis": "evidence",
+      "target": {
+        "pdfField": "Check Box85",
+        "option": "3",
+        "source": {
+          "when": {
+            "key": "Total credits or deposits (next 12 months) (ASB)",
+            "operator": "equals",
+            "value": "$150,000-$250,000"
+          }
+        }
+      },
+      "value": "$150,001-$250,000",
+      "reason": "Monday label renamed; the legacy value no longer exists, so MacroForge leaves 3a blank for this band.",
+      "evidence": "Box 3 is printed '$150,001-$250,000' on the PDF and '$150,001-$250,000' is a live label of the column (live Monday schema of board 5026186805 (read-only, 2026-10-27)); the other three bands match exactly. The old value stays accepted."
+    },
+    {
+      "id": "GHL-IND-LABEL-3B",
+      "type": "add-when-value",
+      "basis": "evidence",
+      "target": {
+        "pdfField": "Check Box86",
+        "option": "3",
+        "source": {
+          "when": {
+            "key": "Cash deposits frequency (ASB)",
+            "operator": "equals",
+            "value": "Occasionally (monthly/quarterly)"
+          }
+        }
+      },
+      "value": "Occasionally (monthly / quarterly)",
+      "reason": "Monday label respaced; the legacy value no longer exists.",
+      "evidence": "Box 3 is printed 'Occasionally (monthly/quarterly)'; the live label is 'Occasionally (monthly / quarterly)' (only spaces differ); the other three labels match exactly (live Monday schema of board 5026186805 (read-only, 2026-10-27))."
+    },
+    {
+      "id": "GHL-IND-LABEL-4",
+      "type": "add-when-value",
+      "basis": "evidence",
+      "target": {
+        "pdfField": "Check Box88",
+        "option": "3",
+        "source": {
+          "when": {
+            "key": "International payments frequency (ASB)",
+            "operator": "equals",
+            "value": "Occasionally (monthly/quarterly)"
+          }
+        }
+      },
+      "value": "Occasionally (monthly / quarterly)",
+      "reason": "Monday label respaced; the legacy value no longer exists.",
+      "evidence": "As GHL-IND-LABEL-3B, for section 4 (live Monday schema of board 5026186805 (read-only, 2026-10-27))."
+    },
+    {
+      "id": "GHL-IND-SECTION5",
+      "type": "add-rule",
+      "basis": "evidence",
+      "rule": {
+        "pdfField": "Check Box90",
+        "kind": "checkbox",
+        "option": "Yes",
+        "source": {
+          "when": {
+            "key": "Use account for anything other than personal use?",
+            "operator": "equals",
+            "value": "Yes"
+          }
+        }
+      },
+      "reason": "Section 5 'Do you intend to use your account for anything other than personal use?' is not mapped in the legacy configuration.",
+      "evidence": "Dedicated column dropdown_mkzvxhrv 'Use account for anything other than personal use?' (Yes/No, single) in the Make contract and live Monday schema of board 5026186805 (read-only, 2026-10-27); Check Box90 has on-states Yes (left) and No (right)."
+    },
+    {
+      "id": "GHL-IND-SECTION5-NO",
+      "type": "add-rule",
+      "basis": "evidence",
+      "rule": {
+        "pdfField": "Check Box90",
+        "kind": "checkbox",
+        "option": "No",
+        "source": {
+          "when": {
+            "key": "Use account for anything other than personal use?",
+            "operator": "equals",
+            "value": "No"
+          }
+        }
+      },
+      "reason": "As GHL-IND-SECTION5 (No box).",
+      "evidence": "As GHL-IND-SECTION5."
+    },
+    {
+      "id": "GHL-IND-SECTION5-DETAILS",
+      "type": "add-rule",
+      "basis": "evidence",
+      "rule": {
+        "pdfField": "Text83",
+        "kind": "text",
+        "source": {
+          "key": "Other account use details (GHL)"
+        }
+      },
+      "reason": "Section 5 details box is not mapped in the legacy configuration.",
+      "evidence": "Dedicated column text_mkzvs58b 'Other account use details (GHL)' in the Make contract and live Monday schema of board 5026186805 (read-only, 2026-10-27); Text83 is the only box under section 5 ('If yes, please provide details of the activity')."
+    }
+  ]
 }

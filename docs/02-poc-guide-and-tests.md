@@ -128,15 +128,23 @@ Unresolved items (138) are listed per manifest in `unresolvedLegacyMappings`.
 
 | Suite | Command | Count |
 |---|---|---|
-| Importer (synthetic .mforge, incl. `--curation`) + deployment staging + coverage report + contract examples vs JSON Schema | `python3 -m unittest discover -s tests/importer -v` | 10 + 7 + 1 + 2 |
-| Engine unit (synthetic AcroForm): widget kinds, errors, normalisation, line items, overlays, fonts, approval validation, template presets, comb appearance, rendering, no value echo, **closed options and preconditions** | `cd engine && mvn -B test` | 30 |
+| Importer (synthetic .mforge, incl. `--curation` and **corrections**) + deployment staging + coverage report + schema drift + contract examples vs JSON Schema | `python3 -m unittest discover -s tests/importer -v` | 14 + 7 + 1 + 1 + 2 |
+| Engine unit (synthetic AcroForm): widget kinds, errors, normalisation, line items, overlays, fonts, approval validation, template presets, comb appearance, rendering, no value echo, closed options and preconditions, **`includes`/`absent` operators, `when` requirements** | `cd engine && mvn -B test` | 32 |
 | HTTP API (PLATFORM_IAM only with `K_SERVICE`, `X-Engine`/`X-Template`, demo page allowlist, CSP and auth, `/health` usable templates) | (same) | 9 |
 | Make contract `/v1/masterboard/documents` (several forms per record, determinism, all-or-nothing/per-document, bank routing + `notMigrated`, invalid contracts, HMAC) | (same) | 5 |
+| Relay (`ENGINE_ROLE=relay`): signed request → IAM stand-in → engine; rotation; tampered/stale/replayed/unsigned; rate limit; wrong identity; size; unsafe config | (same) | 4 |
 | Demo page forms = manifest keys; samples = fixtures. **Skipped without `mappings/`** | (same) | 1 |
-| Legacy templates: BNZ Boarder (+ macrons), BNZ Handover, the DDMMYYYY gap, GHL Trust (2 fixtures), **ASB Boarder, ANZ Boarder, GHL Individual**, no unruled ticks, manifest resolution. **Skipped without `.local` templates** | (same) | 11 |
+| Legacy templates: BNZ Boarder (+ macrons), BNZ Handover, the DDMMYYYY gap, GHL Trust (2 fixtures, **in/out separation, contradictory transfers**), ASB Boarder, ANZ Boarder, **GHL Individual (reconciled labels, section 5, refusals), boarder amount guards**, no unruled ticks, manifest resolution. **Skipped without `.local` templates** | (same) | 14 |
 | Demo page in a real browser (needs a running server and the machine's Playwright) | `node tests/ui/demo_smoke.js <base-url> <out-dir> <forms>` | 27 checks with 5 forms; 21 with 1 |
 
-Last full run (2026-10-27, iteration 6):
+Last full run (2026-10-28, iteration 7):
+- Host: **90 passed** (25 Python + 65 Java, none skipped).
+- BNZ Boarder regression: SHA-256 still `2ae7bfac…` (CLI).
+- Browser smoke test: 27 checks passed with 5 forms (status suffixes shown; GHL contradictory cash answers and ANZ
+  fortnightly amount refused with the rule id).
+- Relay chain with the real jar and templates: see docs/07 section 3.
+
+Previous run (2026-10-27, iteration 6):
 - Host: **76 passed** (20 Python + 56 Java, none skipped).
 - BNZ Boarder regression: the PDF SHA-256 is still `2ae7bfac…3269d6f6` (CLI and UI).
 - Browser smoke test passed:

@@ -83,7 +83,10 @@
     }
   }
 
-  const STATUS_TEXT = { tested: 'Tested', candidate: 'Candidate — awaiting RSFA review' };
+  const STATUS_TEXT = { tested: 'Tested', candidate: 'Candidate — awaiting RSFA review',
+    'ready-for-acceptance-testing': 'Ready for RSFA acceptance testing (not yet approved)',
+    blocked: 'BLOCKED — for review only; open RSFA decision' };
+  const STATUS_SUFFIX = { candidate: ' (candidate)', 'ready-for-acceptance-testing': ' (acceptance testing)', blocked: ' (blocked)' };
 
   // Lists the usable forms (all forms until /health has answered); keeps the current one when still usable.
   function fillSelector() {
@@ -93,7 +96,7 @@
     usable.forEach(({ t, idx }) => {
       const o = document.createElement('option');
       o.value = String(idx);
-      o.textContent = t.label + (t.status === 'candidate' ? ' (candidate)' : '');
+      o.textContent = t.label + (STATUS_SUFFIX[t.status] || '');
       sel.appendChild(o);
     });
     sel.disabled = usable.length === 0;

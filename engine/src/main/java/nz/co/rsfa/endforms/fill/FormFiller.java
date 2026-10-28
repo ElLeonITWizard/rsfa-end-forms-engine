@@ -671,11 +671,15 @@ public final class FormFiller {
     }
 
     private Boolean matches(FieldRule.Condition c, JsonNode data, String field, Run run) {
-        if (c.key() == null || c.operator() == null || (c.value() == null && c.operator() != FieldRule.Operator.present)) {
+        boolean valueless = c.operator() == FieldRule.Operator.present || c.operator() == FieldRule.Operator.absent;
+        if (c.key() == null || c.operator() == null || (c.value() == null && !valueless)) {
             run.error("INVALID_RULE", field, c.key(), "condition needs key, operator and value");
             return null;
         }
         JsonNode v = data.get(c.key());
+        if (c.operator() == FieldRule.Operator.absent) {
+            return v == null || v.isNull() || (v.isTextual() && v.asText().isBlank());
+        }
         if (v == null) {
             run.warning("SOURCE_KEY_ABSENT", field, c.key(), "condition key not present in data");
             return false;
@@ -691,7 +695,9 @@ public final class FormFiller {
         return switch (c.operator()) {
             case equals -> s.equals(c.value());
             case contains -> s.contains(c.value());
+            case includes -> java.util.Arrays.asList(s.split(MULTI_SELECT_SEPARATOR, -1)).contains(c.value());
             case present -> !s.isBlank();
+            case absent -> s.isBlank();
         };
     }
 
@@ -723,16 +729,19 @@ public final class FormFiller {
                 continue;
             }
             String value = v.asText();
-            if (co.multiSelect() && value.contains(MULTI_SELECT_SEPARATOR)) {
+            boolean includesRules = conds.stream().allMatch(c -> c.operator() == FieldRule.Operator.includes);
+            List<String> labels = co.multiSelect() && includesRules
+                    ? java.util.Arrays.asList(value.split(MULTI_SELECT_SEPARATOR, -1)) : List.of(value);
+            if (co.multiSelect() && !includesRules && value.contains(MULTI_SELECT_SEPARATOR)) {
                 run.error("MULTI_SELECT_NOT_REPRESENTABLE", null, co.key(),
-                        "several labels selected; this form's legacy rules can represent only one");
+                        "several labels selected; this form can represent only one");
                 continue;
             }
-            boolean represented = conds.stream().anyMatch(c -> switch (c.operator()) {
-                case equals -> value.equals(c.value());
-                case contains -> c.value() != null && value.contains(c.value());
-                case present -> false;
-            });
+            boolean represented = labels.stream().allMatch(label -> conds.stream().anyMatch(c -> switch (c.operator()) {
+                case equals, includes -> label.equals(c.value());
+                case contains -> c.value() != null && label.contains(c.value());
+                case present, absent -> false;
+            }));
             if (!represented) {
                 if ("blank".equals(co.onUnmapped())) {
                     run.warning("UNMAPPED_OPTION_LEFT_BLANK", null, co.key(),
@@ -744,13 +753,21 @@ public final class FormFiller {
             }
         }
         for (Manifest.Requirement req : manifest.validation().requires()) {
-            if (req.ifPresent() == null || req.require() == null) {
-                run.error("INVALID_RULE", null, req.ifPresent(), "requirement " + req.id() + " needs ifPresent and require");
+            if ((req.ifPresent() == null) == (req.when() == null) || req.require() == null) {
+                run.error("INVALID_RULE", null, req.ifPresent(),
+                        "requirement " + req.id() + " needs exactly one of ifPresent/when, and require");
                 continue;
             }
-            JsonNode trigger = data.get(req.ifPresent());
-            if (trigger == null || trigger.isNull() || (trigger.isTextual() && trigger.asText().isBlank())) {
-                continue;
+            if (req.when() != null) {
+                Boolean applies = matches(req.when(), data, null, run);
+                if (applies == null || !applies) {
+                    continue;
+                }
+            } else {
+                JsonNode trigger = data.get(req.ifPresent());
+                if (trigger == null || trigger.isNull() || (trigger.isTextual() && trigger.asText().isBlank())) {
+                    continue;
+                }
             }
             Boolean ok = matches(req.require(), data, null, run);
             if (ok != null && !ok) {

@@ -8,7 +8,7 @@
   "sourceKeyNormalization": "macroforge-v1",
   "fontFallback": "unicode",
   "provenance": {
-    "importer": "tools/import_mforge.py 0.3.0",
+    "importer": "tools/import_mforge.py 0.4.0",
     "sourceFile": "RSFA End Forms Filling BluePrint 271026.mforge",
     "sourceSha256": "8052c17b374b551272e17f5036de1ebfa9a295328eb8a6d079d30eec788b9a51",
     "flow": "Flow C",
@@ -16,8 +16,8 @@
     "node": 12,
     "legacyPdfName": "Boarder-Income-Declaration 12.02.24.pdf",
     "lenderCondition": "Banks to Send Contains ANZ",
-    "importedOn": "2026-10-27",
-    "curation": "curation/ANZ_BOARDER_INCOME_DECLARATION@02-24.json sha256 9e55ffd97bbd"
+    "importedOn": "2026-10-28",
+    "curation": "curation/ANZ_BOARDER_INCOME_DECLARATION@02-24.json sha256 f7d88462b4e1"
   },
   "pdf": {
     "pages": 1,
@@ -285,13 +285,41 @@
       }
     ]
   },
+  "corrections": [
+    {
+      "id": "ANZ-ADDR-1",
+      "type": "replace-source",
+      "basis": "decision",
+      "status": "pending",
+      "pdfField": "Property address"
+    },
+    {
+      "id": "ANZ-ADDR-2",
+      "type": "replace-source",
+      "basis": "decision",
+      "status": "pending",
+      "pdfField": "Town City"
+    },
+    {
+      "id": "ANZ-ADDR-3",
+      "type": "replace-source",
+      "basis": "decision",
+      "status": "pending",
+      "pdfField": "Postcode"
+    }
+  ],
   "review": {
-    "status": "candidate",
-    "meaning": "synthetic tests pass and every rule was checked against the printed label and the live Monday labels; not approved by RSFA, not compared with a MacroForge output",
+    "status": "blocked",
+    "blockedBy": [
+      "RSFA-DECISION-1: which address is the 'property' on boarder declarations"
+    ],
+    "meaning": "customer-name overlays, customer number, boarder names and weekly-only amounts confirmed; the property address source is a material business decision.",
     "openQuestions": [
-      "Property address is the legacy key Applicant 1 Physical Address (whole address); it may differ from the property where the boarders live.",
-      "The 'inclusive of food and/or bills' Yes/No boxes and the signature dates are not mapped in the legacy configuration and stay blank for the customer.",
-      "Customer name(s) are drawn as legacy overlays (rect / 1.2, inferred; docs/03)."
+      "RSFA-DECISION-1: which address is the 'property' on boarder declarations: legacy = 'Applicant 1 Physical Address' (free text) + 'Applicant 1 Residential City/Town' + 'Applicant 1 Residential Postcode/Zip' (two different sources on one address); proposal ANZ-ADDR-1..3 = 1st Property Address + its City + Postcode (preview PDF provided).",
+      "UNRESOLVED (bank template defect): 'Is this amount inclusive of food and/or bills (utilities)' Yes/No. Monday has dedicated status columns (color_mm3d16dh, color_mm3dm95k, Yes/No), but in ANZ's PDF both widgets of 'B1 Inclusive' and 'B2 Inclusive' export the value 'No' (/Opt ['No','No']); ticking Yes would still record 'No' in the form data. Left blank for the customer, as in the legacy configuration. Needs ANZ's corrected form or RSFA's decision to accept a visual-only tick.",
+      "'Customer number(s)' takes the single column 'ANZ Customer Number (if known)'; a second customer's number cannot be printed.",
+      "Signature dates stay blank (legacy).",
+      "Customer name(s) are legacy overlays (rect / 1.2, inferred; docs/03); visually aligned on the dotted line."
     ]
   }
 }

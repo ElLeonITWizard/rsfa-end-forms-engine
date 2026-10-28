@@ -8,7 +8,7 @@
   "sourceKeyNormalization": "macroforge-v1",
   "fontFallback": "unicode",
   "provenance": {
-    "importer": "tools/import_mforge.py 0.3.0",
+    "importer": "tools/import_mforge.py 0.4.0",
     "sourceFile": "RSFA End Forms Filling BluePrint 271026.mforge",
     "sourceSha256": "8052c17b374b551272e17f5036de1ebfa9a295328eb8a6d079d30eec788b9a51",
     "flow": "Flow C",
@@ -16,8 +16,8 @@
     "node": 2,
     "legacyPdfName": "ASB Home Loan Boarder Declaration Form.pdf",
     "lenderCondition": "Banks to Send Contains ASB",
-    "importedOn": "2026-10-27",
-    "curation": "curation/ASB_BOARDER_DECLARATION@12-22.json sha256 e7e7f8afc816"
+    "importedOn": "2026-10-28",
+    "curation": "curation/ASB_BOARDER_DECLARATION@12-22.json sha256 793160f1dbdb"
   },
   "pdf": {
     "pages": 1,
@@ -443,16 +443,87 @@
           "operator": "present"
         },
         "reason": "the ASB form asks for the frequency (weekly/fortnightly/monthly) of each board amount"
+      },
+      {
+        "id": "ASB-BOARDER-AMOUNT-1",
+        "when": {
+          "key": "Boarders - Board amount 1 frequency",
+          "operator": "present"
+        },
+        "require": {
+          "key": "Boarders - Board amount 1",
+          "operator": "present"
+        },
+        "reason": "a frequency is given for boarder 1 without an amount (contradictory)"
+      },
+      {
+        "id": "ASB-BOARDER-AMOUNT-2",
+        "when": {
+          "key": "Boarders - Board amount 2 frequency",
+          "operator": "present"
+        },
+        "require": {
+          "key": "Boarders - Board amount 2",
+          "operator": "present"
+        },
+        "reason": "a frequency is given for boarder 2 without an amount (contradictory)"
       }
     ]
   },
+  "corrections": [
+    {
+      "id": "ASB-ADDR-1",
+      "type": "replace-source",
+      "basis": "decision",
+      "status": "pending",
+      "pdfField": "1"
+    },
+    {
+      "id": "ASB-ADDR-2",
+      "type": "replace-source",
+      "basis": "decision",
+      "status": "pending",
+      "pdfField": "2"
+    },
+    {
+      "id": "ASB-ADDR-3",
+      "type": "replace-source",
+      "basis": "decision",
+      "status": "pending",
+      "pdfField": "3"
+    },
+    {
+      "id": "ASB-ADDR-4",
+      "type": "replace-source",
+      "basis": "decision",
+      "status": "pending",
+      "pdfField": "postcode"
+    },
+    {
+      "id": "ASB-SIGNATURE-DATE-1",
+      "type": "remove-rule",
+      "basis": "decision",
+      "status": "pending",
+      "pdfField": "date 1"
+    },
+    {
+      "id": "ASB-SIGNATURE-DATE-2",
+      "type": "remove-rule",
+      "basis": "decision",
+      "status": "pending",
+      "pdfField": "date 2"
+    }
+  ],
   "review": {
-    "status": "candidate",
-    "meaning": "synthetic tests pass and every rule was checked against the printed label and the live Monday labels; not approved by RSFA, not compared with a MacroForge output",
+    "status": "blocked",
+    "blockedBy": [
+      "RSFA-DECISION-1: which address is the 'property' on boarder declarations"
+    ],
+    "meaning": "names, household numbers, boarder names, amounts and frequencies confirmed against the printed form and the live labels; the property address source is a material business decision.",
     "openQuestions": [
-      "Property address lines use the legacy keys Applicant 1 Physical Address Street / Province / Country: Suburb and City are not mapped, and the applicant's physical address may differ from the property where the boarders live.",
-      "date 1 and date 2 (beside the customer signatures) are pre-filled with today, as MacroForge [TODAY] does; the DDMMYYYY format is taken from the 8-cell comb, not from a MacroForge output.",
-      "The template is owner-encrypted by ASB; it is filled with an incremental save that keeps ASB's encryption (same policy as GHL N&P Trust, D-007)."
+      "RSFA-DECISION-1: which address is the 'property' on boarder declarations: legacy = applicant 1 physical address, printed as Street / Province / Country (Suburb and City never printed); proposal ASB-ADDR-1..4 = 1st Property Address Street / Suburb / City / Postcode (preview PDF provided). Either way the parts come from Make's OpenAI address split (module 26), which is not deterministic.",
+      "RSFA-DECISION-2: pre-fill the customer's signature dates with today: legacy pre-fills both signature dates with today (DDMMYYYY, format inferred from the 8-cell comb); proposal = leave them blank.",
+      "The template is owner-encrypted by ASB and filled with an incremental save keeping ASB's encryption (D-007)."
     ]
   }
 }

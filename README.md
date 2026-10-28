@@ -4,8 +4,9 @@ A deterministic PDF form-filling engine that will replace the MacroForge desktop
 bank end forms. Mappings are version-controlled and the service can run on Cloud Run.
 **Status: proof of concept.**
 - A private Cloud Run service is deployed by RSFA: BNZ Boarder only, demo page, revision `00002-nan` (docs/04).
-- Four more forms are *candidates* locally (docs/06).
-- The Make integration contract is implemented but not connected (docs/07). See `CLAUDE.md` for the rules and the current status.
+- Two more forms are *ready for acceptance testing* locally (GHL Individual and Trust); ASB and ANZ Boarder are
+  *blocked* pending RSFA decisions (docs/06).
+- The Make integration contract and an authenticating relay are implemented but not connected (docs/07). See `CLAUDE.md` for the rules and the current status.
 
 ## Prerequisites
 
@@ -50,14 +51,15 @@ To view the output without poppler, run `java -jar engine/target/end-forms-engin
 | Form | Template key | Status |
 |---|---|---|
 | BNZ Boarder | `BNZ_BOARDER_FORM@2.0_8-24` | tested; deployed |
-| ASB Boarder | `ASB_BOARDER_DECLARATION@12-22` | candidate (local) |
-| ANZ Boarder | `ANZ_BOARDER_INCOME_DECLARATION@02-24` | candidate (local) |
-| GHL Account Use, Individual | `GHL_NP_INDIVIDUAL_FORM@8-19` | candidate (local) |
-| GHL Account Use, Trust | `GHL_NP_TRUST_FORM@8-19` | blocked (open mapping question) |
+| GHL Account Use, Individual | `GHL_NP_INDIVIDUAL_FORM@8-19` | ready for acceptance testing (local) |
+| GHL Account Use, Trust | `GHL_NP_TRUST_FORM@8-19` | ready for acceptance testing (local; in/out defect fixed) |
+| ASB Boarder | `ASB_BOARDER_DECLARATION@12-22` | blocked (RSFA-DECISION-1 address, RSFA-DECISION-2 dates) |
+| ANZ Boarder | `ANZ_BOARDER_INCOME_DECLARATION@02-24` | blocked (RSFA-DECISION-1 address; bank template defect) |
 
-"Candidate" means the following:
-- synthetic tests pass and every rule was checked against the printed label and the live Monday labels;
-- it is **not** approved by RSFA and **not** compared with MacroForge output.
+"Ready for acceptance testing" means the following:
+- synthetic tests pass; every rule was checked against the printed label and the live Monday labels;
+- evidence-based corrections are applied and documented; contradictory or unrepresentable input is refused;
+- it is **not** approved by RSFA, **not** in the Cloud Run allowlist and **not** compared with MacroForge output.
 
 Selection, open questions and the forms not chosen are in [`docs/06`](docs/06-template-coverage.md). The per-form
 report is generated:
@@ -67,8 +69,13 @@ python3 tools/coverage_report.py --board .local/reference/masterboard-columns-<d
   --contract .local/reference/8731317_result_key_contract.tsv --date <YYYY-MM-DD> --out docs/generated/template-coverage.md
 ```
 
-Reviewed checks per form (closed options, business preconditions) live in `curation/<ID>@<version>.json`. They are
-merged with `import_mforge.py manifest … --curation curation/<file>`.
+Reviewed checks and corrections per form live in `curation/<ID>@<version>.json` (D-028). Evidence-based
+corrections are applied; decision-based ones only with a recorded RSFA decision. Re-import the four curated forms with
+`bash tools/reimport_curated.sh "<mforge>" <YYYY-MM-DD> [--preview-pending .local/preview]` (the preview of pending
+decisions is written under `.local/` only).
+
+Monday schema drift (column renames, replaced IDs, option changes) is checked with `tools/schema_drift.py` against a
+read-only schema export: [`docs/08`](docs/08-monday-schema-drift.md).
 
 ## Make integration contract (not connected)
 
@@ -82,6 +89,11 @@ selection. It returns every selected form as base64 PDFs in one JSON response:
 
 Schema and examples: `contracts/`. Design, authentication options, filing, Monday status and test plan:
 [`docs/07`](docs/07-make-integration.md).
+
+**Relay (recommended Make entry point, D-027; local only):** the same jar with `ENGINE_ROLE=relay` verifies an
+HMAC-SHA256 signature (`X-RSFA-Timestamp`, `X-RSFA-Signature: v1=…`), timestamp skew, replay and rate limits, then
+calls the private engine with its own service-account ID token. `tools/make_like_client.py` signs requests like Make
+would and prints a summary only.
 
 ```bash
 curl -s -H 'Content-Type: application/json' --data @contracts/examples/request.bank-bnz.json \
@@ -167,7 +179,7 @@ Authentication modes:
 ## Current limitations
 
 - Six real templates are tested end-to-end: BNZ Boarder, ASB Boarder, ANZ Boarder, GHL Individual, GHL Trust, and BNZ
-  Handover partially. Only BNZ Boarder is deployed. The others are listed in docs/06.
+  Handover partially. Only BNZ Boarder is deployed. ASB and ANZ Boarder are blocked (docs/06).
 - 138 legacy mappings are unresolved and 19 are unsupported (docs/03). Notable cases:
   - LineItems term/period name conflicts;
   - BNZ Gifting has no form fields;
@@ -177,5 +189,5 @@ Authentication modes:
 - No declaration is certified by default: template-preset ticks are cleared, and constant ticks need a validated
   `approval` record in the manifest (D-016).
 - The legacy `[TODAY]` format and `equals`/`contains` semantics are inferred, not confirmed.
-- There is no flattening and no SharePoint upload. The Make contract exists, but no Make scenario uses it (docs/07).
+- There is no flattening and no SharePoint upload. The Make contract and relay exist, but no Make scenario uses them (docs/07).
 - Equivalence with MacroForge is not proven for any form.

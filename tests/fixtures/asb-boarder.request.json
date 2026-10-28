@@ -18,6 +18,12 @@
     "Boarders - Board amount 1 frequency": "Weekly",
     "Boarders - Boarder two name (if known)": "Sam Lodger",
     "Boarders - Board amount 2": "520",
-    "Boarders - Board amount 2 frequency": "Fortnightly"
+    "Boarders - Board amount 2 frequency": "Fortnightly",
+    "1st Property Address Street": "7 Purchase Lane",
+    "1st Property Address Suburb": "Sampleton",
+    "1st Property Address City": "Hamilton",
+    "1st Property Address Postcode": "3200",
+    "Applicant 1 Physical Address Suburb": "Testville",
+    "Applicant 1 Physical Address City": "Auckland"
   }
 }

@@ -29,6 +29,7 @@ import java.util.Optional;
 import java.util.TreeMap;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -265,53 +266,141 @@ class LegacyTemplatesTest {
     }
 
     @Test
-    void ghlIndividualQuestionnaireWithClosedOptions() throws IOException {
+    void ghlIndividualQuestionnaireWithReconciledLabelsAndSection5() throws IOException {
         Case k = require(GHL_INDIVIDUAL, "tests/fixtures/ghl-np-individual.request.json");
         FillResult r = FILLER.fill(k.template(), k.manifest(), k.data());
         assertTrue(r.ok(), () -> r.issues().toString());
         assertTrue(r.issues().isEmpty(), () -> r.issues().toString());
-        Map<String, String> expected = new TreeMap<>(Map.of(
-                "Please specify your full name", "Jane Example",
-                "What is your primary occupation", "Fictional Test Analyst",
-                "Check Box84", "Yes", "Check Box85", "2", "Check Box86", "2", "Check Box87", "2",
-                "Check Box88", "4", "Check Box89", "1"));
+        Map<String, String> expected = new TreeMap<>(Map.ofEntries(
+                Map.entry("Please specify your full name", "Jane Example"),
+                Map.entry("What is your primary occupation", "Fictional Test Analyst"),
+                Map.entry("Check Box84", "Yes"),
+                Map.entry("Check Box85", "3"),   // live label '$150,001-$250,000' (GHL-IND-LABEL-3A)
+                Map.entry("Check Box86", "2"), Map.entry("Check Box87", "2"),
+                Map.entry("Check Box88", "3"),   // live label 'Occasionally (monthly / quarterly)' (GHL-IND-LABEL-4)
+                Map.entry("Check Box89", "2"),
+                Map.entry("Check Box90", "Yes"), // section 5 (GHL-IND-SECTION5)
+                Map.entry("Text83", "Fictional: small online craft sales")));
         assertEquals(expected, fieldValues(r.pdf(), expected.keySet()));
-        assertVisible(r.pdf(), k.template(), List.of("Check Box85", "Check Box88", "Text81"));
-
-        // live Monday label drift: '$150,001-$250,000' exists on the board and on the PDF, but the legacy rule tests
-        // '$150,000-$250,000'; MacroForge would leave 3a blank, the engine refuses
-        ObjectNode drift = k.data().deepCopy();
-        drift.put("Total credits or deposits (next 12 months) (ASB)", "$150,001-$250,000");
-        FillResult refused = FILLER.fill(k.template(), k.manifest(), drift);
-        assertNull(refused.pdf());
-        assertEquals(List.of("UNMAPPED_OPTION:Total credits or deposits (next 12 months) (ASB)"),
-                refused.errors().stream().map(i -> i.code() + ":" + i.sourceKey()).toList());
-
-        ObjectNode both = k.data().deepCopy();
-        both.put("What do you intend to use your accounts for? (GHL Individual)", "Everyday personal banking, To borrow money");
-        assertEquals(List.of("MULTI_SELECT_NOT_REPRESENTABLE"),
-                FILLER.fill(k.template(), k.manifest(), both).errors().stream().map(Issue::code).toList());
+        assertVisible(r.pdf(), k.template(), List.of("Check Box85", "Check Box88", "Check Box90", "Text83"));
         writeOutput("GHL_NP_Individual_POC.pdf", r.pdf());
     }
 
     @Test
-    void ghlTrustQuestionnaireWithLiveMondayLabels() throws IOException {
+    void ghlIndividualRefusesUnsupportedOptionsAndContradictoryData() throws IOException {
+        Case k = require(GHL_INDIVIDUAL, "tests/fixtures/ghl-np-individual.request.json");
+        Map<String, String> cases = new java.util.LinkedHashMap<>();
+        cases.put("Total credits or deposits (next 12 months) (ASB)=$250,001-$400,000", "UNMAPPED_OPTION");
+        cases.put("What do you intend to use your accounts for? (GHL Individual)=Everyday personal banking, To borrow money",
+                "MULTI_SELECT_NOT_REPRESENTABLE");
+        cases.put("Use account for anything other than personal use?=Maybe", "UNMAPPED_OPTION");
+        for (var c : cases.entrySet()) {
+            String[] kv = c.getKey().split("=", 2);
+            ObjectNode d = k.data().deepCopy();
+            d.put(kv[0], kv[1]);
+            assertEquals(List.of(c.getValue()), codesOf(FILLER.fill(k.template(), k.manifest(), d)), c.getKey());
+        }
+        ObjectNode never = k.data().deepCopy();
+        never.put("Cash deposits frequency (ASB)", "Never"); // but an average value and details are still given
+        assertEquals(List.of("PRECONDITION_FAILED", "PRECONDITION_FAILED"), codesOf(FILLER.fill(k.template(), k.manifest(), never)));
+        ObjectNode otherUse = k.data().deepCopy();
+        otherUse.put("Use account for anything other than personal use?", "No"); // but details are still given
+        FillResult r = FILLER.fill(k.template(), k.manifest(), otherUse);
+        assertEquals(List.of("PRECONDITION_FAILED"), codesOf(r));
+        assertTrue(r.errors().getFirst().message().contains("GHL-IND-OTHER-USE-NO"));
+        assertFalse(r.issues().toString().contains("craft"), "issues never echo values");
+    }
+
+    @Test
+    void ghlTrustSeparatesInboundAndOutboundDetails() throws IOException {
         Case k = require(GHL_TRUST, "tests/fixtures/ghl-np-trust-live-labels.request.json");
         FillResult r = FILLER.fill(k.template(), k.manifest(), k.data());
         assertTrue(r.ok(), () -> r.issues().toString());
-        Map<String, String> expected = new TreeMap<>(Map.of(
-                "Full trustorganisation name", "Example Family Trust",
-                "Check Box94", "No", "undefined", "Fictional: refinance from another lender",
-                "Check Box95", "1", "Check Box96", "1", "Check Box99", "3",
-                "Check Box101", "1", "Check Box102", "3", "Check Box103", "4", "Check Box104", "1"));
+        assertTrue(r.issues().isEmpty(), () -> r.issues().toString());
+        String in = "Please provide details of the activity including countries involved";
+        String out = in + "_2";
+        Map<String, String> expected = new TreeMap<>(Map.ofEntries(
+                Map.entry("Full trustorganisation name", "Example Family Trust"),
+                Map.entry("Check Box94", "No"), Map.entry("undefined", "Fictional: refinance from another lender"),
+                Map.entry("Check Box95", "1"),
+                Map.entry("Check Box96", "1"), Map.entry("Check Box97", "Yes"), // multi-select: both sources (GHL-TRUST-3B-MULTI)
+                Map.entry("Check Box99", "3"), Map.entry("Please provide details of the activity", "Fictional: quarterly cash donations at a fete"),
+                Map.entry("Check Box101", "1"), Map.entry("Check Box102", "2"), // '$1,000-$10,000' (GHL-TRUST-LABEL-3D-AVG)
+                Map.entry(in, "Fictional: rental income from Australia"),
+                Map.entry("Check Box103", "2"), Map.entry("Check Box104", "1"),
+                Map.entry(out, "Fictional: annual fee paid to a UK trustee service"),
+                Map.entry("Check Box105", "Yes")));
         assertEquals(expected, fieldValues(r.pdf(), expected.keySet()));
-        assertEquals("Yes", fieldValues(r.pdf(), List.of("Check Box105")).get("Check Box105"));
-        ObjectNode drift = k.data().deepCopy();
-        drift.put("Int Transfers OUT - Average Value per Payment (GHL Trust)", "$1,000-$10,000");
-        assertEquals(List.of("UNMAPPED_OPTION:Int Transfers OUT - Average Value per Payment (GHL Trust)"),
-                FILLER.fill(k.template(), k.manifest(), drift).errors().stream()
-                        .map(i -> i.code() + ":" + i.sourceKey()).toList());
+        assertEquals("Off", fieldValues(r.pdf(), List.of("Check Box98")).get("Check Box98"), "unselected source stays unticked");
+        assertVisible(r.pdf(), k.template(), List.of(in, out, "Please provide details of the activity", "Check Box97"));
+
+        // never copy inbound details into the outbound box: with no OUT details the OUT box stays empty
+        ObjectNode noOut = k.data().deepCopy();
+        noOut.remove("International Money Transfers – Out activity details (including countries)");
+        FillResult r2 = FILLER.fill(k.template(), k.manifest(), noOut);
+        assertTrue(r2.ok(), () -> r2.issues().toString());
+        assertEquals("", fieldValues(r2.pdf(), List.of(out)).get(out));
+        assertEquals("Fictional: rental income from Australia", fieldValues(r2.pdf(), List.of(in)).get(in));
+        // the legacy generic key alone fills neither box any more
+        ObjectNode legacyOnly = k.data().deepCopy();
+        legacyOnly.remove("International Money Transfers – In activity details (including countries)");
+        legacyOnly.remove("International Money Transfers – Out activity details (including countries)");
+        legacyOnly.put("International payments activity details (including countries involved)", "Fictional generic text");
+        FillResult r3 = FILLER.fill(k.template(), k.manifest(), legacyOnly);
+        assertEquals(Map.of(in, "", out, ""), fieldValues(r3.pdf(), List.of(in, out)));
         writeOutput("GHL_NP_Trust_live_labels_POC.pdf", r.pdf());
+    }
+
+    @Test
+    void ghlTrustRefusesContradictoryTransferData() throws IOException {
+        Case k = require(GHL_TRUST, "tests/fixtures/ghl-np-trust-live-labels.request.json");
+        record C(String key, String value, String rule) {
+        }
+        for (C c : List.of(
+                new C("International Money Transfers – Out frequency", "Never", "GHL-TRUST-OUT-NEVER"),
+                new C("International Money Transfers – In frequency", "Never", "GHL-TRUST-IN-NEVER"),
+                new C("Receive transactions/funds from third parties?", "No", "GHL-TRUST-THIRD-PARTY-NO"),
+                new C("Cash deposits frequency (GHL Trust)", "Never", "GHL-TRUST-CASH-NEVER-DETAILS"))) {
+            ObjectNode d = k.data().deepCopy();
+            d.put(c.key(), c.value());
+            FillResult r = FILLER.fill(k.template(), k.manifest(), d);
+            assertNull(r.pdf(), c.key());
+            assertTrue(r.errors().stream().allMatch(i -> i.code().equals("PRECONDITION_FAILED") && i.message().contains(c.rule())),
+                    () -> c.key() + " " + r.errors());
+        }
+        ObjectNode unknownSource = k.data().deepCopy();
+        unknownSource.put("Sources of credits", "Dividends from investments, Inheritance");
+        assertEquals(List.of("UNMAPPED_OPTION"), codesOf(FILLER.fill(k.template(), k.manifest(), unknownSource)));
+        ObjectNode bothReasons = k.data().deepCopy();
+        bothReasons.put("GHL Why have you come to Sovereign Home Loans?", "Everyday banking, Other (please specify)");
+        assertEquals(List.of("MULTI_SELECT_NOT_REPRESENTABLE"), codesOf(FILLER.fill(k.template(), k.manifest(), bothReasons)),
+                "the two reason boxes are one checkbox field: only one state can be recorded");
+    }
+
+    @Test
+    void boarderFormsRefuseContradictoryAmounts() throws IOException {
+        Case asb = require(ASB_BOARDER, "tests/fixtures/asb-boarder.request.json");
+        ObjectNode noAmount = asb.data().deepCopy();
+        noAmount.remove("Boarders - Board amount 1"); // frequency without amount
+        FillResult r = FILLER.fill(asb.template(), asb.manifest(), noAmount);
+        assertEquals(List.of("PRECONDITION_FAILED"), codesOf(r));
+        assertTrue(r.errors().getFirst().message().contains("ASB-BOARDER-AMOUNT-1"));
+        ObjectNode badFreq = asb.data().deepCopy();
+        badFreq.put("Boarders - Board amount 1 frequency", "Quarterly");
+        assertEquals(List.of("UNMAPPED_OPTION"), codesOf(FILLER.fill(asb.template(), asb.manifest(), badFreq)));
+
+        Case anz = require(ANZ_BOARDER, "tests/fixtures/anz-boarder.request.json");
+        ObjectNode monthly = anz.data().deepCopy();
+        monthly.put("Boarders - Board amount 1 frequency", "Monthly");
+        monthly.put("Boarders - Board amount 2 frequency", "Fortnightly");
+        assertEquals(List.of("PRECONDITION_FAILED", "PRECONDITION_FAILED"), codesOf(FILLER.fill(anz.template(), anz.manifest(), monthly)));
+        // the food/bills answer exists on Monday but ANZ's radios both export 'No': never filled (template defect)
+        FillResult ok = FILLER.fill(anz.template(), anz.manifest(), anz.data());
+        assertEquals(Map.of("B1 Inclusive", "Off", "B2 Inclusive", "Off"), fieldValues(ok.pdf(), List.of("B1 Inclusive", "B2 Inclusive")));
+    }
+
+    static List<String> codesOf(FillResult r) {
+        return r.errors().stream().map(Issue::code).toList();
     }
 
     @Test

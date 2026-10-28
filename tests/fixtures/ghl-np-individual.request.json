@@ -7,12 +7,14 @@
     "Applicant 1 Full Name": "Jane Example",
     "Applicant 1 Current Occupation": "Fictional Test Analyst",
     "What do you intend to use your accounts for? (GHL Individual)": "Everyday personal banking",
-    "Total credits or deposits (next 12 months) (ASB)": "$50,000-$150,000",
+    "Total credits or deposits (next 12 months) (ASB)": "$150,001-$250,000",
     "Cash deposits frequency (ASB)": "Infrequently",
     "Cash deposits average value per deposit (ASB)": "$500-$1,000",
     "Cash deposits activity details": "Occasional cash from a fictional weekend market stall",
-    "International payments frequency (ASB)": "Never",
-    "International payments average value per payment (ASB)": "Less than $500",
-    "International payments activity details (including countries involved)": "None expected (fictional test data)"
+    "International payments frequency (ASB)": "Occasionally (monthly / quarterly)",
+    "International payments average value per payment (ASB)": "$500-$1,000",
+    "International payments activity details (including countries involved)": "Fictional: annual transfer to a relative in Australia",
+    "Use account for anything other than personal use?": "Yes",
+    "Other account use details (GHL)": "Fictional: small online craft sales"
   }
 }

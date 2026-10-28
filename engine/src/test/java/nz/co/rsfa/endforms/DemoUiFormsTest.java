@@ -48,7 +48,12 @@ class DemoUiFormsTest {
         });
         m.path("overlays").forEach(o -> keys.add(o.path("source").path("key").asText()));
         m.path("validation").path("requires").forEach(r -> {
-            keys.add(r.get("ifPresent").asText());
+            if (r.has("ifPresent")) {
+                keys.add(r.get("ifPresent").asText());
+            }
+            if (r.has("when")) {
+                keys.add(r.get("when").get("key").asText());
+            }
             keys.add(r.get("require").get("key").asText());
         });
         return keys;

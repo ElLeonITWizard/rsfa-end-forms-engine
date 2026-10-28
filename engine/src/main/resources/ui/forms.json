@@ -81,8 +81,8 @@
       "templateId": "ASB_BOARDER_DECLARATION",
       "templateVersion": "12-22",
       "label": "ASB — Boarder Income Declaration",
-      "status": "candidate",
-      "description": "ASB boarder income declaration (blank ASB form 56140 25905 1222). Candidate: synthetic tests pass; awaiting RSFA review.",
+      "status": "blocked",
+      "description": "ASB boarder income declaration (blank ASB form 56140 25905 1222). BLOCKED pending RSFA decision on which address is the property (legacy mapping shown).",
       "sections": [
         {
           "title": "Borrowers",
@@ -215,8 +215,8 @@
       "templateId": "ANZ_BOARDER_INCOME_DECLARATION",
       "templateVersion": "02-24",
       "label": "ANZ — Boarder Income Declaration",
-      "status": "candidate",
-      "description": "ANZ boarder income declaration (02/24). Candidate. The form only has weekly amounts: other frequencies are refused.",
+      "status": "blocked",
+      "description": "ANZ boarder income declaration (02/24). BLOCKED pending RSFA decision on which address is the property (legacy mapping shown).",
       "sections": [
         {
           "title": "Customers",
@@ -309,10 +309,10 @@
         "data": {
           "Applicant 1 Full Name": "Jane Example",
           "Applicant 2 Full Name": "John Sample",
+          "ANZ Customer Number (if known)": "100200300",
           "Applicant 1 Physical Address": "12 Example Street, Testville",
           "Applicant 1 Residential City/Town": "Auckland",
           "Applicant 1 Residential Postcode/Zip": "0999",
-          "ANZ Customer Number (if known)": "100200300",
           "Boarders - Boarder one name (if known)": "Alex Boarder",
           "Boarders - Board amount 1": "250",
           "Boarders - Board amount 1 frequency": "Weekly",
@@ -326,8 +326,8 @@
       "templateId": "GHL_NP_INDIVIDUAL_FORM",
       "templateVersion": "8-19",
       "label": "GHL — Account Use Questionnaire (Individual)",
-      "status": "candidate",
-      "description": "Sovereign / GO Home Loans nature & purpose questionnaire (08/19). Candidate. Options whose Monday label has no box are refused.",
+      "status": "ready-for-acceptance-testing",
+      "description": "Sovereign / GO Home Loans account use questionnaire (08/19). Ready for RSFA acceptance testing: renamed Monday labels reconciled, section 5 mapped, contradictory or unrepresentable answers refused.",
       "sections": [
         {
           "title": "Customer",
@@ -425,6 +425,25 @@
               "wide": true
             }
           ]
+        },
+        {
+          "title": "Other use (section 5)",
+          "fields": [
+            {
+              "key": "Use account for anything other than personal use?",
+              "label": "Use account for anything other than personal use?",
+              "type": "select",
+              "options": [
+                "Yes",
+                "No"
+              ]
+            },
+            {
+              "key": "Other account use details (GHL)",
+              "label": "Other account use details (GHL)",
+              "wide": true
+            }
+          ]
         }
       ],
       "date": {
@@ -438,13 +457,15 @@
           "Applicant 1 Full Name": "Jane Example",
           "Applicant 1 Current Occupation": "Fictional Test Analyst",
           "What do you intend to use your accounts for? (GHL Individual)": "Everyday personal banking",
-          "Total credits or deposits (next 12 months) (ASB)": "$50,000-$150,000",
+          "Total credits or deposits (next 12 months) (ASB)": "$150,001-$250,000",
           "Cash deposits frequency (ASB)": "Infrequently",
           "Cash deposits average value per deposit (ASB)": "$500-$1,000",
           "Cash deposits activity details": "Occasional cash from a fictional weekend market stall",
-          "International payments frequency (ASB)": "Never",
-          "International payments average value per payment (ASB)": "Less than $500",
-          "International payments activity details (including countries involved)": "None expected (fictional test data)"
+          "International payments frequency (ASB)": "Occasionally (monthly / quarterly)",
+          "International payments average value per payment (ASB)": "$500-$1,000",
+          "International payments activity details (including countries involved)": "Fictional: annual transfer to a relative in Australia",
+          "Use account for anything other than personal use?": "Yes",
+          "Other account use details (GHL)": "Fictional: small online craft sales"
         }
       }
     },
@@ -452,8 +473,8 @@
       "templateId": "GHL_NP_TRUST_FORM",
       "templateVersion": "8-19",
       "label": "GHL — Account Use Questionnaire (Trust)",
-      "status": "candidate",
-      "description": "Sovereign / GO Home Loans nature & purpose questionnaire for trusts (08/19). Candidate with a BLOCKING open question (activity details boxes, docs/06).",
+      "status": "ready-for-acceptance-testing",
+      "description": "Sovereign / GO Home Loans account use questionnaire for trusts (08/19). Ready for RSFA acceptance testing: inbound and outbound details come from their own Monday columns; contradictory answers are refused.",
       "sections": [
         {
           "title": "Trust",
@@ -489,7 +510,7 @@
           ]
         },
         {
-          "title": "Expected account behaviour",
+          "title": "Credits and cash",
           "fields": [
             {
               "key": "Total credits or deposits (next 12 months) (GHL Trust)",
@@ -529,6 +550,16 @@
               ]
             },
             {
+              "key": "Cash deposits activity details",
+              "label": "Cash deposits activity details",
+              "wide": true
+            }
+          ]
+        },
+        {
+          "title": "International transfers IN (3d)",
+          "fields": [
+            {
               "key": "International Money Transfers – In frequency",
               "label": "International Money Transfers – In frequency",
               "type": "select",
@@ -549,6 +580,16 @@
                 "More than $10,000"
               ]
             },
+            {
+              "key": "International Money Transfers – In activity details (including countries)",
+              "label": "International Money Transfers – In activity details (including countries)",
+              "wide": true
+            }
+          ]
+        },
+        {
+          "title": "International transfers OUT (3e)",
+          "fields": [
             {
               "key": "International Money Transfers – Out frequency",
               "label": "International Money Transfers – Out frequency",
@@ -571,10 +612,15 @@
               ]
             },
             {
-              "key": "International payments activity details (including countries involved)",
-              "label": "International payments activity details (including countries involved)",
+              "key": "International Money Transfers – Out activity details (including countries)",
+              "label": "International Money Transfers – Out activity details (including countries)",
               "wide": true
-            },
+            }
+          ]
+        },
+        {
+          "title": "Third parties",
+          "fields": [
             {
               "key": "Receive transactions/funds from third parties?",
               "label": "Receive transactions/funds from third parties?",
@@ -605,14 +651,16 @@
           "GHL Why have you come to Sovereign Home Loans?": "Other (please specify)",
           "GHL Other reasons to come": "Fictional: refinance from another lender",
           "Total credits or deposits (next 12 months) (GHL Trust)": "Less than $250K",
-          "Sources of credits": "Dividends from investments",
+          "Sources of credits": "Dividends from investments, Donations",
           "GHL Other sources of credits": "",
           "Cash deposits frequency (GHL Trust)": "Occasionally (monthly / quarterly)",
+          "Cash deposits activity details": "Fictional: quarterly cash donations at a fete",
           "International Money Transfers – In frequency": "Frequently (daily / weekly / fortnightly)",
-          "Int Transfers IN - Average Value per Payment (GHL Trust)": "More than $10,000",
-          "International Money Transfers – Out frequency": "Never",
+          "Int Transfers IN - Average Value per Payment (GHL Trust)": "$1,000-$10,000",
+          "International Money Transfers – In activity details (including countries)": "Fictional: rental income from Australia",
+          "International Money Transfers – Out frequency": "Infrequently",
           "Int Transfers OUT - Average Value per Payment (GHL Trust)": "Less than $1,000",
-          "International payments activity details (including countries involved)": "Fictional rental income from Australia",
+          "International Money Transfers – Out activity details (including countries)": "Fictional: annual fee paid to a UK trustee service",
           "Receive transactions/funds from third parties?": "Yes",
           "If yes, purpose": "Fictional: family contributions to the mortgage"
         }

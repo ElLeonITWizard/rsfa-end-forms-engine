@@ -15,6 +15,11 @@
     "Boarders - Board amount 1 frequency": "Weekly",
     "Boarders - Boarder two name (if known)": "Sam Lodger",
     "Boarders - Board amount 2": "230",
-    "Boarders - Board amount 2 frequency": "Weekly"
+    "Boarders - Board amount 2 frequency": "Weekly",
+    "1st Property Address": "7 Purchase Lane, Sampleton, Hamilton 3200",
+    "1st Property Address City": "Hamilton",
+    "1st Property Address Postcode": "3200",
+    "Boarder 1 amount inclusive of food and/or bills/utilities": "No",
+    "Boarder 2 amount inclusive of food and/or bills/utilities?": "Yes"
   }
 }

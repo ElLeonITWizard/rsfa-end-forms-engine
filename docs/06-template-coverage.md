@@ -1,83 +1,124 @@
-# 06 — Template coverage: selection, readiness and open questions (iteration 6)
+# 06 — Form validation: status, corrections, decisions (iteration 7)
 
-The per-form mapping report (every key, label check and unmapped field) is generated:
-[`docs/generated/template-coverage.md`](generated/template-coverage.md) (`tools/coverage_report.py`).
-This page explains **which forms were chosen, why the others were not, and what each form still needs**.
+The detailed report per form is generated: [`docs/generated/template-coverage.md`](generated/template-coverage.md)
+(`tools/coverage_report.py`). It lists, for every form:
+- every data key and its live-board and Make-contract status;
+- the label check of every condition;
+- confirmed, corrected and unresolved mappings, stakeholder decisions and remaining risks.
 
-Evidence used (2026-10-27):
-- **Imported manifests:** `tools/import_mforge.py`.
-- **Printed label next to every mapped widget:** a geometric label check on the real PDFs.
-- **Rendered output:** every candidate, reviewed visually with synthetic data.
-- **[live] Monday schema (read-only):** column schema of board `5026186805` via the Monday connector, columns
-  only, no items. It is saved locally as `.local/reference/masterboard-columns-2026-10-27.json` (git-ignored).
-- **Make contract:** the `8731317` result-key contract (`.local/reference/8731317_result_key_contract.tsv`).
+This page summarises it and explains the reasoning.
+
+**Evidence used (2026-10-27/28):**
+- the bank's blank PDFs (field geometry, states, export values, printed labels next to each widget);
+- the imported MacroForge rules;
+- the live Monday column schema (read-only, docs/08);
+- the `8731317` key contract and live module-8 code;
+- rendered synthetic outputs.
+
+**Nothing here is approved by RSFA, and no form is compared with a MacroForge output.**
 
 ## Readiness levels
 
 | Level | Meaning |
 |---|---|
 | **tested** | Output asserted by automated tests; deployed with RSFA's approval for packaging/testing (BNZ Boarder only). |
-| **candidate** | Every rule checked against the printed label and the live Monday labels. Synthetic end-to-end tests pass, and refusals are tested. **Not approved by RSFA and not compared with a MacroForge output.** Available locally (demo selector, `/v1` with `includeCandidates`). Not in the Cloud Run allowlist. |
-| **blocked** | Generates, but an open question means the document could be wrong. Not routed by bank selection. |
-| not selected | Not migrated in this iteration; MacroForge remains responsible. |
+| **ready-for-acceptance-testing** | Every rule checked against the printed form and the live Monday schema. Evidence-based corrections applied and documented. Contradictory or unrepresentable input is refused. No material ambiguity left. **Safe to propose for RSFA acceptance testing; not approved, not in the Cloud Run allowlist.** |
+| **blocked** | A material question needs an RSFA decision. Generates locally for review only (with the legacy mapping, plus a preview of the proposed correction); never routed by bank. |
 
-## Selected forms
+## Corrections policy (D-028)
 
-| Form | Template key | Level | Why selected | Engine features exercised |
-|---|---|---|---|---|
-| ASB Boarder Income Declaration | `ASB_BOARDER_DECLARATION@12-22` | candidate | Same business case as BNZ Boarder. 23/23 legacy rules imported. All 19 PDF fields mapped. All frequency labels match the live board exactly. | text, radio + conditions, `[TODAY]` comb dates (DDMMYYYY), encrypted template (preserve), closed options, `present` precondition |
-| ANZ Boarder Income Declaration | `ANZ_BOARDER_INCOME_DECLARATION@02-24` | candidate | Boarder family. 8/8 rules plus 2 overlays. Simple layout. | text, overlays (rect / 1.2), **weekly-amount precondition** |
-| GHL Account Use Questionnaire — Individual | `GHL_NP_INDIVIDUAL_FORM@8-19` | candidate | 26/26 rules, checkbox-heavy, no line items. | checkbox groups + conditions, encrypted template, closed options (single and multi-select) |
-| GHL Account Use Questionnaire — Trust | `GHL_NP_TRUST_FORM@8-19` | **blocked** | Was "partially tested". Now fully exercised with live labels. | as above |
+Reviewed corrections live in `curation/<ID>@<version>.json`, next to the closed options and preconditions:
+- **Basis `evidence`:** applied by the importer and documented. Examples: a renamed Monday label whose printed option
+  is unambiguous; a dedicated Monday column for a box the legacy configuration left empty or filled from the wrong
+  column. The old legacy value stays accepted next to a corrected label.
+- **Basis `decision`:** business choices, e.g. which address is "the property". **Never applied** without a recorded
+  RSFA decision (`approvedBy`, `approvedOn`, `reference`), which is never written on RSFA's behalf.
+  `import_mforge.py --preview-pending` builds a preview manifest under `.local/` for visual review only.
+- A correction must match the imported rule exactly, otherwise the import fails. It can never add a constant tick
+  (D-016) or target a signature.
 
-The **form version** is taken from the bank's own form code where the file name has none. ASB `56140 25905 1222` → `12-22`
-follows the same convention as GHL `56140-26142-1124`, which is printed "November 2024".
+## Summary per form
 
-## What the review found (and how the engine now handles it)
+| Form | Status | Confirmed | Corrected | Unresolved (left blank) | Decision needed |
+|---|---|---|---|---|---|
+| BNZ Boarder `BNZ_BOARDER_FORM@2.0_8-24` | tested | 7 fields + 2 overlays | — | `Text 1` (legacy) | — |
+| GHL Account Use — Individual `GHL_NP_INDIVIDUAL_FORM@8-19` | **ready-for-acceptance-testing** | 10 fields | 6: three renamed labels; section 5 Yes/No + details | 10 (internal-use boxes, dates) | — (two review questions) |
+| GHL Account Use — Trust `GHL_NP_TRUST_FORM@8-19` | **ready-for-acceptance-testing** | 13 fields | 8: **3d/3e in/out details from dedicated columns**; 3c details; `$1,000-$10,000` ×2; multi-select sources | 11, incl. 3c average value (no matching column) | — (review questions) |
+| ASB Boarder `ASB_BOARDER_DECLARATION@12-22` | **blocked** | 13 fields (names, household, boarders, amounts, frequencies); 6 under decision | — | — | RSFA-DECISION-1 (address), RSFA-DECISION-2 (signature dates) |
+| ANZ Boarder `ANZ_BOARDER_INCOME_DECLARATION@02-24` | **blocked** | 5 fields + 2 overlays; 3 under decision | — | food/bills Yes/No (**bank template defect**), signature dates | RSFA-DECISION-1 (address) |
 
-1. **Monday label drift.** The live board has labels that no legacy rule tests, because the labels were renamed after
-   MacroForge was configured:
-   - GHL Individual:
-     - `$150,001-$250,000` (rule tests `$150,000-$250,000`);
-     - `Occasionally (monthly / quarterly)` ×2 (rule tests `Occasionally (monthly/quarterly)`).
-   - GHL Trust: `$1,000-$10,000` ×2 (rule tests `$1,000-$5,000`; the box is printed `$1,000-$10,000`).
+### GHL Individual: ready for acceptance testing
 
-   MacroForge would silently leave those boxes blank. The engine now **refuses** such values (`UNMAPPED_OPTION`)
-   through the curated `validation.closedOptions` (D-023). The obvious rule fixes are **not** applied. They change the
-   legacy mapping and need RSFA's decision.
-2. **Multi-select columns.** These columns use legacy `equals` rules, which can represent only one label:
-   - `Sources of credits`;
-   - `GHL Why have you come to Sovereign Home Loans?`;
-   - `What do you intend to use your accounts for? (GHL Individual)`.
+- **Confirmed:**
+  - name and occupation;
+  - all six checkbox groups against the printed options and the live labels;
+  - free-text details.
+- **Corrected (evidence):**
+  - `$150,001-$250,000`, and `Occasionally (monthly / quarterly)` in 3b and 4: Monday labels renamed, same printed
+    option. MacroForge leaves those boxes blank today.
+  - Section 5 "anything other than personal use?" from `Use account for anything other than personal use?` (Yes/No)
+    and `Other account use details (GHL)`. The legacy configuration leaves it empty.
+- **Refused:**
+  - two "intend to use" labels at once: one checkbox field, so only one state can be recorded;
+  - any unknown label;
+  - contradictions: cash or international "Never" with an average value or details; other use "No" with details.
+- **Review questions (not blocking):**
+  - Section 4 average value comes from the ASB column (legacy). A `(GHL Individual)` column with the same bands
+    also exists.
+  - In a parallel run MacroForge will differ where the engine fills more.
 
-   Two labels are refused (`MULTI_SELECT_NOT_REPRESENTABLE`).
-3. **Misstated amounts.** The ANZ form only has a "Weekly board amount" box, but Monday allows Weekly, Fortnightly or
-   Monthly. A non-weekly amount is refused (`PRECONDITION_FAILED`, `ANZ-BOARDER-WEEKLY-1/2`). ASB requires a frequency
-   whenever an amount is given (`ASB-BOARDER-FREQ-1/2`).
-4. **GHL Trust activity details (BLOCKING).** The legacy configuration writes the same key into both detail boxes:
-   - the key is `International payments activity details (including countries involved)`;
-   - the boxes are 3d (transfers **in**) and 3e (transfers **out**);
-   - so details appear under "out" even when "out" is `Never`;
-   - the 3c cash-deposit details box and average value are not mapped.
-5. **Template quirk.** The GHL Individual PDF carries an XMP metadata stream (object 187) with bad AES padding in the
-   bank's own file. PDFBox logs a `SEVERE` decrypt message (no data) and the incremental save keeps the original
-   bytes. Output verified with PDFBox and pypdf.
-6. **Live schema facts relevant to Make** (also in docs/07):
-   - The board is titled **"SOP Masterboard"**.
-   - Column `dropdown_mkzvfgeg`, which the Make contract and MacroForge call "Banks to Send", is now titled
-     **"Selected Banks"**. Its labels are `ASB, ANZ, BNZ, KiwiBank, WBC`.
-   - `status` has a fifth label, **`Historical`**.
-   - Contract key `KIWIBANK Account Number 1` vs live title `Kiwibank Account Number 1`.
+### GHL Trust: ready for acceptance testing (inbound/outbound defect fixed)
 
-## Open questions per form (for RSFA)
+- **Corrected (evidence):**
+  - 3d details ← `International Money Transfers – In activity details (including countries)`.
+  - 3e details ← `… – Out activity details (including countries)`.
+  - These replace the legacy rule that copied one generic text into both boxes. Without OUT details the OUT box stays
+    empty (tested).
+  - 3c cash details ← `Cash deposits activity details`.
+  - `$1,000-$10,000` for both average-value questions.
+  - `Sources of credits` uses `includes`: each selected source ticks its own checkbox.
+- **Refused:**
+  - IN/OUT/cash "Never" combined with an average or details;
+  - third parties "No" combined with a purpose;
+  - unknown sources;
+  - both "why have you come" reasons at once (one checkbox field).
+- **Unresolved:** 3c average value (Check Box100: the Monday cash column for this form does not exist; the ASB one
+  has other bands). Left blank as in MacroForge.
+- **Review question:** which near-duplicate Monday columns advisers actually fill (docs/generated).
 
-| Form | Question | Blocking? |
-|---|---|---|
-| ASB Boarder | Property address uses Applicant 1 *physical* address Street / Province / Country (legacy). Suburb and City are not mapped, and it may not be the property where the boarders live. | review |
-| ASB Boarder | Signature dates are pre-filled with today (legacy `[TODAY]`). The DDMMYYYY format is inferred from the 8-cell comb. | review |
-| ANZ Boarder | Property address = Applicant 1 Physical Address (legacy). The "inclusive of food/bills" Yes/No boxes are not mapped. | review |
-| GHL Individual | Apply the three label fixes above? Multi-select: should both boxes be ticked (new `includes` semantics)? | for those values |
-| GHL Trust | Correct keys for the 3c/3d/3e activity details; the `$1,000-$10,000` fix; multi-select semantics. | **yes** |
+### ASB Boarder: blocked by RSFA-DECISION-1
+
+- **Confirmed:**
+  - borrower names, full names, household numbers;
+  - boarder names, amounts and the three frequencies (labels exact);
+  - the radio state positions;
+  - encryption preserved.
+- **Refused:** an unknown frequency; a frequency without an amount; an amount without a frequency.
+- **Decision 1 (material):** "Property address".
+  - Legacy: the applicant's *physical* address printed as Street / **Province** / **Country**, so Suburb and City are
+    never printed.
+  - Proposal `ASB-ADDR-1..4`: *1st Property Address* Street / Suburb / City / Postcode, as BNZ Boarder does.
+  - The right answer depends on the deal: purchase vs refinance.
+  - Preview PDF provided.
+- **Decision 2:** the signature dates are pre-filled with today (legacy). Proposal `ASB-SIGNATURE-DATE-1/2`: leave them
+  blank for the customer.
+
+### ANZ Boarder: blocked by RSFA-DECISION-1
+
+- **Confirmed:**
+  - customer-name overlays, visually on the dotted line;
+  - customer number, boarder names;
+  - weekly amounts, guarded: Fortnightly/Monthly is refused;
+  - signature dates blank.
+- **Decision 1:**
+  - Legacy mixes the free-text *physical* address with the structured *residential* City/Town and Postcode columns.
+  - Proposal `ANZ-ADDR-1..3`: *1st Property Address* + its City + Postcode. Preview PDF provided.
+- **Unresolved, bank template defect:**
+  - Monday has dedicated Yes/No columns for "inclusive of food and/or bills".
+  - But in ANZ's PDF **both** widgets of `B1 Inclusive`/`B2 Inclusive` export the value `No` (`/Opt ['No','No']`).
+    A visually ticked Yes would be recorded as No.
+  - Not filled. Needs ANZ's corrected form or RSFA's explicit acceptance of a visual-only tick.
+- **Risk:** `Customer number(s)` takes one Monday column, so a second customer's number cannot be printed.
 
 ## Forms reviewed and not selected (this iteration)
 

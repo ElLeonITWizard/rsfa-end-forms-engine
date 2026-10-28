@@ -15,10 +15,10 @@ class ContractExamplesTest(unittest.TestCase):
     def test_examples_validate_and_use_only_fictional_identifiers(self):
         schema = json.loads((REPO / "contracts" / "masterboard-request.v1.schema.json").read_text(encoding="utf-8"))
         examples = sorted((REPO / "contracts" / "examples").glob("request.*.json"))
-        self.assertGreaterEqual(len(examples), 3)
+        self.assertGreaterEqual(len(examples), 5)
         for p in examples:
             doc = json.loads(p.read_text(encoding="utf-8"))
-            if jsonschema is not None:
+            if jsonschema is not None and "unknown-bank" not in p.name:  # that one is deliberately invalid
                 jsonschema.validate(doc, schema)
             self.assertTrue(doc["source"]["itemId"].startswith("10000000"), f"{p.name}: fictional item ids only")
             self.assertIn(doc["data"].get("Applicant 1 Full Name"), ("Jane Example", None), p.name)

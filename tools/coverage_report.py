@@ -82,6 +82,48 @@ def source_type(f) -> str:
     return next((k for k in ("key", "when", "generated", "lineItem") if k in s), "?")
 
 
+def validation_sections(m: dict) -> list[str]:
+    """Confirmed / corrected / unresolved mappings, stakeholder decisions and risks, from the manifest and its curation."""
+    cur_path = REPO / "curation" / f"{m['templateId']}@{m['templateVersion']}.json"
+    cur = json.loads(cur_path.read_text(encoding="utf-8")) if cur_path.is_file() else {}
+    by_id = {c["id"]: c for c in cur.get("corrections", [])}
+    status = {c["id"]: c["status"] for c in m.get("corrections", [])}
+    review = m.get("review", {})
+    out = ["", "### Validation report", "",
+           f"Status: **{review.get('status', 'not curated')}**" + (f" (blocked by: {'; '.join(review['blockedBy'])})"
+                                                                     if review.get("blockedBy") else "") + "."]
+    pending_fields = {(c.get("target") or c.get("rule") or {}).get("pdfField") for c in cur.get("corrections", [])
+                      if status.get(c["id"]) != "applied"}
+    confirmed = sorted({f["pdfField"] for f in m["fields"] if "correction" not in f} - pending_fields)
+    if not cur:
+        out += ["", f"**Imported mappings ({len(confirmed)} PDF fields), not individually reviewed yet** (no curation file): "
+                + ", ".join(f"`{x}`" for x in confirmed) + "."]
+    else:
+        out += ["", f"**Confirmed mappings ({len(confirmed)} PDF fields):** imported legacy rules checked against the "
+                    "printed label next to each widget and, for conditions, the live Monday labels: "
+                + ", ".join(f"`{x}`" for x in confirmed) + "."]
+        if pending_fields - {None}:
+            out += ["", "**Fields under a pending decision (legacy rule still applied):** "
+                    + ", ".join(f"`{x}`" for x in sorted(pending_fields - {None})) + "."]
+    applied = [c for c in cur.get("corrections", []) if status.get(c["id"]) == "applied"]
+    out += ["", f"**Corrected mappings ({len(applied)}):**" + ("" if applied else " none.")]
+    out += [f"- `{c['id']}` ({c['type']}, {c['basis']}): {c['reason']} Evidence: {c['evidence']}" for c in applied]
+    pending = [c for c in cur.get("corrections", []) if status.get(c["id"]) != "applied"]
+    unresolved = [q for q in review.get("openQuestions", []) if q.startswith("UNRESOLVED")]
+    out += ["", f"**Unresolved mappings:** {len(m.get('unmappedPdfFields', []))} PDF field(s) left blank (listed above)"
+            + (", plus:" if unresolved else ".")] + [f"- {q}" for q in unresolved]
+    groups = {}
+    for c in pending:
+        groups.setdefault(c.get("decisionRef", c["id"]), []).append(c)
+    out += ["", f"**Required stakeholder decisions ({len(groups)}):**" + ("" if groups else " none for this form.")]
+    for ref, cs in groups.items():
+        out.append(f"- {ref}: proposed corrections {', '.join(f'`{c["id"]}`' for c in cs)} (pending, not applied). "
+                   f"{cs[0]['reason']} Evidence: {cs[0]['evidence']}")
+    risks = [q for q in review.get("openQuestions", []) if not q.startswith("UNRESOLVED")]
+    out += ["", "**Remaining risks and open questions:**"] + ([f"- {q}" for q in risks] or ["- none recorded"])
+    return out
+
+
 def report(m: dict, path: Path, board, contract) -> tuple[dict, str]:
     pdf_fields = m["pdf"]["fields"]
     kinds = collections.Counter(v["kind"] for v in pdf_fields.values())
@@ -127,12 +169,22 @@ def report(m: dict, path: Path, board, contract) -> tuple[dict, str]:
             if live is None:
                 cell = f"{len(conds)} rule(s); live labels not available"
             else:
-                hit = lambda c: (c["value"] in live) if c["operator"] == "equals" else any(c["value"] in x for x in live)
-                stale = sorted({c["value"] for c in conds if not hit(c)})
-                cov = lambda x: any((x == c["value"]) if c["operator"] == "equals" else (c["value"] in x) for c in conds)
+                hit = lambda c: (c["value"] in live) if c["operator"] in ("equals", "includes") else any(c["value"] in x for x in live)
+                # a legacy value kept on purpose next to a corrected live label (add-when-value) is not drift any more
+                corrected_slots = {(f["pdfField"], f.get("option")) for f in m["fields"]
+                                   if "correction" in f and (f["source"].get("when") or {}).get("key") == k}
+                kept = sorted({f["source"]["when"]["value"] for f in m["fields"]
+                               if (f["source"].get("when") or {}).get("key") == k and "correction" not in f
+                               and (f["pdfField"], f.get("option")) in corrected_slots and not hit(f["source"]["when"])})
+                stale = sorted({c["value"] for c in conds if not hit(c)} - set(kept))
+                if kept:
+                    parts_kept = "legacy value kept next to the corrected live label: " + ", ".join(f"`{x}`" for x in kept)
+                cov = lambda x: any((x == c["value"]) if c["operator"] in ("equals", "includes") else (c["value"] in x) for c in conds)
                 norule = [x for x in live if not cov(x)]
-                multi = not (col.get("settings") or {}).get("limit_select")
+                multi = col.get("type") == "dropdown" and not (col.get("settings") or {}).get("limit_select")
                 parts = [f"{len(conds)} rule(s), {len(live)} live label(s){' (multi-select)' if multi else ''}"]
+                if kept:
+                    parts.append(parts_kept)
                 if stale:
                     parts.append("rule value not a live label: " + ", ".join(f"`{x}`" for x in stale))
                     issues["stale rule label"] += len(stale)
@@ -143,8 +195,7 @@ def report(m: dict, path: Path, board, contract) -> tuple[dict, str]:
         lines.append(f"| `{k}` | {', '.join(users)[:80]} | {how}{' (' + col['type'] + ')' if col else ''} | {in_contract} | {cell} |")
     if unmapped:
         lines += ["", "Unmapped PDF fields: " + ", ".join(f"`{n}` ({pdf_fields[n]['kind']})" for n in unmapped) + "."]
-    if review.get("openQuestions"):
-        lines += ["", "Open questions for RSFA:"] + [f"- {q}" for q in review["openQuestions"]]
+    lines += validation_sections(m)
     summary = {"key": f"{m['templateId']}@{m['templateVersion']}", "status": review.get("status", "not curated"),
                "pdfFields": len(pdf_fields), "mapped": len(mapped), "unmapped": len(unmapped), "rules": len(m["fields"]),
                "overlays": len(m.get("overlays", [])),

@@ -1,5 +1,5 @@
 {
-  "_comment": "Bank -> lender forms, as in MacroForge Flow C (one PDF Batch Filler per 'Banks to Send Contains <bank>' block; the ASB block also holds the GHL forms; All Banks_DOAD.pdf is always filled). Bank labels are the live 'Selected Banks' dropdown labels (column dropdown_mkzvfgeg, board 5026186805, read 2026-10-27). Status: tested | candidate (synthetic tests pass, awaiting RSFA review) | blocked (open blocking question, docs/06) | partial | untested | not-migrated. Bank selection generates only 'tested' forms, plus 'candidate' with includeCandidates=true; everything else is reported in notMigrated so MacroForge stays responsible for it during the parallel run (D-025).",
+  "_comment": "Bank -> lender forms, as in MacroForge Flow C (one PDF Batch Filler per 'Banks to Send Contains <bank>' block; the ASB block also holds the GHL forms; All Banks_DOAD.pdf is always filled). Bank labels are the live 'Selected Banks' dropdown labels (column dropdown_mkzvfgeg, board 5026186805, read 2026-10-27). Status: tested | acceptance (ready for RSFA acceptance testing, not approved) | candidate | blocked (open RSFA decision, docs/06) | partial | untested | not-migrated. Bank selection generates only 'tested' forms, plus 'acceptance'/'candidate' forms with includeCandidates=true (testing only); everything else is reported in notMigrated so MacroForge stays responsible for it during the parallel run (D-025).",
   "contract": "masterboard.v1",
   "banks": {
     "ASB": [
@@ -7,7 +7,7 @@
         "legacyPdfName": "ASB Home Loan Boarder Declaration Form.pdf",
         "templateId": "ASB_BOARDER_DECLARATION",
         "templateVersion": "12-22",
-        "status": "candidate"
+        "status": "blocked"
       },
       {
         "legacyPdfName": "ASB&GHL_AdvDec_05 25.pdf",
@@ -29,13 +29,13 @@
         "legacyPdfName": "GHL_N&P Individual_8 19.pdf",
         "templateId": "GHL_NP_INDIVIDUAL_FORM",
         "templateVersion": "8-19",
-        "status": "candidate"
+        "status": "acceptance"
       },
       {
         "legacyPdfName": "GHL_N&P Trust_8 19.pdf",
         "templateId": "GHL_NP_TRUST_FORM",
         "templateVersion": "8-19",
-        "status": "blocked"
+        "status": "acceptance"
       }
     ],
     "KiwiBank": [
@@ -89,7 +89,7 @@
         "legacyPdfName": "Boarder-Income-Declaration 12.02.24.pdf",
         "templateId": "ANZ_BOARDER_INCOME_DECLARATION",
         "templateVersion": "02-24",
-        "status": "candidate"
+        "status": "blocked"
       },
       {
         "legacyPdfName": "Gift Declaration form 23.02.26.pdf",

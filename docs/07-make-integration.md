@@ -1,9 +1,12 @@
 # 07 — Make integration contract and proposed architecture (prepared, not connected)
 
-**Status (2026-10-27):** the engine side is implemented and tested locally (`POST /v1/masterboard/documents`). **No Make
-scenario, Monday board, SharePoint site or Google Cloud resource was created or changed.** The live Cloud Run revision
-does not contain this endpoint. Everything below that touches Make, Monday, SharePoint or GCP is a **proposal** that
-needs RSFA's approval of exact steps.
+**Status (2026-10-28, iteration 7):**
+- **Engine side:** implemented and tested locally (`POST /v1/masterboard/documents`).
+- **Recommended authentication:** the relay (section 3). It is implemented in the same jar (`ENGINE_ROLE=relay`) and
+  proven locally end-to-end: Make-style signed request → relay → IAM stand-in → engine.
+- **Not changed:** no Make scenario, Monday board, SharePoint site or Google Cloud resource was created or changed.
+  The live Cloud Run revision (`00002-nan`) does not contain `/v1` or the relay.
+- **Proposals:** everything below that touches Make, Monday, SharePoint or GCP needs RSFA's approval of exact steps.
 
 Production systems that stay untouched:
 
@@ -25,8 +28,9 @@ Production systems that stay untouched:
   - `dropdown_mkzvfgeg` is titled **"Selected Banks"**. The Make contract and MacroForge's conditions say
     **"Banks to Send"**. The labels are `ASB, ANZ, BNZ, KiwiBank, WBC`.
   - `status` labels: `Reviewing, Reviewed, Cancelled, Filled, Historical`.
-  - **Inference:** `8731317` maps column IDs to fixed result keys (the contract file lists id → key), so the rename has
-    not broken MacroForge. **TODO: verify** in the `8731317` code module before relying on it.
+  - **[live, blueprint read 2026-10-28]** `8731317` module 8 builds every result key from the column's **live title**
+    (`key = col.title || col.id`). The old inference that it maps column IDs to fixed keys was **wrong**: since the
+    rename, `8731317` sends **"Selected Banks"**, not "Banks to Send". See docs/08 for the consequence for MacroForge.
 
 ## 2. Contract `masterboard.v1` — `POST /v1/masterboard/documents`
 
@@ -49,7 +53,8 @@ Examples: [`contracts/examples/`](../contracts/examples/) (fictional data only).
 **Selection.** Exactly one of the following:
 - **`banks`:** the "Selected Banks" labels, split on `", "`. The engine uses the version-controlled routing table
   `engine/src/main/resources/routing/masterboard-v1.json`. It is MacroForge Flow C's bank → form list, ASB including GHL.
-  - It generates only `tested` forms, plus `candidate` forms with `includeCandidates=true` (testing only).
+  - It generates only `tested` forms, plus `acceptance`/`candidate` forms with `includeCandidates=true` (testing only).
+    `blocked` forms are never routed (docs/06).
   - Every other form of that bank, plus the always-filled `All Banks_DOAD.pdf`, is listed in **`notMigrated`**, so Make
     knows that MacroForge must still produce it during the parallel run.
   - An unknown bank label gives 422 `UNKNOWN_BANK`.
@@ -127,71 +132,171 @@ Measured sizes (synthetic fixtures): BNZ Boarder 57 KB, ANZ Boarder 247 KB, ASB 
 - **Unverified:** whether Make can compute HMAC-SHA256 natively. Community threads suggest `sha256()` alone is not an
   HMAC; a Code (JavaScript) module may be needed.
 
-## 3. Service-to-service authentication (Make → private Cloud Run)
+## 3. Service-to-service authentication (Make → private Cloud Run): decision
 
 **Constraints:**
-- Cloud Run must stay `--no-allow-unauthenticated`.
+- The engine stays `--no-allow-unauthenticated`.
 - No service-account JSON keys.
 - No Owner/Editor grants.
+- The fewest new dependencies.
 
-**Why Make cannot simply call it:**
-- Cloud Run IAM accepts only a **Google-signed ID token** (audience = service URL) for a principal with `run.invoker`.
-- Minting one for a service account outside Google needs that account's private key (a JSON key) or a workload
-  identity federation token exchange.
-- Make has no built-in way to sign such a JWT without the key.
+**Why Make cannot call the engine directly:**
+- Cloud Run IAM accepts only a **Google-signed ID token** (audience = service URL) of a principal with `run.invoker`.
+- Make has no built-in way to mint one without a private key.
 - **Not verified:** whether Make can issue an OIDC token per scenario.
-- A user OAuth access token, e.g. from a Make "Google" connection, is **not** an ID token.
 
-| Option | How Make authenticates | Cloud Run stays IAM-only? | Keys? | Effort / risk | Verdict |
-|---|---|---|---|---|---|
-| **A. API Gateway (Google)** in front of Cloud Run | API key restricted to this API, stored in a Make connection/keychain; the gateway calls Cloud Run with its own service account (`run.invoker`) and a Google-minted ID token | **yes** | no SA keys (API key is a revocable bearer secret) | managed, no code; adds a gateway + config; verify payload limits | **Recommended for the first isolated test** |
-| **B. Relay service** (a small Cloud Run service "make-relay") | API key or HMAC checked against Secret Manager; can restrict to Make's published egress IPs; calls the engine with its own SA identity (metadata server) | **yes** | none | full control (HMAC, IP allowlist, rate limit), but one more service to maintain | Recommended if RSFA wants HMAC/IP pinning |
-| C. Workload Identity Federation | Make presents an OIDC token | yes | none | Make does not issue per-scenario OIDC tokens (verify) | Not applicable today |
-| D. Engine `API_KEY` mode + `--allow-unauthenticated` | bearer key | **no** | — | weakens the platform boundary | **Rejected** |
-| E. Service-account JSON key in Make | signs its own ID token | yes | **yes** | key exfiltration risk, forbidden by RSFA | **Rejected** |
+So a public-facing entry point is needed, and it must authenticate Make itself.
 
-**Least-privilege layout (A or B):**
-- a dedicated `make-gateway@` (or `make-relay@`) service account with `roles/run.invoker` **on the engine service only**;
-- the deployer's own invoker binding unchanged;
-- the API key restricted to the gateway API, rotated on a schedule and revoked on suspicion;
-- Cloud Run logs and the gateway or relay logs correlated by `X-Correlation-Id`.
+### Option A — Google API Gateway in front of the private engine
 
-Exact `gcloud` commands will be prepared for approval when RSFA chooses A or B. **Nothing is created now.**
+| Aspect | How it works |
+|---|---|
+| Make → entry point | Static **API key** (header `x-api-key`, checked by the gateway). The gateway does not "authenticate Make" in any stronger sense: anyone holding the key is accepted. JWT validation is possible, but Make would then need to sign a JWT, which is the same problem as the ID token. |
+| Entry point → engine | The gateway's service account calls Cloud Run with a Google-minted ID token (`x-google-backend` with `jwt_audience`); `run.invoker` on the engine only. No key file. |
+| Secrets and rotation | API key created in the project (APIs & Services > Credentials), restricted to the gateway's API, stored in Make. Rotation: create a second key, switch Make, delete the old one. |
+| Replay protection | **None.** A captured request can be replayed for as long as the key is valid. |
+| Request and response size | Gateway limits apply on top of Cloud Run's 32 MiB response limit. The backend `deadline` must be raised from its short default for 120 s calls. **Not verified:** the exact limits. |
+| Rate limiting, logging | Per-key quotas in the API config; access logs in Cloud Logging. Retries and idempotency stay with Make and the engine (unchanged). |
+| Cost and maintenance | Within the free tier at RSFA volumes (list price, verify). New: 3 APIs (API Gateway, Service Management, Service Control), an OpenAPI config, an API, a gateway, an API key. Every change is a new immutable API config. |
+| Failure recovery | Managed service. A config error makes every call fail until a corrected config is rolled out. |
 
-## 4. Proposed Make architecture (future, isolated)
+### Option B — Small authenticated Cloud Run relay (implemented as a PoC)
 
-**Phase 1 — isolated test scenario (needs RSFA approval to create).** It uses fictional data only and never touches the
-production scenarios or board.
+| Aspect | How it works |
+|---|---|
+| Make → entry point | Every request is **signed**: `X-RSFA-Timestamp: <unix seconds>`, `X-RSFA-Signature: v1=<hex HMAC-SHA256(secret, timestamp + "." + body)>`. The relay is the only public endpoint and accepts nothing unsigned (only `/health` and `/v1/masterboard/documents` exist). |
+| Entry point → engine | The relay's own service account (`rsfa-make-relay@`) gets a Google-signed ID token from the **Cloud Run metadata server** (audience = engine URL; cached until 5 min before expiry). It is the only invoker added to the engine. No key file anywhere. |
+| Secrets and rotation | One HMAC secret in **Secret Manager**, mounted as `RELAY_HMAC_SECRETS`, with `secretAccessor` for the relay SA on that secret only. The same value is stored in Make (see "Make side"). Rotation, two secrets active at once: add version 2, deploy the relay with `old,new`, switch Make, then deploy with `new` only. Tested (`RelayServerTest`). |
+| Replay protection | The timestamp must be within ±300 s, and each signature is accepted once per instance while fresh (`409 REPLAYED_REQUEST`). With at most 2 instances, a replay within 5 min that lands on the other instance is still possible. It would only re-generate identical documents for the same requester. Accepted, documented risk. |
+| Request and response size | Request ≤ 1 MiB (checked before the signature, `413`), response ≤ 32 MiB passed through; engine limits unchanged (20 MiB raw PDFs). Upstream timeout 110 s, below Cloud Run's 120 s. |
+| Rate limiting, logging | Fixed window per instance (default 30/min, `429` with `Retry-After: 60`). One log line per request: `relay correlationId=… status=… outcome=… ms=…`. No body, values, secrets or tokens. |
+| Retry and idempotency | Relay errors carry `retryable`: true for `429`, `502 UPSTREAM_UNAVAILABLE`, `503 IDENTITY_TOKEN_UNAVAILABLE` and `504`. Engine responses are passed through unchanged, so engine idempotency (`requestDigest`, deterministic file names) is preserved. A retry must be **re-signed** with a new timestamp; Make re-evaluates the expressions when it re-runs the module. |
+| Cost and maintenance | Same container image as the engine, so no new build pipeline or runtime. Scale-to-zero, within the Cloud Run free tier at RSFA volumes. Secret Manager costs cents per month (list price, verify). New: 1 API (Secret Manager), 1 secret, 1 service account, 1 Cloud Run service. About 300 lines of tested code to maintain. |
+| Failure recovery | The relay is stateless: redeploy or roll back its revision independently of the engine. If the engine is down, Make gets `502`/`504` with `retryable: true`. |
+
+### Is HMAC signing possible in Make without external code?
+
+**Probably yes, but not verified.**
+- **Indications:** Make's `sha256(text; [encoding]; [key]; [key encoding])` computes an HMAC when a key is given,
+  according to Make Community threads that point to the official functions reference.
+- **Why it could not be confirmed:** `www.make.com` and `community.make.com` are not reachable from this session.
+- **Verification step, before anything is deployed.** In any existing Make scenario's expression tester, or a throwaway
+  scenario in a sandbox team, evaluate:
+
+  `sha256("1793152800.{""contractVersion"":""masterboard.v1""}"; "hex"; "rsfa-test-vector-secret-NOT-FOR-USE-0001")`
+
+  The expected result is `3089d368d7df95f95bafd039bc244e302c350d306f1095ebe43466b47f49601b`. This is HMAC-SHA256 of
+  `1793152800.{"contractVersion":"masterboard.v1"}` with that test key; quoting may differ in Make's editor.
+- **Fallback if Make cannot compute HMAC natively** (both options keep the engine private):
+  - B1: the relay accepts a static bearer key, with the same security as Option A and no replay protection.
+  - B2: Make's Code (JavaScript) module computes the HMAC. `8731317` already uses a Code module (module 8), so it is
+    not a new dependency.
+
+**Where the secret lives in Make:** a scenario-level or team custom variable is visible to scenario editors.
+**Not verified:** which Make feature (keychain/connection vs custom variable) hides it best on RSFA's plan. Decide
+during Phase 1.
+
+### Recommendation: Option B (relay)
+
+- **It is the only option that authenticates *requests*** (integrity, freshness, replay window) rather than the mere
+  possession of a static key.
+- **It adds the fewest new kinds of dependency.**
+  - Same image, Cloud Run and Cloud Build as today.
+  - Secret Manager is the only new API. API Gateway would add three APIs and an OpenAPI config lifecycle.
+- **It is already proven locally:**
+  - `RelayServerTest` (4 tests) covers a valid request, rotation, tampered body, wrong secret, stale timestamp, replay,
+    rate limit, a non-invoker identity (`502 UPSTREAM_AUTH_FAILED`), an oversized body, and unsafe configurations.
+  - A run with the real jar and real templates (`tools/make_like_client.py`) returned:
+    - BNZ: 200, the PDF SHA-256 equals the fixture;
+    - GHL acceptance: 2 PDFs;
+    - contradictory data: 422;
+    - unknown bank: 422;
+    - wrong secret: 401;
+    - IAM layer without a token: 403;
+    - logs: no data values.
+
+**Accepted risk:** the relay is a public HTTPS endpoint (`--allow-unauthenticated` **on the relay only**) whose
+authentication is the HMAC. Two notes:
+- If the organisation policy forbids `allUsers` (domain-restricted sharing), Option A has the same constraint.
+- Additional mitigations are available if RSFA wants them:
+  - Cloud Armor via a load balancer (adds cost and complexity);
+  - a Make egress-IP allowlist inside the relay (Make publishes IP ranges per zone; verify).
+
+### Estimated infrastructure changes (B; nothing done; exact commands will be prepared for approval)
+
+| # | Change | Approval |
+|---|---|---|
+| 1 | Enable `secretmanager.googleapis.com` | RSFA |
+| 2 | Secret `rsfa-make-relay-hmac` (value generated in Cloud Shell with `openssl rand -hex 32`, never in chat or git) | RSFA |
+| 3 | Service account `rsfa-make-relay@` with no project roles; `secretmanager.secretAccessor` on that secret only; `run.invoker` on the engine service only | RSFA |
+| 4 | Engine revision 3 with `/v1` (same `UPDATE_EXISTING=1` no-traffic procedure, docs/04); allowlist unchanged unless RSFA approves more templates | RSFA |
+| 5 | Cloud Run service `rsfa-end-forms-relay` from the same image (`ENGINE_ROLE=relay`, `RELAY_TARGET_URL=<engine URL>`, secret as env; `--allow-unauthenticated`, ingress all, min 0, max 1, concurrency 4, timeout 120 s, 512 MiB) | RSFA (public endpoint) |
+| 6 | Make: store the secret, build the isolated test scenario (section 4) | RSFA |
+
+**Rollback:** delete the relay service, or remove its `allUsers` binding (stops all Make access at once). Remove the
+relay SA's invoker binding on the engine. The engine revision rolls back with `update-traffic` (docs/04).
+
+## 4. Isolated Make test scenario (designed, not created)
+
+**Name:** `TEST – Masterboard to End Forms Engine (synthetic)`, in a dedicated folder.
+
+**What it must not touch:**
+- no trigger on board `5026186805`;
+- no use of `8731317`, `9254149` or `8732008`;
+- no production SharePoint folder.
+
+**Inputs:** synthetic payloads only, i.e. the `contracts/examples/*.json` bodies stored in a Make data store
+`engine-test-payloads` (key = test case), or pasted into a "Create JSON" module.
 
 ```text
-[Manual run / test webhook]  "TEST – Masterboard to End Forms Engine (fictional)"
-  1 Set variables: correlationId = mb-<boardId>-<itemId>-{{executionId}}, idempotencyKey, today (Pacific/Auckland)
-  2 Data store "engine-runs-test": key = idempotencyKey exists and status=filed?  → stop (already done)
-  3 HTTP POST {gateway}/v1/masterboard/documents   (timeout 120 s; parse JSON; API key header)
-       error handler: retryable=true → Break (3 attempts, 30 s/2 min/5 min); else → route "failed"
-  4 Router
-     ├─ complete/partial → Iterator(documents where status=generated)
-     │      → SharePoint (TEST library/folder) upload  name = fileName, content = toBinary(pdfBase64; base64), conflict = replace
-     │      → (after iterator) Monday TEST board: "Engine Filling Status" := Generated, "Engine Run" := correlationId
-     └─ failed / 4xx → Monday TEST board: "Engine Filling Status" := Failed; e-mail summary (codes/fields only)
-  5 Data store: idempotencyKey → filed, requestDigest, fileNames
+1  Manual run (Run once) + "Set variable": testCase (T1…T9)
+2  Data store "engine-test-payloads": Get record(testCase) → body template
+3  Set multiple variables (all computed at run time, so a retry re-signs):
+     itemId          = synthetic item id from the payload (10000000xx)
+     correlationId   = "mb-5026186805-" + itemId + "-" + {{executionId}}
+     idempotencyKey  = itemId + "-" + testCase + "-" + <test run date>
+     body            = payload with correlationId/idempotencyKey/today substituted (one string; sent byte-for-byte)
+     ts              = formatDate(now; "X")                        (unix seconds; verify token)
+     signature       = "v1=" + sha256(ts + "." + body; "hex"; <relay secret>)
+4  Data store "engine-test-runs": Search idempotencyKey; Filter: continue only if no record with status "filed"
+     (prevents duplicate files when a run is repeated)
+5  HTTP "Make a request": POST https://<relay>/v1/masterboard/documents, raw body = body (application/json),
+     headers X-RSFA-Timestamp = ts, X-RSFA-Signature = signature, timeout 120 s, parse response = yes,
+     "Evaluate all states as errors" = no (4xx bodies are routed, not thrown)
+     Error handler (network/5xx only): Break, 3 attempts, 2 min interval (needs "store incomplete executions")
+6  Router on status code and body.status:
+   a) 200 complete|partial → Iterator(documents) → Filter status = generated
+        → SharePoint "Upload a file": site/library = the TEST library named by RSFA,
+          folder = /End Forms Engine TEST/<itemId>/, name = fileName, content = toBinary(pdfBase64; "base64"),
+          on conflict = replace (same fileName ⇒ same requestDigest ⇒ same content)
+      → Array aggregator: uploaded file names + documents[].status/code + notMigrated[].legacyPdfName
+   b) 422 / 400 / 401 / 409 / 413 → no upload; summary = code + per-document error codes and keys (never values)
+   c) 429 / 502 / 503 / 504 with retryable = true → Break (retry); after 3 attempts → summary "failed after retries"
+7  Data store "engine-test-runs": Add/replace {idempotencyKey, correlationId, testCase, httpStatus, status,
+     requestDigest, fileNames, errorCodes, notMigratedCount, finishedAt} ← traceable execution summary
+8  E-mail (or Slack test channel) to the tester: the same summary, codes and file names only
 ```
 
-- The test **board** is a copy of the Masterboard *schema* with fictional items only. The test **SharePoint** location
-  is separate from client folders.
-- Test payloads come from `contracts/examples/` or from fictional items. Production items are never used.
-- **`COMP-MAKE-ERROR-001` (`8732008`) is not wired into the test scenario.** Using the shared production handler needs
-  approval.
+**Test cases (synthetic):**
 
-**Phase 2 — parallel run (production change; needs a change plan, approval and a rollback):**
-- Add a parallel branch to `8731317`, after it has built `result`, that calls the engine with `selection.banks` from
-  "Selected Banks".
-- MacroForge stays primary.
-- The engine's PDFs go to a *comparison* folder, never to the client's filing folder.
-- Compare them with MacroForge's outputs per form. This is the only way to prove equivalence (not proven today).
+| Case | Payload | Expected |
+|---|---|---|
+| T1 | `request.bank-bnz.json` | 200 complete; 1 PDF uploaded; SHA-256 `2ae7bfac…`; 6 `notMigrated` reported |
+| T2 | `request.bank-asb-acceptance.json` | 200 complete; 2 PDFs (GHL Individual and GHL Trust) |
+| T3 | `request.bank-asb-acceptance-dry-run.json` | 200; no PDFs (`includePdf=false`); nothing uploaded |
+| T4 | `request.negative-contradictory-transfers.json` | 422; `PRECONDITION_FAILED` `GHL-TRUST-OUT-NEVER-*`; nothing uploaded |
+| T5 | `request.negative-unknown-bank.json` | 422 `UNKNOWN_BANK`; nothing uploaded |
+| T6 | Run T1 again | Step 4 stops: no new file; summary "duplicate" |
+| T7 | T1 with a wrong secret | 401 `INVALID_SIGNATURE`; nothing uploaded |
+| T8 | T1 while the relay target is wrong (test revision) | 502/503, 3 retries, then "failed after retries" |
+| T9 | T1 with the system clock skewed (`ts` − 10 min) | 401 `STALE_TIMESTAMP` |
 
-**Phase 3 — cutover per form:** only forms that passed the parallel comparison and that RSFA approved are added to the
-Cloud Run allowlist and filed for real. Forms in `notMigrated` stay with MacroForge.
+**Acceptance for Phase 1:**
+- every case behaves as expected;
+- the uploaded files are only in the TEST location;
+- the `engine-test-runs` record exists for each run;
+- the execution history of `8731317`/`9254149`/`8732008` is unchanged during the test window;
+- Cloud Run, relay and Make logs contain no data values.
 
 ## 5. Reflecting completion in Monday without recursive runs
 
@@ -217,18 +322,10 @@ Cloud Run allowlist and filed for real. Forms in `notMigrated` stay with MacroFo
 
 | Level | How | Status |
 |---|---|---|
-| Unit/contract | `MasterboardApiTest`: several forms in one call, determinism, all-or-nothing vs per-document, bank routing + `notMigrated`, invalid contracts, HMAC (valid/stale/tampered) | **Passed** (5 tests) |
-| Real templates, local | `ENGINE_AUTH=NONE java -jar engine/target/end-forms-engine.jar serve`, then `curl --data @contracts/examples/<file>.json localhost:8080/v1/masterboard/documents` | **Passed** 2026-10-27: BNZ 1 generated / 6 notMigrated; ASB+ANZ candidates 3 generated (dry run) / 9 notMigrated |
-| POC image (local container, staged context, PLATFORM_IAM) | `docker build --target poc` from `stage_deploy.py` output, then call `/v1` | **Passed** 2026-10-27: BNZ generated, SHA `2ae7bfac…` = fixture, no data in logs |
-| Cloud Run candidate revision | deploy with `UPDATE_EXISTING=1` (no-traffic tag, docs/04) after approval; call the tag URL with the deployer's ID token | Planned |
-| Isolated Make scenario | Phase 1 above, with a test board, test SharePoint folder and fictional items | Planned (needs approval) |
-| Parallel run | Phase 2 | Planned (needs change plan) |
-
-**Acceptance criteria for Phase 1:**
-1. A fictional item with `Selected Banks = BNZ` files exactly one PDF, named `fileName`, whose SHA-256 equals the local build.
-2. Re-running the same execution files nothing new (data store) or overwrites the identical file.
-3. A fictional item with an unmapped label shows `Failed`, the e-mail lists codes and keys only, and nothing is filed.
-4. A forced 503 (e.g. a candidate revision without templates) retries 3 times, then reports `Failed`.
-5. `status` on the test board is never written by the test scenario, and no production scenario runs (execution
-   history of `8731317`/`9254149` unchanged during the test window).
-6. Logs (Cloud Run, gateway, Make) contain no data values.
+| Contract unit tests | `MasterboardApiTest`: several forms per call, determinism, all-or-nothing vs per-document, bank routing + `notMigrated`, invalid contracts, engine HMAC | **Passed** (5) |
+| Relay unit tests | `RelayServerTest`: signed request → IAM stand-in → engine; rotation; tampered/stale/replayed/unsigned; rate limit; wrong identity; size; unsafe config | **Passed** (4) |
+| Real templates, local chain | engine (`ENGINE_AUTH=NONE`) → IAM stand-in (403 without the relay's token) → relay (`ENGINE_ROLE=relay`) ← `tools/make_like_client.py` with `contracts/examples/*` | **Passed** 2026-10-28 (results in section 3) |
+| POC image (local container) | iteration 6: `/v1` in the staged image | **Passed** 2026-10-27 |
+| Cloud Run (engine revision 3 + relay) | after approval, no-traffic tag first (docs/04) | Planned |
+| Isolated Make scenario | section 4, T1–T9 | Planned (needs approval) |
+| Parallel run with MacroForge | PDFs to a comparison folder; compare per form | Planned (needs change plan) |

@@ -70,8 +70,9 @@ public record FieldRule(
 
     /**
      * Legacy MacroForge operators {@code equals} and {@code contains}: exact and case-sensitive (legacy semantics
-     * unverified). {@code present} (engine, used only by reviewed {@code validation.requires}): the key has a
-     * non-blank value; {@code value} is ignored.
+     * unverified). Engine operators (reviewed corrections and validation only):
+     * {@code includes}: one of the labels of a Monday multi-select value (text joined with ", ") equals {@code value};
+     * {@code present} / {@code absent}: the key has / has not a non-blank value ({@code value} ignored).
      */
-    public enum Operator { equals, contains, present }
+    public enum Operator { equals, contains, includes, present, absent }
 }

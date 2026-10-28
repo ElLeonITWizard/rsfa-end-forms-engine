@@ -124,7 +124,8 @@ final class MasterboardApi {
                 }
                 for (JsonNode e : entries) {
                     String status = e.path("status").asText();
-                    if (status.equals("tested") || (status.equals("candidate") && includeCandidates)) {
+                    boolean testing = status.equals("candidate") || status.equals("acceptance");
+                    if (status.equals("tested") || (testing && includeCandidates)) {
                         selected.add(new Selected(e.get("templateId").asText(), e.get("templateVersion").asText(), b.asText()));
                     } else {
                         notMigrated.add(json.createObjectNode().put("bank", b.asText())
@@ -257,8 +258,8 @@ final class MasterboardApi {
 
     private static String reason(String status) {
         return switch (status) {
-            case "candidate" -> "candidate form (awaiting RSFA review); request with options.includeCandidates=true to test it";
-            case "blocked" -> "engine mapping has an open blocking question (docs/06); MacroForge remains responsible";
+            case "candidate", "acceptance" -> "not yet accepted by RSFA; request with options.includeCandidates=true to test it";
+            case "blocked" -> "open RSFA decision on this form (docs/06); MacroForge remains responsible";
             case "partial", "untested" -> "engine mapping not fully tested; MacroForge remains responsible";
             default -> "not migrated to the engine; MacroForge remains responsible";
         };

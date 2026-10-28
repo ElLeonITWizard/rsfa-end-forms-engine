@@ -33,16 +33,151 @@
           "operator": "present"
         },
         "reason": "the ASB form asks for the frequency (weekly/fortnightly/monthly) of each board amount"
+      },
+      {
+        "id": "ASB-BOARDER-AMOUNT-1",
+        "when": {
+          "key": "Boarders - Board amount 1 frequency",
+          "operator": "present"
+        },
+        "require": {
+          "key": "Boarders - Board amount 1",
+          "operator": "present"
+        },
+        "reason": "a frequency is given for boarder 1 without an amount (contradictory)"
+      },
+      {
+        "id": "ASB-BOARDER-AMOUNT-2",
+        "when": {
+          "key": "Boarders - Board amount 2 frequency",
+          "operator": "present"
+        },
+        "require": {
+          "key": "Boarders - Board amount 2",
+          "operator": "present"
+        },
+        "reason": "a frequency is given for boarder 2 without an amount (contradictory)"
       }
     ]
   },
   "review": {
-    "status": "candidate",
-    "meaning": "synthetic tests pass and every rule was checked against the printed label and the live Monday labels; not approved by RSFA, not compared with a MacroForge output",
+    "status": "blocked",
+    "blockedBy": [
+      "RSFA-DECISION-1: which address is the 'property' on boarder declarations"
+    ],
+    "meaning": "names, household numbers, boarder names, amounts and frequencies confirmed against the printed form and the live labels; the property address source is a material business decision.",
     "openQuestions": [
-      "Property address lines use the legacy keys Applicant 1 Physical Address Street / Province / Country: Suburb and City are not mapped, and the applicant's physical address may differ from the property where the boarders live.",
-      "date 1 and date 2 (beside the customer signatures) are pre-filled with today, as MacroForge [TODAY] does; the DDMMYYYY format is taken from the 8-cell comb, not from a MacroForge output.",
-      "The template is owner-encrypted by ASB; it is filled with an incremental save that keeps ASB's encryption (same policy as GHL N&P Trust, D-007)."
+      "RSFA-DECISION-1: which address is the 'property' on boarder declarations: legacy = applicant 1 physical address, printed as Street / Province / Country (Suburb and City never printed); proposal ASB-ADDR-1..4 = 1st Property Address Street / Suburb / City / Postcode (preview PDF provided). Either way the parts come from Make's OpenAI address split (module 26), which is not deterministic.",
+      "RSFA-DECISION-2: pre-fill the customer's signature dates with today: legacy pre-fills both signature dates with today (DDMMYYYY, format inferred from the 8-cell comb); proposal = leave them blank.",
+      "The template is owner-encrypted by ASB and filled with an incremental save keeping ASB's encryption (D-007)."
     ]
-  }
+  },
+  "corrections": [
+    {
+      "id": "ASB-ADDR-1",
+      "type": "replace-source",
+      "basis": "decision",
+      "decisionRef": "RSFA-DECISION-1: which address is the 'property' on boarder declarations",
+      "target": {
+        "pdfField": "1",
+        "option": null,
+        "source": {
+          "key": "Applicant 1 Physical Address Street"
+        }
+      },
+      "source": {
+        "key": "1st Property Address Street"
+      },
+      "reason": "Proposed: print the security/purchase property (as BNZ Boarder) as Street / Suburb / City. The legacy lines are Street / Province / Country, so Suburb and City are never printed.",
+      "evidence": "The declaration describes the property where the boarders live (ASB: 'your main owner-occupied residence'). The legacy rule uses the applicant's physical address (OpenAI-split parts of text_mkzvrrfx); BNZ Boarder (tested, deployed) uses 1st Property Address (text_mkzvqaw7, split into Street/Suburb/City/Postcode by Make module 26). Both are in the Make contract. Which one is right depends on the deal (purchase vs refinance)."
+    },
+    {
+      "id": "ASB-ADDR-2",
+      "type": "replace-source",
+      "basis": "decision",
+      "decisionRef": "RSFA-DECISION-1: which address is the 'property' on boarder declarations",
+      "target": {
+        "pdfField": "2",
+        "option": null,
+        "source": {
+          "key": "Applicant 1 Physical Address Province"
+        }
+      },
+      "source": {
+        "key": "1st Property Address Suburb"
+      },
+      "reason": "Proposed: print the security/purchase property (as BNZ Boarder) as Street / Suburb / City. The legacy lines are Street / Province / Country, so Suburb and City are never printed.",
+      "evidence": "The declaration describes the property where the boarders live (ASB: 'your main owner-occupied residence'). The legacy rule uses the applicant's physical address (OpenAI-split parts of text_mkzvrrfx); BNZ Boarder (tested, deployed) uses 1st Property Address (text_mkzvqaw7, split into Street/Suburb/City/Postcode by Make module 26). Both are in the Make contract. Which one is right depends on the deal (purchase vs refinance)."
+    },
+    {
+      "id": "ASB-ADDR-3",
+      "type": "replace-source",
+      "basis": "decision",
+      "decisionRef": "RSFA-DECISION-1: which address is the 'property' on boarder declarations",
+      "target": {
+        "pdfField": "3",
+        "option": null,
+        "source": {
+          "key": "Applicant 1 Physical Address Country"
+        }
+      },
+      "source": {
+        "key": "1st Property Address City"
+      },
+      "reason": "Proposed: print the security/purchase property (as BNZ Boarder) as Street / Suburb / City. The legacy lines are Street / Province / Country, so Suburb and City are never printed.",
+      "evidence": "The declaration describes the property where the boarders live (ASB: 'your main owner-occupied residence'). The legacy rule uses the applicant's physical address (OpenAI-split parts of text_mkzvrrfx); BNZ Boarder (tested, deployed) uses 1st Property Address (text_mkzvqaw7, split into Street/Suburb/City/Postcode by Make module 26). Both are in the Make contract. Which one is right depends on the deal (purchase vs refinance)."
+    },
+    {
+      "id": "ASB-ADDR-4",
+      "type": "replace-source",
+      "basis": "decision",
+      "decisionRef": "RSFA-DECISION-1: which address is the 'property' on boarder declarations",
+      "target": {
+        "pdfField": "postcode",
+        "option": null,
+        "source": {
+          "key": "Applicant 1 Physical Address Postcode"
+        }
+      },
+      "source": {
+        "key": "1st Property Address Postcode"
+      },
+      "reason": "Proposed: print the security/purchase property (as BNZ Boarder) as Street / Suburb / City. The legacy lines are Street / Province / Country, so Suburb and City are never printed.",
+      "evidence": "The declaration describes the property where the boarders live (ASB: 'your main owner-occupied residence'). The legacy rule uses the applicant's physical address (OpenAI-split parts of text_mkzvrrfx); BNZ Boarder (tested, deployed) uses 1st Property Address (text_mkzvqaw7, split into Street/Suburb/City/Postcode by Make module 26). Both are in the Make contract. Which one is right depends on the deal (purchase vs refinance)."
+    },
+    {
+      "id": "ASB-SIGNATURE-DATE-1",
+      "type": "remove-rule",
+      "basis": "decision",
+      "decisionRef": "RSFA-DECISION-2: pre-fill the customer's signature dates with today",
+      "target": {
+        "pdfField": "date 1",
+        "option": null,
+        "source": {
+          "generated": "today",
+          "format": "ddMMyyyy",
+          "zone": "Pacific/Auckland"
+        }
+      },
+      "reason": "Proposed alternative: leave the date beside each customer signature blank for the customer, as the ANZ legacy configuration does.",
+      "evidence": "The 'Date' boxes sit directly under 'Signature' for each borrower (page 1). MacroForge pre-fills them with [TODAY]; if the customer signs on another day the printed date is wrong."
+    },
+    {
+      "id": "ASB-SIGNATURE-DATE-2",
+      "type": "remove-rule",
+      "basis": "decision",
+      "decisionRef": "RSFA-DECISION-2: pre-fill the customer's signature dates with today",
+      "target": {
+        "pdfField": "date 2",
+        "option": null,
+        "source": {
+          "generated": "today",
+          "format": "ddMMyyyy",
+          "zone": "Pacific/Auckland"
+        }
+      },
+      "reason": "Proposed alternative: leave the date beside each customer signature blank for the customer, as the ANZ legacy configuration does.",
+      "evidence": "The 'Date' boxes sit directly under 'Signature' for each borrower (page 1). MacroForge pre-fills them with [TODAY]; if the customer signs on another day the printed date is wrong."
+    }
+  ]
 }

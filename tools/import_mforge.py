@@ -31,7 +31,8 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 
-IMPORTER_VERSION = "0.3.0"
+IMPORTER_VERSION = "0.4.0"
+REPO_ROOT = Path(__file__).resolve().parents[1]
 BATCH_FILLER = "PDF Batch Filler"
 SINGLE_FILLER = "PDF Filler"
 CONDITIONAL = "Conditional Block"
@@ -641,23 +642,119 @@ def select_template(doc: dict, pdf_name: str, flow: str | None, sha: str | None)
     return hits[0]
 
 
-CURATION_KEYS = {"templateId", "templateVersion", "templateSha256", "validation", "review"}
+CURATION_KEYS = {"templateId", "templateVersion", "templateSha256", "validation", "review", "corrections"}
+CONDITION_OPS = ("equals", "contains", "includes", "present", "absent")
+CORRECTION_TYPES = ("replace-source", "add-when-value", "add-rule", "remove-rule")
 
 
-def apply_curation(manifest: dict, path: Path) -> None:
+def _condition_ok(c) -> bool:
+    return (isinstance(c, dict) and bool(c.get("key")) and c.get("operator") in CONDITION_OPS
+            and (c["operator"] in ("present", "absent") or isinstance(c.get("value"), str)))
+
+
+def _decision_ok(d, today: dt.date) -> bool:
+    """A recorded RSFA decision: approvedBy, approvedOn (ISO date, not in the future) and reference, all non-empty."""
+    if not isinstance(d, dict) or not all(isinstance(d.get(k), str) and d[k].strip()
+                                          for k in ("approvedBy", "approvedOn", "reference")):
+        return False
+    try:
+        return dt.date.fromisoformat(d["approvedOn"]) <= today
+    except ValueError:
+        return False
+
+
+def _apply_correction(manifest: dict, c: dict, name: str) -> None:
+    """Apply one correction to manifest['fields'], refusing anything that does not match the imported rule exactly."""
+    fields = manifest["fields"]
+    pdf_fields = manifest["pdf"]["fields"]
+    t = c.get("target") or {}
+
+    def matching():
+        return [e for e in fields if e["pdfField"] == t.get("pdfField") and e.get("option") == t.get("option")
+                and e["source"] == t.get("source")]
+
+    if c["type"] in ("replace-source", "add-when-value", "remove-rule"):
+        hits = matching()
+        if len(hits) != 1:
+            raise SystemExit(f"curation {name}: correction {c['id']} target matches {len(hits)} imported rules (stale?)")
+        rule = hits[0]
+        if c["type"] == "remove-rule":
+            fields.remove(rule)
+        elif c["type"] == "replace-source":
+            rule["source"] = c["source"]
+            rule["correction"] = c["id"]
+        else:
+            if "when" not in rule["source"] or not isinstance(c.get("value"), str):
+                raise SystemExit(f"curation {name}: {c['id']} add-when-value needs a when-rule target and a value")
+            extra = json.loads(json.dumps(rule))
+            extra["source"]["when"]["value"] = c["value"]
+            extra["correction"] = c["id"]
+            extra.pop("reviewRequired", None)
+            fields.append(extra)
+    else:  # add-rule
+        rule = c.get("rule") or {}
+        f = pdf_fields.get(rule.get("pdfField"))
+        if f is None or f["kind"] != rule.get("kind") or (rule.get("option") and rule["option"] not in f.get("states", [])):
+            raise SystemExit(f"curation {name}: {c['id']} add-rule must name an existing PDF field, its kind and state")
+        if f["kind"] in ("signature", "pushbutton"):
+            raise SystemExit(f"curation {name}: {c['id']} may not target signature or push-button fields")
+        if "constant" in rule.get("source", {}):
+            raise SystemExit(f"curation {name}: {c['id']} constant rules need the approval mechanism (D-016), not a correction")
+        fields.append({**rule, "correction": c["id"]})
+        if rule["pdfField"] in manifest.get("unmappedPdfFields", []):
+            manifest["unmappedPdfFields"].remove(rule["pdfField"])
+    for key in ("source",):
+        src = c.get(key) or (c.get("rule") or {}).get("source") or {}
+        if "when" in src and not _condition_ok(src["when"]):
+            raise SystemExit(f"curation {name}: {c['id']} has an invalid condition")
+
+
+def apply_curation(manifest: dict, path: Path, preview_pending: bool = False, today: dt.date | None = None) -> None:
     """Merge a reviewed, version-controlled curation file (curation/<ID>@<version>.json) into a manifest.
 
-    Only `validation` (closedOptions, requires) and `review` (readiness notes) are taken. The file must name the same
-    template and SHA-256, and every closed-option key must be used by a `when` rule, so a curation can never point at
-    another template or invent rules. It holds no data values.
+    Takes `validation` (closedOptions, requires), `review` (readiness notes) and `corrections`:
+      * basis "evidence" corrections (e.g. a renamed Monday label, a dedicated source column for a box) are applied;
+      * basis "decision" corrections (business choices) are applied only with a complete recorded RSFA `decision`
+        (approvedBy, approvedOn <= today, reference); otherwise they are listed as pending and NOT applied.
+    `--preview-pending` applies pending ones too, for visual review only; such a manifest is marked and must never be
+    committed. Every correction must match the imported rule exactly, so a stale curation fails loudly. The file must
+    name the same template and SHA-256 and holds no data values.
     """
+    today = today or dt.date.today()
     cur = json.loads(path.read_text(encoding="utf-8"))
+    if manifest.get("sourceKeyNormalization") == "macroforge-v1":
+        # data keys are Monday titles as Make sends them; the engine normalises '/' and '.' to '_' (D-008)
+        def norm_keys(node):
+            if isinstance(node, dict):
+                return {k: (v.replace("/", "_").replace(".", "_") if k in ("key", "ifPresent") and isinstance(v, str)
+                            else norm_keys(v)) for k, v in node.items()}
+            if isinstance(node, list):
+                return [norm_keys(x) for x in node]
+            return node
+        cur["validation"] = norm_keys(cur.get("validation", {}))
+        for c in cur.get("corrections", []):
+            for k in ("source", "rule"):
+                if k in c:
+                    c[k] = norm_keys(c[k])
     unknown = set(cur) - CURATION_KEYS
     if unknown:
         raise SystemExit(f"curation {path.name}: unknown keys {sorted(unknown)}")
     for k in ("templateId", "templateVersion", "templateSha256"):
         if cur.get(k) != manifest[k]:
             raise SystemExit(f"curation {path.name}: {k} does not match the manifest")
+    status = []
+    seen = set()
+    for c in cur.get("corrections", []):
+        if not (c.get("id") and c.get("type") in CORRECTION_TYPES and c.get("basis") in ("evidence", "decision")
+                and c.get("reason") and c.get("evidence")) or c["id"] in seen:
+            raise SystemExit(f"curation {path.name}: correction needs a unique id, type, basis, reason and evidence")
+        seen.add(c["id"])
+        decided = c["basis"] == "evidence" or _decision_ok(c.get("decision"), today)
+        if decided or preview_pending:
+            _apply_correction(manifest, c, path.name)
+        status.append({"id": c["id"], "type": c["type"], "basis": c["basis"],
+                       "status": "applied" if decided else ("PREVIEW-NOT-APPROVED" if preview_pending else "pending"),
+                       "pdfField": (c.get("target") or c.get("rule") or {}).get("pdfField")})
     when_keys = {e["source"]["when"]["key"] for e in manifest["fields"] if "when" in e.get("source", {})}
     v = cur.get("validation", {})
     for co in v.get("closedOptions", []):
@@ -666,16 +763,19 @@ def apply_curation(manifest: dict, path: Path) -> None:
         if co.get("onUnmapped", "error") not in ("error", "blank"):
             raise SystemExit(f"curation {path.name}: onUnmapped must be error or blank")
     for r in v.get("requires", []):
-        req = r.get("require") or {}
-        if not (r.get("id") and r.get("ifPresent") and req.get("key") and r.get("reason")
-                and (req.get("operator") == "present"
-                     or (req.get("operator") in ("equals", "contains") and isinstance(req.get("value"), str)))):
-            raise SystemExit(f"curation {path.name}: requirement needs id, ifPresent, require{{key,operator,value}}, reason")
+        if not (r.get("id") and r.get("reason") and _condition_ok(r.get("require"))
+                and (bool(r.get("ifPresent")) != _condition_ok(r.get("when")))):
+            raise SystemExit(f"curation {path.name}: requirement needs id, one of ifPresent/when, require, reason")
+    manifest["fields"].sort(key=lambda e: (e["pdfField"], e.get("option") or "", json.dumps(e["source"], sort_keys=True)))
     if v:
         manifest["validation"] = v
+    if status:
+        manifest["corrections"] = status
     if "review" in cur:
         manifest["review"] = cur["review"]
     manifest["provenance"]["curation"] = f"curation/{path.name} sha256 {sha256(path.read_bytes())[:12]}"
+    if preview_pending and any(s["status"] == "PREVIEW-NOT-APPROVED" for s in status):
+        manifest["preview"] = "PENDING CORRECTIONS APPLIED FOR REVIEW ONLY - NOT APPROVED - DO NOT COMMIT OR DEPLOY"
 
 
 def cmd_manifest(args) -> int:
@@ -730,7 +830,12 @@ def cmd_manifest(args) -> int:
     manifest["unmappedPdfFields"] = sorted(n for n, f in info["fields"].items()
                                            if n not in mapped and f.kind not in ("pushbutton",))
     if args.curation:
-        apply_curation(manifest, Path(args.curation))
+        apply_curation(manifest, Path(args.curation), args.preview_pending,
+                       dt.date.fromisoformat(args.date) if args.date else None)
+    elif args.preview_pending:
+        raise SystemExit("--preview-pending needs --curation")
+    if manifest.get("preview") and REPO_ROOT in Path(args.out).resolve().parents and ".local" not in Path(args.out).resolve().parts:
+        raise SystemExit("preview manifests may only be written under .local/ (never into mappings/)")
     text = json.dumps(manifest, indent=2, ensure_ascii=False) + "\n"
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -767,7 +872,9 @@ def main(argv=None) -> int:
     s.add_argument("--encryption", choices=["reject", "preserve"], default="reject",
                    help="engine policy for encrypted templates; 'preserve' = incremental save keeping the "
                         "bank's encryption (record the human review in docs/decisions.md)")
-    s.add_argument("--curation", help="reviewed curation file (validation + review) merged into the manifest")
+    s.add_argument("--curation", help="reviewed curation file (validation, corrections, review) merged into the manifest")
+    s.add_argument("--preview-pending", action="store_true",
+                   help="also apply pending 'decision' corrections, for visual review only (output must be under .local/)")
     s.add_argument("--out", required=True)
     s.set_defaults(fn=cmd_manifest)
     args = p.parse_args(argv)

@@ -9,15 +9,17 @@
     "GHL Why have you come to Sovereign Home Loans?": "Other (please specify)",
     "GHL Other reasons to come": "Fictional: refinance from another lender",
     "Total credits or deposits (next 12 months) (GHL Trust)": "Less than $250K",
-    "Sources of credits": "Dividends from investments",
+    "Sources of credits": "Dividends from investments, Donations",
     "GHL Other sources of credits": "",
     "Cash deposits frequency (GHL Trust)": "Occasionally (monthly / quarterly)",
     "International Money Transfers – In frequency": "Frequently (daily / weekly / fortnightly)",
-    "Int Transfers IN - Average Value per Payment (GHL Trust)": "More than $10,000",
-    "International Money Transfers – Out frequency": "Never",
+    "Int Transfers IN - Average Value per Payment (GHL Trust)": "$1,000-$10,000",
+    "International Money Transfers – Out frequency": "Infrequently",
     "Int Transfers OUT - Average Value per Payment (GHL Trust)": "Less than $1,000",
-    "International payments activity details (including countries involved)": "Fictional rental income from Australia",
     "Receive transactions/funds from third parties?": "Yes",
-    "If yes, purpose": "Fictional: family contributions to the mortgage"
+    "If yes, purpose": "Fictional: family contributions to the mortgage",
+    "Cash deposits activity details": "Fictional: quarterly cash donations at a fete",
+    "International Money Transfers – In activity details (including countries)": "Fictional: rental income from Australia",
+    "International Money Transfers – Out activity details (including countries)": "Fictional: annual fee paid to a UK trustee service"
   }
 }

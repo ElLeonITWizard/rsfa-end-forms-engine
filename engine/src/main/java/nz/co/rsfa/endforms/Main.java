@@ -9,6 +9,8 @@ import nz.co.rsfa.endforms.fill.FormFiller;
 import nz.co.rsfa.endforms.http.ApiServer;
 import nz.co.rsfa.endforms.mapping.Manifest;
 import nz.co.rsfa.endforms.pdf.TemplateInspector;
+import nz.co.rsfa.endforms.relay.MetadataIdTokenSource;
+import nz.co.rsfa.endforms.relay.RelayServer;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -132,6 +134,9 @@ public final class Main {
 
     private static int serve() throws Exception {
         Map<String, String> env = System.getenv();
+        if ("relay".equals(env.get("ENGINE_ROLE"))) {
+            return relay(env);
+        }
         String host = env.getOrDefault("ENGINE_BIND", "127.0.0.1");
         int port = Integer.parseInt(env.getOrDefault("PORT", "8080"));
         String apiKey = env.get("ENGINE_API_KEY");
@@ -147,6 +152,39 @@ public final class Main {
         System.err.printf("end-forms-engine listening on %s:%d auth=%s templates=%d%n", host, bound, auth,
                 catalog.manifests().size());
         Runtime.getRuntime().addShutdownHook(new Thread(server::stop));
+        Thread.currentThread().join();
+        return 0;
+    }
+
+    /**
+     * Authenticated intermediary for Make (D-027): verifies the HMAC signature and calls the private engine with the
+     * service account's Google ID token from the metadata server. Env: RELAY_TARGET_URL, RELAY_HMAC_SECRETS (1-2,
+     * comma-separated, from Secret Manager), RELAY_RATE_PER_MINUTE (default 30), PORT, ENGINE_BIND.
+     */
+    private static int relay(Map<String, String> env) throws Exception {
+        String target = env.get("RELAY_TARGET_URL");
+        String secrets = env.get("RELAY_HMAC_SECRETS");
+        if (target == null || secrets == null) {
+            System.err.println("relay needs RELAY_TARGET_URL and RELAY_HMAC_SECRETS");
+            return 2;
+        }
+        RelayServer.IdTokenSource tokens;
+        String testToken = env.get("RELAY_TEST_ID_TOKEN");
+        if (testToken != null) {
+            if (env.get("K_SERVICE") != null) {
+                throw new IllegalStateException("RELAY_TEST_ID_TOKEN is for local tests only and is refused on Cloud Run");
+            }
+            tokens = () -> testToken;
+        } else {
+            tokens = new MetadataIdTokenSource(target, java.time.Clock.systemUTC());
+        }
+        RelayServer relay = new RelayServer(java.net.URI.create(target),
+                Arrays.stream(secrets.split(",")).map(String::trim).filter(x -> !x.isEmpty()).toList(), tokens,
+                java.time.Clock.systemUTC(), Integer.parseInt(env.getOrDefault("RELAY_RATE_PER_MINUTE", "30")));
+        String host = env.getOrDefault("ENGINE_BIND", "127.0.0.1");
+        int bound = relay.start(host, Integer.parseInt(env.getOrDefault("PORT", "8080")));
+        System.err.printf("end-forms relay listening on %s:%d%n", host, bound);
+        Runtime.getRuntime().addShutdownHook(new Thread(relay::stop));
         Thread.currentThread().join();
         return 0;
     }

@@ -106,15 +106,16 @@ function check(cond, msg) {
       check(rep.ok, f.label + ': generated, ' + texts.length + ' sample text values found, no signatures, SHA matches');
     }
     if (forms.length > 1) {
-      // A live Monday label with no box on the GHL form is refused instead of leaving the boxes blank.
+      // Contradictory banking data on the GHL form is refused: cash deposits 'Never' but an average value and details given.
       const ghl = forms.find((f) => f.label.startsWith('GHL — Account Use Questionnaire (Individual)'));
       await page.selectOption('#template', ghl.value);
       await page.click('#load-sample');
-      await page.selectOption('select[data-key="Total credits or deposits (next 12 months) (ASB)"]', '$150,001-$250,000');
+      await page.selectOption('select[data-key="Cash deposits frequency (ASB)"]', 'Never');
       await page.click('#generate');
       await page.waitForSelector('#message.error', { timeout: 30000 });
-      check(/UNMAPPED_OPTION/.test(await page.textContent('#message')), 'GHL: unmapped Monday label refused with UNMAPPED_OPTION');
-      await page.screenshot({ path: path.join(out, '6-unmapped-option.png'), fullPage: true });
+      const m1 = await page.textContent('#message');
+      check(/PRECONDITION_FAILED/.test(m1) && /GHL-IND-CASH-NEVER/.test(m1), 'GHL: contradictory cash answers refused with the rule id');
+      await page.screenshot({ path: path.join(out, '6-contradictory-data.png'), fullPage: true });
       // The ANZ form only has weekly amounts.
       const anz = forms.find((f) => f.label.startsWith('ANZ'));
       await page.selectOption('#template', anz.value);

@@ -8,7 +8,7 @@
   "sourceKeyNormalization": "macroforge-v1",
   "fontFallback": "unicode",
   "provenance": {
-    "importer": "tools/import_mforge.py 0.3.0",
+    "importer": "tools/import_mforge.py 0.4.0",
     "sourceFile": "RSFA End Forms Filling BluePrint 271026.mforge",
     "sourceSha256": "8052c17b374b551272e17f5036de1ebfa9a295328eb8a6d079d30eec788b9a51",
     "flow": "Flow C",
@@ -16,8 +16,8 @@
     "node": 3,
     "legacyPdfName": "GHL_N&P Trust_8 19.pdf",
     "lenderCondition": "Banks to Send Contains ASB",
-    "importedOn": "2026-10-27",
-    "curation": "curation/GHL_NP_TRUST_FORM@8-19.json sha256 566736619617"
+    "importedOn": "2026-10-28",
+    "curation": "curation/GHL_NP_TRUST_FORM@8-19.json sha256 1ccec14e4d63"
   },
   "pdf": {
     "pages": 2,
@@ -278,6 +278,23 @@
         "when": {
           "key": "Int Transfers IN - Average Value per Payment (GHL Trust)",
           "operator": "equals",
+          "value": "$1,000-$10,000"
+        }
+      },
+      "legacy": {
+        "field": "Check Box102#2",
+        "mapping": "conditional"
+      },
+      "option": "2",
+      "correction": "GHL-TRUST-LABEL-3D-AVG"
+    },
+    {
+      "pdfField": "Check Box102",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "Int Transfers IN - Average Value per Payment (GHL Trust)",
+          "operator": "equals",
           "value": "$1,000-$5,000"
         }
       },
@@ -389,6 +406,23 @@
       },
       "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
       "option": "1"
+    },
+    {
+      "pdfField": "Check Box104",
+      "kind": "checkbox",
+      "source": {
+        "when": {
+          "key": "Int Transfers OUT - Average Value per Payment (GHL Trust)",
+          "operator": "equals",
+          "value": "$1,000-$10,000"
+        }
+      },
+      "legacy": {
+        "field": "Check Box104#2",
+        "mapping": "conditional"
+      },
+      "option": "2",
+      "correction": "GHL-TRUST-LABEL-3E-AVG"
     },
     {
       "pdfField": "Check Box104",
@@ -583,7 +617,7 @@
       "source": {
         "when": {
           "key": "Sources of credits",
-          "operator": "equals",
+          "operator": "includes",
           "value": "Dividends from investments"
         }
       },
@@ -591,7 +625,8 @@
         "field": "Check Box96",
         "mapping": "conditional"
       },
-      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified"
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "correction": "GHL-TRUST-3B-MULTI-96"
     },
     {
       "pdfField": "Check Box97",
@@ -599,7 +634,7 @@
       "source": {
         "when": {
           "key": "Sources of credits",
-          "operator": "equals",
+          "operator": "includes",
           "value": "Donations"
         }
       },
@@ -607,7 +642,8 @@
         "field": "Check Box97",
         "mapping": "conditional"
       },
-      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified"
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "correction": "GHL-TRUST-3B-MULTI-97"
     },
     {
       "pdfField": "Check Box98",
@@ -615,7 +651,7 @@
       "source": {
         "when": {
           "key": "Sources of credits",
-          "operator": "equals",
+          "operator": "includes",
           "value": "Other (please specify)"
         }
       },
@@ -623,7 +659,8 @@
         "field": "Check Box98",
         "mapping": "conditional"
       },
-      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified"
+      "reviewRequired": "legacy equals/contains case-sensitivity and whitespace handling unverified",
+      "correction": "GHL-TRUST-3B-MULTI-98"
     },
     {
       "pdfField": "Check Box99",
@@ -716,26 +753,36 @@
       }
     },
     {
+      "pdfField": "Please provide details of the activity",
+      "kind": "text",
+      "source": {
+        "key": "Cash deposits activity details"
+      },
+      "correction": "GHL-TRUST-3C-DETAILS"
+    },
+    {
       "pdfField": "Please provide details of the activity including countries involved",
       "kind": "text",
       "source": {
-        "key": "International payments activity details (including countries involved)"
+        "key": "International Money Transfers – In activity details (including countries)"
       },
       "legacy": {
         "field": "Please provide details of the activity including countries involved",
         "mapping": "source_key"
-      }
+      },
+      "correction": "GHL-TRUST-3D-IN-DETAILS"
     },
     {
       "pdfField": "Please provide details of the activity including countries involved_2",
       "kind": "text",
       "source": {
-        "key": "International payments activity details (including countries involved)"
+        "key": "International Money Transfers – Out activity details (including countries)"
       },
       "legacy": {
         "field": "Please provide details of the activity including countries involved_2",
         "mapping": "source_key"
-      }
+      },
+      "correction": "GHL-TRUST-3E-OUT-DETAILS"
     },
     {
       "pdfField": "What is the objective of your trustorganisation",
@@ -785,7 +832,6 @@
     "D_2",
     "M",
     "M_2",
-    "Please provide details of the activity",
     "Y",
     "Y_2",
     "Y_3",
@@ -838,15 +884,154 @@
         "multiSelect": false,
         "onUnmapped": "error"
       }
+    ],
+    "requires": [
+      {
+        "id": "GHL-TRUST-IN-NEVER-AVG",
+        "when": {
+          "key": "International Money Transfers – In frequency",
+          "operator": "equals",
+          "value": "Never"
+        },
+        "require": {
+          "key": "Int Transfers IN - Average Value per Payment (GHL Trust)",
+          "operator": "absent"
+        },
+        "reason": "transfers IN are 'Never' but an IN average value is given (contradictory)"
+      },
+      {
+        "id": "GHL-TRUST-IN-NEVER-DETAILS",
+        "when": {
+          "key": "International Money Transfers – In frequency",
+          "operator": "equals",
+          "value": "Never"
+        },
+        "require": {
+          "key": "International Money Transfers – In activity details (including countries)",
+          "operator": "absent"
+        },
+        "reason": "transfers IN are 'Never' but IN activity details are given (contradictory)"
+      },
+      {
+        "id": "GHL-TRUST-OUT-NEVER-AVG",
+        "when": {
+          "key": "International Money Transfers – Out frequency",
+          "operator": "equals",
+          "value": "Never"
+        },
+        "require": {
+          "key": "Int Transfers OUT - Average Value per Payment (GHL Trust)",
+          "operator": "absent"
+        },
+        "reason": "transfers OUT are 'Never' but an OUT average value is given (contradictory)"
+      },
+      {
+        "id": "GHL-TRUST-OUT-NEVER-DETAILS",
+        "when": {
+          "key": "International Money Transfers – Out frequency",
+          "operator": "equals",
+          "value": "Never"
+        },
+        "require": {
+          "key": "International Money Transfers – Out activity details (including countries)",
+          "operator": "absent"
+        },
+        "reason": "transfers OUT are 'Never' but OUT activity details are given (contradictory)"
+      },
+      {
+        "id": "GHL-TRUST-CASH-NEVER-DETAILS",
+        "when": {
+          "key": "Cash deposits frequency (GHL Trust)",
+          "operator": "equals",
+          "value": "Never"
+        },
+        "require": {
+          "key": "Cash deposits activity details",
+          "operator": "absent"
+        },
+        "reason": "cash deposits are 'Never' but cash activity details are given (contradictory)"
+      },
+      {
+        "id": "GHL-TRUST-THIRD-PARTY-NO",
+        "when": {
+          "key": "Receive transactions_funds from third parties?",
+          "operator": "equals",
+          "value": "No"
+        },
+        "require": {
+          "key": "If yes, purpose",
+          "operator": "absent"
+        },
+        "reason": "third-party funds are 'No' but a purpose is given (contradictory)"
+      }
     ]
   },
+  "corrections": [
+    {
+      "id": "GHL-TRUST-3D-IN-DETAILS",
+      "type": "replace-source",
+      "basis": "evidence",
+      "status": "applied",
+      "pdfField": "Please provide details of the activity including countries involved"
+    },
+    {
+      "id": "GHL-TRUST-3E-OUT-DETAILS",
+      "type": "replace-source",
+      "basis": "evidence",
+      "status": "applied",
+      "pdfField": "Please provide details of the activity including countries involved_2"
+    },
+    {
+      "id": "GHL-TRUST-3C-DETAILS",
+      "type": "add-rule",
+      "basis": "evidence",
+      "status": "applied",
+      "pdfField": "Please provide details of the activity"
+    },
+    {
+      "id": "GHL-TRUST-LABEL-3D-AVG",
+      "type": "add-when-value",
+      "basis": "evidence",
+      "status": "applied",
+      "pdfField": "Check Box102"
+    },
+    {
+      "id": "GHL-TRUST-LABEL-3E-AVG",
+      "type": "add-when-value",
+      "basis": "evidence",
+      "status": "applied",
+      "pdfField": "Check Box104"
+    },
+    {
+      "id": "GHL-TRUST-3B-MULTI-96",
+      "type": "replace-source",
+      "basis": "evidence",
+      "status": "applied",
+      "pdfField": "Check Box96"
+    },
+    {
+      "id": "GHL-TRUST-3B-MULTI-97",
+      "type": "replace-source",
+      "basis": "evidence",
+      "status": "applied",
+      "pdfField": "Check Box97"
+    },
+    {
+      "id": "GHL-TRUST-3B-MULTI-98",
+      "type": "replace-source",
+      "basis": "evidence",
+      "status": "applied",
+      "pdfField": "Check Box98"
+    }
+  ],
   "review": {
-    "status": "candidate",
-    "meaning": "synthetic tests pass and every rule was checked against the printed label and the live Monday labels; not approved by RSFA, not compared with a MacroForge output",
+    "status": "ready-for-acceptance-testing",
+    "meaning": "the in/out details defect is corrected from dedicated Monday columns; every rule checked against the printed form and the live Monday schema; contradictory inputs are refused. Not approved by RSFA; not compared with a MacroForge output.",
     "openQuestions": [
-      "BLOCKING for RSFA review: the legacy configuration writes the same key, 'International payments activity details (including countries involved)', into BOTH the 3d (transfers IN) and 3e (transfers OUT) detail boxes, so details appear under OUT even when OUT is 'Never'; the 3c cash-deposit details box and average value are not mapped. The engine reproduces the legacy rules; RSFA must decide the intended keys before this form is used.",
-      "Live label '$1,000-$10,000' (international transfers in and out, average value) has no rule; the legacy rule tests '$1,000-$5,000' for the box printed '$1,000-$10,000'. Refused (UNMAPPED_OPTION) until RSFA decides.",
-      "'Sources of credits' and 'GHL Why have you come to Sovereign Home Loans?' are multi-select on Monday; only one label can be represented by the legacy equals rules (two are refused)."
+      "3c 'Average value per deposit' (Check Box100: <$1,000 / $1,000-$10,000 / >$10,000) has no matching Monday column (the ASB cash column uses different bands): left blank for the adviser, as in the legacy configuration.",
+      "'GHL Why have you come to Sovereign Home Loans?' is multi-select on Monday but its two boxes are one checkbox field: selecting both is refused.",
+      "The board also has unused near-duplicates 'International Money Transfers – In/Out average value per payment' (no labels configured) and 'International payments activity details (including countries)'; the engine uses the GHL Trust columns and the dedicated In/Out detail columns. Confirm these are the columns advisers fill.",
+      "Expected differences from MacroForge in a parallel run: 3d/3e details (MacroForge copies one text into both), 3c details, the $1,000-$10,000 band and multi-source ticks."
     ]
   }
 }
