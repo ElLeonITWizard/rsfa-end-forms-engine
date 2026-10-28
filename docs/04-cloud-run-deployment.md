@@ -222,12 +222,12 @@ without MacroForge. Commands were written for and checked against `gcloud` 570.0
 - `/v1` in this image can generate only BNZ Boarder. A bank selection that routes other forms is refused with 422
   `UNKNOWN_TEMPLATE` and no PDF. Forms MacroForge must still produce are listed in `notMigrated`.
 
-**Package** (built from commit `d35d5d5`, reproducible: a rebuild gives the same SHA-256):
+**Package** (built from commit `80affdd`, which includes the relay review fixes; reproducible: a rebuild gives the same SHA-256):
 
 | Item | Value |
 |---|---|
 | Bundle | `.local/deploy/rsfa-end-forms-bundle.tar.gz` (git-ignored; sent separately) |
-| SHA-256 | `2596696611b0ce37374089170b1c3bb03693d22189f10cb7218f385890161e8d` |
+| SHA-256 | `6b0e7015164b49c0f6b54c4035a7563e46ebef715d173b2398a6c8291826303d` |
 | Contents | `deploy_poc.sh`, `verify_pdf.py`, `BUNDLE_INFO.json` (commit and per-file SHA-256), staged context (36 files: engine sources and tests, BNZ manifest, the blank allowlisted BNZ template), `/generate` fixture, 3 `/v1` requests (fictional) |
 | Expected PDFs | `/generate` `2ae7bfacf48b8ee8e63aaf9ce28997650abd2c07b59ddbeade9928ce3269d6f6` (unchanged from revisions 1–2); `/v1` `e08a79e00e8702eb1acf56a055870ff6730826ea04bc5bfafb16c02a71088d78` (same data, `today` 2026-10-28) |
 
@@ -247,8 +247,8 @@ without MacroForge. Commands were written for and checked against `gcloud` 570.0
   command.
 
 **Local rehearsal (2026-10-28):**
-- **Image build:** built from the staged context with the Cloud Build target (`poc`); the Maven tests ran inside the
-  build. 59 ran; 18 were skipped (legacy-template and demo-form tests need files outside the context, by design).
+- **Image build:** built from the bundle's own staged context (commit `80affdd`) with the Cloud Build target (`poc`);
+  the Maven tests ran inside the build. 59 ran; 18 were skipped (legacy-template and demo-form tests need files outside the context, by design).
   - The first rehearsal **failed**: a test read `contracts/`, which is not in the context. Fixed in `d35d5d5`.
 - **Image run:** with `K_SERVICE` and `ENGINE_AUTH=PLATFORM_IAM` behind a local IAM stand-in. All checks above passed:
   - the script's own `v1_checks` function was executed;
