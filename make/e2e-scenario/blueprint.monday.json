@@ -40,8 +40,7 @@
       "name": "itemId",
       "value": "{{trim(var.input.itemId)}}"
      }
-    ],
-    "scope": "roundtrip"
+    ]
    },
    "metadata": {
     "designer": {
@@ -195,20 +194,20 @@
          "x": 1200,
          "y": 0
         }
+       },
+       "filter": {
+        "name": "refused before any call",
+        "conditions": [
+         [
+          {
+           "a": "{{4.result.refused}}",
+           "o": "exist"
+          }
+         ]
+        ]
        }
       }
-     ],
-     "filter": {
-      "name": "refused before any call",
-      "conditions": [
-       [
-        {
-         "a": "{{4.result.refused}}",
-         "o": "exist"
-        }
-       ]
-      ]
-     }
+     ]
     },
     {
      "flow": [
@@ -661,56 +660,56 @@
              "x": 3000,
              "y": 0
             }
+           },
+           "filter": {
+            "name": "B permanent error",
+            "conditions": [
+             [
+              {
+               "a": "{{12.statusCode}}",
+               "o": "number:equal",
+               "b": "400"
+              }
+             ],
+             [
+              {
+               "a": "{{12.statusCode}}",
+               "o": "number:equal",
+               "b": "401"
+              }
+             ],
+             [
+              {
+               "a": "{{12.statusCode}}",
+               "o": "number:equal",
+               "b": "404"
+              }
+             ],
+             [
+              {
+               "a": "{{12.statusCode}}",
+               "o": "number:equal",
+               "b": "409"
+              }
+             ],
+             [
+              {
+               "a": "{{12.statusCode}}",
+               "o": "number:equal",
+               "b": "413"
+              }
+             ],
+             [
+              {
+               "a": "{{12.statusCode}}",
+               "o": "number:equal",
+               "b": "422"
+              }
+             ]
+            ]
            }
           }
-         ],
-         "filter": {
-          "name": "B permanent error",
-          "conditions": [
-           [
-            {
-             "a": "{{12.statusCode}}",
-             "o": "number:equal",
-             "b": "400"
-            }
-           ],
-           [
-            {
-             "a": "{{12.statusCode}}",
-             "o": "number:equal",
-             "b": "401"
-            }
-           ],
-           [
-            {
-             "a": "{{12.statusCode}}",
-             "o": "number:equal",
-             "b": "404"
-            }
-           ],
-           [
-            {
-             "a": "{{12.statusCode}}",
-             "o": "number:equal",
-             "b": "409"
-            }
-           ],
-           [
-            {
-             "a": "{{12.statusCode}}",
-             "o": "number:equal",
-             "b": "413"
-            }
-           ],
-           [
-            {
-             "a": "{{12.statusCode}}",
-             "o": "number:equal",
-             "b": "422"
-            }
-           ]
-          ]
-         }
+         ]
         },
         {
          "flow": [
@@ -742,56 +741,56 @@
              "x": 3000,
              "y": 0
             }
+           },
+           "filter": {
+            "name": "C retryable",
+            "conditions": [
+             [
+              {
+               "a": "{{12.statusCode}}",
+               "o": "number:equal",
+               "b": "429"
+              }
+             ],
+             [
+              {
+               "a": "{{12.statusCode}}",
+               "o": "number:equal",
+               "b": "500"
+              }
+             ],
+             [
+              {
+               "a": "{{12.statusCode}}",
+               "o": "number:equal",
+               "b": "502"
+              }
+             ],
+             [
+              {
+               "a": "{{12.statusCode}}",
+               "o": "number:equal",
+               "b": "503"
+              }
+             ],
+             [
+              {
+               "a": "{{12.statusCode}}",
+               "o": "number:equal",
+               "b": "504"
+              }
+             ],
+             [
+              {
+               "a": "{{12.statusCode}}",
+               "o": "number:equal",
+               "b": "599"
+              }
+             ]
+            ]
            }
           }
-         ],
-         "filter": {
-          "name": "C retryable",
-          "conditions": [
-           [
-            {
-             "a": "{{12.statusCode}}",
-             "o": "number:equal",
-             "b": "429"
-            }
-           ],
-           [
-            {
-             "a": "{{12.statusCode}}",
-             "o": "number:equal",
-             "b": "500"
-            }
-           ],
-           [
-            {
-             "a": "{{12.statusCode}}",
-             "o": "number:equal",
-             "b": "502"
-            }
-           ],
-           [
-            {
-             "a": "{{12.statusCode}}",
-             "o": "number:equal",
-             "b": "503"
-            }
-           ],
-           [
-            {
-             "a": "{{12.statusCode}}",
-             "o": "number:equal",
-             "b": "504"
-            }
-           ],
-           [
-            {
-             "a": "{{12.statusCode}}",
-             "o": "number:equal",
-             "b": "599"
-            }
-           ]
-          ]
-         }
+         ]
         }
        ]
       }

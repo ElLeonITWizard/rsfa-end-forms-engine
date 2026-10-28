@@ -63,6 +63,13 @@ def code_module(mid, inputs, x):
                        "input": [{"name": k, "value": v} for k, v in inputs]}, "metadata": meta(x)}
 
 
+def route(flow_modules: list, filter_: dict | None = None) -> dict:
+    """A router route; Make keeps a route's filter on the route's FIRST module (the link into it)."""
+    if filter_ is not None:
+        flow_modules[0]["filter"] = filter_
+    return {"flow": flow_modules}
+
+
 def build(mode: str) -> dict:
     variables = [
         {"name": "today", "value": "{{formatDate(now; \"YYYY-MM-DD\"; \"Pacific/Auckland\")}}"},
@@ -76,7 +83,7 @@ def build(mode: str) -> dict:
         variables.append({"name": "approvedItemIds", "value": "<<APPROVED_ITEM_IDS>>"})
         variables.append({"name": "itemId", "value": "{{trim(var.input.itemId)}}"})
     flow = [{"id": 2, "module": "util:SetVariables", "version": 1, "parameters": {},
-             "mapper": {"variables": variables, "scope": "roundtrip"}, "metadata": meta(0)}]
+             "mapper": {"variables": variables}, "metadata": meta(0)}]
     sign_common = [("executionId", "{{2.runId}}"), ("today", "{{2.today}}"), ("secret", "<<RELAY_TEST_SECRET>>")]
     if mode == "monday":
         flow.append({"id": 3, "module": "monday:GetItemV2", "version": 2, "parameters": {"__IMTCONN__": MONDAY_CONN},
@@ -136,23 +143,23 @@ def build(mode: str) -> dict:
                  record(17, "filed", {"engineStatus": "{{12.data.status}}", "requestDigest": "{{12.data.requestDigest}}",
                                       "fileName": "{{14.fileName}}", "templateId": "{{14.templateId}}",
                                       "webUrl": "{{15.webUrl}}", "sharepointItemId": "{{15.id}}"}, 3600)]},
-             {"flow": [record(18, "failed", None, 3000)],
-              "filter": flt("B permanent error", *[[cond("{{12.statusCode}}", "number:equal", s)] for s in
-                                                    ("400", "401", "404", "409", "413", "422")])},
-             {"flow": [record(19, "{{if(8.i = 3; \"failed-after-retries\"; \"retrying\")}}", None, 3000)],
-              "filter": flt("C retryable", *[[cond("{{12.statusCode}}", "number:equal", s)] for s in
-                                              ("429", "500", "502", "503", "504", "599")])},
+             route([record(18, "failed", None, 3000)],
+                   flt("B permanent error", *[[cond("{{12.statusCode}}", "number:equal", s)] for s in
+                                              ("400", "401", "404", "409", "413", "422")])),
+             route([record(19, "{{if(8.i = 3; \"failed-after-retries\"; \"retrying\")}}", None, 3000)],
+                   flt("C retryable", *[[cond("{{12.statusCode}}", "number:equal", s)] for s in
+                                        ("429", "500", "502", "503", "504", "599")])),
          ]},
     ]
     flow.append({"id": 5, "module": "builtin:BasicRouter", "version": 1, "parameters": {}, "mapper": None,
                  "metadata": meta(900), "routes": [
-                     {"flow": [{"id": 6, "module": "datastore:AddRecord", "version": 1, "parameters": {"datastore": 0},
-                                "mapper": {"key": "refused-{{2.runId}}", "overwrite": True,
-                                           "data": {"status": "refused", "code": "{{4.result.refused}}",
-                                                    "itemId": "{{ifempty(2.itemId; \"synthetic\")}}", "runId": "{{2.runId}}",
-                                                    "at": "{{formatDate(now; \"YYYY-MM-DDTHH:mm:ssZ\")}}"}},
-                                "metadata": meta(1200)}],
-                      "filter": flt("refused before any call", [cond("{{4.result.refused}}", "exist")])},
+                     route([{"id": 6, "module": "datastore:AddRecord", "version": 1, "parameters": {"datastore": 0},
+                             "mapper": {"key": "refused-{{2.runId}}", "overwrite": True,
+                                        "data": {"status": "refused", "code": "{{4.result.refused}}",
+                                                 "itemId": "{{ifempty(2.itemId; \"synthetic\")}}", "runId": "{{2.runId}}",
+                                                 "at": "{{formatDate(now; \"YYYY-MM-DDTHH:mm:ssZ\")}}"}},
+                             "metadata": meta(1200)}],
+                           flt("refused before any call", [cond("{{4.result.refused}}", "exist")])),
                      {"flow": [
                          {"id": 7, "module": "datastore:GetRecord", "version": 1, "parameters": {"datastore": 0},
                           "mapper": {"key": "{{4.result.idempotencyKey}}"},
