@@ -40,7 +40,12 @@ const logs = { engine: '', relay: '' };
 
 // ---------------------------------------------------------------- processes
 function start(name, env) {
-  const p = spawn('java', ['-jar', jar, 'serve'], { env: Object.assign({}, process.env, env), stdio: ['ignore', 'pipe', 'pipe'] });
+  // RELAY_IMAGE=<tag>: run the relay from the built container image (bundle rehearsal) instead of the host jar
+  const image = name === 'relay' ? process.env.RELAY_IMAGE : null;
+  const p = image
+    ? spawn('docker', ['run', '--rm', '--name', 'rsfa-relay-e2e', '--network', 'host', '--read-only', '--tmpfs', '/tmp',
+      ...Object.entries(env).flatMap(([k, v]) => ['-e', k + '=' + v]), image], { stdio: ['ignore', 'pipe', 'pipe'] })
+    : spawn('java', ['-jar', jar, 'serve'], { env: Object.assign({}, process.env, env), stdio: ['ignore', 'pipe', 'pipe'] });
   p.stdout.on('data', d => { logs[name] += d; });
   p.stderr.on('data', d => { logs[name] += d; });
   procs.push(p);
@@ -257,4 +262,4 @@ function verifyPdf(file, expect) {
   ok(JSON.stringify([...dataStore.values()]).match(/Jane|Example Street|Testville/) === null, 'run records hold no field values');
   fs.writeFileSync(path.join(out, 'run-records.json'), JSON.stringify([...dataStore.values()], null, 1));
   console.log(`MAKE E2E SCENARIO TEST PASSED (${n} checks)`);
-})().catch(e => { console.error(e.message); process.exitCode = 1; }).finally(() => { procs.forEach(p => p.kill()); setTimeout(() => process.exit(), 300); });
+})().catch(e => { console.error(e.message); process.exitCode = 1; }).finally(() => { procs.forEach(p => p.kill()); if (process.env.RELAY_IMAGE) spawnSync('docker', ['rm', '-f', 'rsfa-relay-e2e']); setTimeout(() => process.exit(), 300); });
