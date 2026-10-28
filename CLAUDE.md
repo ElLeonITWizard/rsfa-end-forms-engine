@@ -36,6 +36,10 @@ docs/05-demo-script.md                demo page: secure access (gcloud run servi
 docs/06-template-coverage.md          form selection, readiness levels, open questions, forms not chosen
 docs/07-make-integration.md           Make contract masterboard.v1, auth A vs B (relay recommended), Make test scenario design
 docs/08-monday-schema-drift.md        live Monday schema vs key contract: renames, replaced IDs, option drift (read-only)
+docs/09-macroforge-banks-key-investigation.md  8731317 'Banks to Send' rename: evidence, reproduction, prepared fix (NOT applied)
+docs/10-relay-security-and-infrastructure.md   relay security architecture, durable replay, minimum GCP resources, costs, rollback
+docs/11-make-test-scenario.md         isolated Make test scenario, module by module (designed, not created)
+docs/12-acceptance-checklists.md      business acceptance checklists for Rod (GHL Individual / Trust)
 docs/generated/template-coverage.md   GENERATED per-form coverage report (tools/coverage_report.py)
 docs/generated/monday-schema-drift.md GENERATED ID-by-ID schema comparison (tools/schema_drift.py)
 docs/decisions.md                     decision log (ADR-lite)
@@ -47,7 +51,9 @@ tools/reimport_curated.sh re-imports the four curated forms (optionally a .local
 tools/make_like_client.py signs /v1 requests like Make (HMAC) for local relay tests; prints a summary only
 curation/                 reviewed per-form validation (closedOptions, requires), corrections (evidence | decision, D-028)
                           and review status, merged by the importer
-contracts/                Make contract JSON Schema (masterboard.v1) + fictional example requests
+contracts/                Make contract JSON Schema (masterboard.v1) + fictional example requests + HMAC test vector
+make/                     Make material prepared here, never applied automatically: proposed 8731317 module-8 snippet,
+                          test-scenario Code module (build + HMAC sign) and synthetic payloads T1–T12
 deploy/                   poc-allowlist.json (approved templates), cloudbuild.yaml, deploy_poc.sh (end-to-end deployment),
                           make_bundle.sh (Cloud Shell bundle), verify_pdf.py (post-deploy PDF checks), bucket lifecycle
 engine/                   Maven project: library, CLI (inspect | fill | render | serve), HTTP API (/health, /generate,
@@ -57,6 +63,7 @@ mappings/<lender>/<TEMPLATE_ID>@<version>.json   imported manifests (no client d
 tests/fixtures/           synthetic requests (fictional "Jane Example" data only)
 tests/importer/           importer + staging unit tests (synthetic .mforge)
 tests/ui/                 browser smoke test of the demo page (Playwright from the machine) + PDF checker
+tests/make/               Node tests of the make/ material (+ a runner for the local relay chain)
 .local/                   GIT-IGNORED: reference exports, lender PDFs, generated output
 ```
 
@@ -78,6 +85,7 @@ ENGINE_AUTH=NONE java -jar engine/target/end-forms-engine.jar serve             
 node tests/ui/demo_smoke.js http://127.0.0.1:8080/ .local/output/ui-smoke 5        # browser smoke test (server running; 5 = forms offered)
 bash tools/reimport_curated.sh ".local/reference/<file>.mforge" <YYYY-MM-DD> [--preview-pending .local/preview]
 python3 tools/schema_drift.py --help                                               # schema drift report (docs/08)
+node tests/make/code_module_sign_test.js && node tests/make/module8_banks_alias_test.js   # Make material (docs/09, docs/11)
 python3 tools/coverage_report.py --board .local/reference/masterboard-columns-<date>.json \
   --contract .local/reference/8731317_result_key_contract.tsv --date <YYYY-MM-DD> --out docs/generated/template-coverage.md
 ```
@@ -106,9 +114,30 @@ extracted to `.local/generated/templates/`. A green build without them proves on
 8. Nothing is deployed or changed in Google Cloud without RSFA's explicit approval of the exact commands (docs/04).
    Never build from the repo root for deployment: only from the staged context.
 
-## Current status (2026-10-28, iteration 7)
+## Current status (2026-10-28, iteration 8)
 
-- **Iteration 7 (local only; nothing deployed or changed in Make, Monday, SharePoint or GCP; `00002-nan` untouched):**
+- **Iteration 8 (nothing deployed; no change in Make, Monday, SharePoint or GCP; `00002-nan` untouched):**
+  - **`8731317` investigation (docs/09, D-033):**
+    - Confirmed: `dropdown_mkzvfgeg` was renamed 2026-10-25, module 8 keys by live title, and MacroForge still tests
+      `Banks to Send`. Reproduced locally.
+    - Not verified: MacroForge's handling of the missing key. No production run since 2026-10-01.
+    - A 6-line additive module-8 fix (by column ID) is prepared and tested, **not applied**; it needs explicit
+      approval. A full blueprint backup is in `.local/` (never committed).
+  - **Relay:**
+    - durable cross-instance replay store (Cloud Storage `ifGenerationMatch=0`, fail-closed; D-031);
+    - JSON and signature-header validation; configurable timeout;
+    - 13 relay tests.
+  - **Make signing:** tested plain-JS HMAC for the Code module (D-032); native `sha256` with a key is still unverified.
+    Test scenario guide with re-signing retries, T1–T12 run locally through the signer, relay and engine (docs/11).
+  - **Forms (D-034):**
+    - GHL Individual/Trust refuse a missing name.
+    - New **RSFA-DECISION-3**: MacroForge fills both GHL forms for every ASB deal.
+    - ANZ refuses an inclusive **Yes**.
+    - Statuses unchanged: GHL ready for acceptance (checklists docs/12); ASB and ANZ blocked.
+  - **Tests:** 77 Java + 25 Python + 56 Node checks + 27 browser checks; local Make-payload chain 12/12; BNZ Boarder
+    bytes unchanged.
+
+- **Iteration 7 (local only, superseded where iteration 8 differs; nothing deployed or changed in Make, Monday, SharePoint or GCP; `00002-nan` untouched):**
   - Forms (docs/06, D-029):
     - **GHL Individual and GHL Trust: ready for acceptance testing** (routing `acceptance`). GHL Trust in/out defect
       fixed: 3d/3e details come from the dedicated In/Out columns; OUT stays empty without OUT data.
@@ -156,7 +185,9 @@ extracted to `.local/generated/templates/`. A green build without them proves on
   offers that are usable.
 - **Open decisions** (docs/02 "Known gaps", docs/06, docs/07):
   - the candidate forms' open questions and the GHL label fixes (docs/06);
-  - the Make → Cloud Run authentication option (API Gateway vs relay) and the dedicated Monday engine-status column (docs/07);
+  - approval (or MacroForge-side confirmation) of the `8731317` module-8 fix (docs/09);
+  - RSFA-DECISION-1/2/3 (docs/06, docs/12);
+  - the relay (D-027/D-031) and its public exposure, and the dedicated Monday engine-status column (docs/07, docs/10);
   - 36 constant ticks;
   - the DDMMYYYY → 6-cell date transform;
   - the LineItems name conflict;

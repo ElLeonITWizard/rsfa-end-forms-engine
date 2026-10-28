@@ -17,7 +17,7 @@
     "legacyPdfName": "GHL_N&P Individual_8 19.pdf",
     "lenderCondition": "Banks to Send Contains ASB",
     "importedOn": "2026-10-28",
-    "curation": "curation/GHL_NP_INDIVIDUAL_FORM@8-19.json sha256 197cbf237f97"
+    "curation": "curation/GHL_NP_INDIVIDUAL_FORM@8-19.json sha256 21927b9a6723"
   },
   "pdf": {
     "pages": 2,
@@ -702,6 +702,18 @@
       }
     ],
     "requires": [
+      {
+        "id": "GHL-IND-NAME-REQUIRED",
+        "when": {
+          "key": "Applicant 1 Full Name",
+          "operator": "absent"
+        },
+        "require": {
+          "key": "Applicant 1 Full Name",
+          "operator": "present"
+        },
+        "reason": "the customer name identifies whose questionnaire this is; without it the form cannot be used (data-quality guard, D-034)"
+      },
       {
         "id": "GHL-IND-CASH-NEVER-AVG",
         "when": {

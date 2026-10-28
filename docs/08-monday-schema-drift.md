@@ -1,6 +1,7 @@
 # 08 — Monday schema drift (read-only investigation, 2026-10-28)
 
-**Nothing was changed in Monday, Make or MacroForge.**
+**Nothing was changed in Monday, Make or MacroForge.** Iteration 8 added the Monday activity-log evidence (rename
+dates) and the production investigation of `8731317` (docs/09).
 
 **Sources:**
 - **[live]** Board `5026186805` column schema: Monday connector, `get_board_info` with columns only and no items, read
@@ -32,10 +33,10 @@ This **corrects** the inference in iteration 6 that keys are fixed per column ID
 
 | # | Finding | Kind | Evidence |
 |---|---|---|---|
-| 1 | Board display name is **"SOP Masterboard"** (RSFA documents call it "Masterboard: End Forms"); ID `5026186805` unchanged | display name | live schema |
+| 1 | Board display name is **"SOP Masterboard"** (RSFA documents call it "Masterboard: End Forms"); ID `5026186805` unchanged. Renamed 2026-10-25 07:06 → "Masterboard: from SOP", 07:09 → "SOP Masterboard" | display name | live schema; activity log (iteration 8) |
 | 2 | `status` (End Forms Filling Status) keeps ID and type; it gained the label **`Historical`** (5 labels: Reviewing, Reviewed, Cancelled, Filled, Historical) | option added | live schema |
-| 3 | `dropdown_mkzvfgeg`: **"Banks to Send" → "Selected Banks"**; same ID, type and labels (`ASB, ANZ, BNZ, KiwiBank, WBC`) | **display-name change with key impact** | live schema; blueprint cache still says "Banks to Send" (last edit 2026-07-16) |
-| 4 | Five more renames, same ID: `Related Contacts`→`Contacts`; `KIWIBANK Account Number 1`→`Kiwibank Account Number 1`; `Which facility`→`Which Facility – ASB Lending`; `Capitalise to loan`→`Capitalise to loan (Yes/No)`; and **`boolean_mkzvcgkc` "Applicant 2 Tax resident of one or more other countries…" → "Applicant 1 Tax resident…"** | display-name change; the last one changes **meaning** | generated report |
+| 3 | `dropdown_mkzvfgeg`: **"Banks to Send" → "Selected Banks"**; same ID, type and labels (`ASB, ANZ, BNZ, KiwiBank, WBC`) | **display-name change with key impact** | live schema; **activity log: renamed 2026-10-25 06:36:07 UTC** (iteration 8); blueprint cache still says "Banks to Send" (last edit 2026-07-16) |
+| 4 | Five more renames, same ID: `Related Contacts`→`Contacts` (2026-10-25 07:03; also `lookup_mm8fw9zw` `Client Profile`→`Client Profile from Contacts` 06:37; neither is used by MacroForge); `KIWIBANK Account Number 1`→`Kiwibank Account Number 1`; `Which facility`→`Which Facility – ASB Lending`; `Capitalise to loan`→`Capitalise to loan (Yes/No)`; and **`boolean_mkzvcgkc` "Applicant 2 Tax resident of one or more other countries…" → "Applicant 1 Tax resident…"** | display-name change; the last one changes **meaning** | generated report |
 | 5 | Nine column IDs removed. Seven have a new column with the same title, so the key is kept. Notably: both boarder names and Boarder 2 amount and frequency are new columns; "Applicant 2 Tax resident in one or more other countries/jurisdictions" changed from **checkbox to text**. Two keys are gone: "Applicant 1 Preferred Time To Call" and the old boolean "Capitalise to loan" | replacement / removal | generated report |
 | 6 | No real type change on a kept ID. The 65 apparent ones are Monday's legacy API type names (`boolean`/`numeric` = `checkbox`/`numbers`) | none | ID prefixes |
 | 7 | 17 new columns, including `Applicant 1/2 Full Name`, `ASB Account Number`, `Adviser Occupation/Address`, `Boarder 1/2 amount inclusive of food and/or bills/utilities`, `Purchase Property 1–3 Address` | new | generated report |
@@ -49,7 +50,8 @@ This **corrects** the inference in iteration 6 that keys are fixed per column ID
   - Since the rename, `8731317` sends `Selected Banks` instead. **The next production run may fill no bank forms**
     (only `All Banks_DOAD.pdf`, which is unconditional).
   - The last `8731317` execution in Make's history is 2026-10-01 (SUCCESS). No run since, so it is unobserved.
-  - **Read-only check to confirm the rename date:** the Monday board activity log for column `dropdown_mkzvfgeg`.
+  - **Rename date confirmed (iteration 8):** 2026-10-25 06:36:07 UTC, after the last `8731317` run (2026-10-01).
+    Full investigation, reproduction and the prepared fix: [docs/09](09-macroforge-banks-key-investigation.md).
   - **Possible fixes (production changes, need a change plan and approval):**
     - rename the column back to "Banks to Send";
     - add a key alias in `8731317` module 8;

@@ -399,6 +399,64 @@ class LegacyTemplatesTest {
         assertEquals(Map.of("B1 Inclusive", "Off", "B2 Inclusive", "Off"), fieldValues(ok.pdf(), List.of("B1 Inclusive", "B2 Inclusive")));
     }
 
+    @Test
+    void anzRefusesAnInclusiveYesTheBankFormCannotRecord() throws IOException {
+        Case anz = require(ANZ_BOARDER, "tests/fixtures/anz-boarder.request.json");
+        for (String key : List.of("Boarder 1 amount inclusive of food and/or bills/utilities",
+                "Boarder 2 amount inclusive of food and/or bills/utilities?")) {
+            ObjectNode yes = anz.data().deepCopy();
+            yes.put(key, "Yes");
+            FillResult r = FILLER.fill(anz.template(), anz.manifest(), yes);
+            assertNull(r.pdf(), key);
+            assertEquals(List.of("PRECONDITION_FAILED"), codesOf(r));
+            assertTrue(r.errors().getFirst().message().contains("ANZ-INCLUSIVE-YES-"), () -> r.errors().toString());
+        }
+        ObjectNode no = anz.data().deepCopy(); // 'No' is not ambiguous: left for the customer, as in the legacy setup
+        no.put("Boarder 1 amount inclusive of food and/or bills/utilities", "No");
+        assertTrue(FILLER.fill(anz.template(), anz.manifest(), no).ok());
+    }
+
+    @Test
+    void ghlFormsRefuseAMissingCustomerOrTrustName() throws IOException {
+        record C(String id, String fixture, String key, String rule) {
+        }
+        for (C c : List.of(
+                new C(GHL_INDIVIDUAL, "tests/fixtures/ghl-np-individual.request.json", "Applicant 1 Full Name",
+                        "GHL-IND-NAME-REQUIRED"),
+                new C(GHL_TRUST, "tests/fixtures/ghl-np-trust-live-labels.request.json",
+                        "Applicant 1 Organisation legal name (entity/company/trust/branch)", "GHL-TRUST-NAME-REQUIRED"))) {
+            Case k = require(c.id(), c.fixture());
+            ObjectNode missing = k.data().deepCopy();
+            missing.remove(c.key());
+            ObjectNode blank = k.data().deepCopy();
+            blank.put(c.key(), "  ");
+            for (ObjectNode d : List.of(missing, blank)) {
+                FillResult r = FILLER.fill(k.template(), k.manifest(), d);
+                assertNull(r.pdf(), c.rule());
+                assertTrue(r.errors().stream().anyMatch(i -> i.code().equals("PRECONDITION_FAILED")
+                        && i.message().contains(c.rule())), () -> r.errors().toString());
+            }
+        }
+    }
+
+    @Test
+    void ghlTrustRefusesUnknownAndAmbiguousSelections() throws IOException {
+        Case k = require(GHL_TRUST, "tests/fixtures/ghl-np-trust-live-labels.request.json");
+        Map<String, String> cases = new java.util.LinkedHashMap<>();
+        cases.put("International Money Transfers – In frequency=Sometimes", "UNMAPPED_OPTION");
+        cases.put("International Money Transfers – Out frequency=Weekly, Monthly", "UNMAPPED_OPTION"); // single-select column
+        cases.put("Receive transactions/funds from third parties?=Unsure", "UNMAPPED_OPTION");
+        for (var c : cases.entrySet()) {
+            String[] kv = c.getKey().split("=", 2);
+            ObjectNode d = k.data().deepCopy();
+            d.put(kv[0], kv[1]);
+            FillResult r = FILLER.fill(k.template(), k.manifest(), d);
+            assertNull(r.pdf(), c.getKey());
+            assertTrue(codesOf(r).contains(c.getValue()), () -> c.getKey() + " " + r.errors());
+            assertFalse(r.issues().toString().contains(kv[1]), "issues never echo values");
+        }
+    }
+
     static List<String> codesOf(FillResult r) {
         return r.errors().stream().map(Issue::code).toList();
     }

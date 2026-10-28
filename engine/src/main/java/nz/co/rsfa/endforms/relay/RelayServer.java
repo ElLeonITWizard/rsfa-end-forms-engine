@@ -20,10 +20,8 @@ import java.security.MessageDigest;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.HexFormat;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
@@ -34,8 +32,10 @@ import java.util.regex.Pattern;
  * <ul>
  *   <li>Make authenticates every request with an HMAC-SHA256 signature over {@code timestamp + "." + body}
  *       ({@code X-RSFA-Timestamp}, {@code X-RSFA-Signature: v1=<hex>}); two secrets may be active for rotation.</li>
- *   <li>Replay protection: timestamp within ±{@value #MAX_SKEW_SECONDS}s and each signature accepted once per instance
- *       while it is fresh.</li>
+ *   <li>Replay protection: timestamp within ±{@value #MAX_SKEW_SECONDS}s and each signature accepted once, recorded
+ *       in a {@link ReplayStore}: {@link GcsReplayStore} is shared by all instances; {@link ReplayStore.Memory} is
+ *       correct only with a single instance. The store fails closed (503).</li>
+ *   <li>The body must be a JSON object (checked after the signature, before anything is forwarded).</li>
  *   <li>The relay calls the engine with a Google-signed ID token for its own service account (Cloud Run metadata
  *       server), so the engine keeps {@code --no-allow-unauthenticated}; no key file exists anywhere.</li>
  *   <li>Request ≤ 1 MiB, response ≤ 32 MiB, per-instance rate limit, upstream timeout below Cloud Run's 120 s.</li>
@@ -50,7 +50,8 @@ public final class RelayServer {
     static final long MAX_RESPONSE_BYTES = 32L * 1024 * 1024;
     static final long MAX_SKEW_SECONDS = 300;
     static final Duration UPSTREAM_TIMEOUT = Duration.ofSeconds(110);
-    private static final Pattern CORRELATION = Pattern.compile("\"correlationId\"\\s*:\\s*\"([A-Za-z0-9._:-]{8,128})\"");
+    private static final Pattern CORRELATION = Pattern.compile("[A-Za-z0-9._:-]{8,128}");
+    private static final Pattern SIGNATURE = Pattern.compile("v1=[0-9a-fA-F]{64}");
 
     /** Supplies a Google-signed ID token whose audience is the engine URL. */
     public interface IdTokenSource {
@@ -65,8 +66,8 @@ public final class RelayServer {
     private final ObjectMapper json = new ObjectMapper();
     private final HttpClient http = HttpClient.newBuilder().proxy(HttpClient.Builder.NO_PROXY)
             .connectTimeout(Duration.ofSeconds(10)).build();
-    /** signature -> epoch second after which it may be forgotten (outside the skew window it is refused anyway). */
-    private final Map<String, Long> seen = new LinkedHashMap<>(16, 0.75f, false);
+    private final ReplayStore replay;
+    private volatile Duration upstreamTimeout = UPSTREAM_TIMEOUT;
     private HttpServer server;
 
     /**
@@ -75,6 +76,12 @@ public final class RelayServer {
      *                then remove the old one)
      */
     public RelayServer(URI target, List<String> secrets, IdTokenSource tokens, Clock clock, int ratePerMinute) {
+        this(target, secrets, tokens, clock, ratePerMinute, new ReplayStore.Memory(10_000));
+    }
+
+    /** @param replay where accepted signatures are recorded; {@link GcsReplayStore} whenever more than one instance may run */
+    public RelayServer(URI target, List<String> secrets, IdTokenSource tokens, Clock clock, int ratePerMinute,
+                       ReplayStore replay) {
         boolean loopback = "http".equals(target.getScheme())
                 && ("127.0.0.1".equals(target.getHost()) || "localhost".equals(target.getHost()));
         if (!"https".equals(target.getScheme()) && !loopback) {
@@ -88,6 +95,13 @@ public final class RelayServer {
         this.tokens = tokens;
         this.clock = clock;
         this.limiter = new RateLimiter(ratePerMinute, clock);
+        this.replay = replay;
+    }
+
+    /** Upstream timeout (default 110 s, below Cloud Run's request timeout); shorter values only for tests. */
+    public RelayServer withUpstreamTimeout(Duration timeout) {
+        this.upstreamTimeout = timeout;
+        return this;
     }
 
     public int start(String host, int port) throws IOException {
@@ -114,7 +128,7 @@ public final class RelayServer {
             if ("/health".equals(path) && "GET".equals(ex.getRequestMethod())) {
                 status = 200;
                 outcome = "health";
-                send(ex, 200, json.createObjectNode().put("status", "ok").put("role", "relay"));
+                send(ex, 200, json.createObjectNode().put("status", "ok").put("role", "relay").put("replayStore", replay.kind()));
                 return;
             }
             if (!PATH.equals(path)) {
@@ -136,13 +150,42 @@ public final class RelayServer {
                 send(ex, 413, error("PAYLOAD_TOO_LARGE", false));
                 return;
             }
-            var m = CORRELATION.matcher(new String(body, 0, Math.min(body.length, 4096), StandardCharsets.UTF_8));
-            cid = m.find() ? m.group(1) : null;
             String auth = authenticate(ex, body);
             if (auth != null) {
-                status = "REPLAYED_REQUEST".equals(auth) ? 409 : 401;
+                status = 401;
                 outcome = auth;
                 send(ex, status, error(auth, false));
+                return;
+            }
+            JsonNode parsed;
+            try {
+                parsed = json.readTree(body);
+            } catch (IOException e) {
+                parsed = null;
+            }
+            if (parsed == null || !parsed.isObject()) {
+                status = 400;
+                outcome = "malformed_json";
+                send(ex, 400, error("MALFORMED_JSON", false));
+                return;
+            }
+            String c = parsed.path("correlationId").asText("");
+            cid = CORRELATION.matcher(c).matches() ? c : null;
+            String sig = ex.getRequestHeaders().getFirst("X-RSFA-Signature").toLowerCase(Locale.ROOT);
+            long now = clock.instant().getEpochSecond();
+            boolean first;
+            try {
+                first = replay.claim(sha256Hex(sig), now + 2 * MAX_SKEW_SECONDS, now);
+            } catch (IOException | RuntimeException e) {
+                status = 503;
+                outcome = "replay_store_unavailable";
+                send(ex, 503, error("REPLAY_STORE_UNAVAILABLE", true));
+                return;
+            }
+            if (!first) {
+                status = 409;
+                outcome = "REPLAYED_REQUEST";
+                send(ex, 409, error("REPLAYED_REQUEST", false));
                 return;
             }
             if (!limiter.tryAcquire()) {
@@ -161,7 +204,7 @@ public final class RelayServer {
                 send(ex, 503, error("IDENTITY_TOKEN_UNAVAILABLE", true));
                 return;
             }
-            HttpRequest.Builder up = HttpRequest.newBuilder(target.resolve(PATH)).timeout(UPSTREAM_TIMEOUT)
+            HttpRequest.Builder up = HttpRequest.newBuilder(target.resolve(PATH)).timeout(upstreamTimeout)
                     .header("Authorization", "Bearer " + token).header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofByteArray(body));
             if (cid != null) {
@@ -225,7 +268,7 @@ public final class RelayServer {
     private String authenticate(HttpExchange ex, byte[] body) {
         String ts = ex.getRequestHeaders().getFirst("X-RSFA-Timestamp");
         String sig = ex.getRequestHeaders().getFirst("X-RSFA-Signature");
-        if (ts == null || sig == null || !ts.matches("[0-9]{1,12}") || !sig.startsWith("v1=")) {
+        if (ts == null || sig == null || !ts.matches("[0-9]{1,12}") || !SIGNATURE.matcher(sig).matches()) {
             return "MISSING_SIGNATURE";
         }
         long now = clock.instant().getEpochSecond();
@@ -237,19 +280,15 @@ public final class RelayServer {
         for (byte[] secret : secrets) {
             ok |= MessageDigest.isEqual(hmacHex(secret, ts, body).getBytes(StandardCharsets.UTF_8), given);
         }
-        if (!ok) {
-            return "INVALID_SIGNATURE";
+        return ok ? null : "INVALID_SIGNATURE";
+    }
+
+    static String sha256Hex(String s) {
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(s.getBytes(StandardCharsets.UTF_8)));
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
         }
-        synchronized (seen) {
-            seen.values().removeIf(exp -> exp < now);
-            while (seen.size() >= 10_000) { // bounded memory: the oldest entries are closest to expiry
-                seen.remove(seen.keySet().iterator().next());
-            }
-            if (seen.putIfAbsent(sig, now + 2 * MAX_SKEW_SECONDS) != null) {
-                return "REPLAYED_REQUEST";
-            }
-        }
-        return null;
     }
 
     /** Lowercase hex HMAC-SHA256 of {@code timestamp + "." + body}; the same string Make must produce. */

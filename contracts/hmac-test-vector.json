@@ -1,0 +1,10 @@
+{
+  "description": "SYNTHETIC test vector for the RSFA relay signature (docs/07). The secret is public and must never be used.",
+  "algorithm": "HMAC-SHA256, lowercase hex",
+  "headers": {"X-RSFA-Timestamp": "<timestamp>", "X-RSFA-Signature": "v1=<expectedSignatureHex>"},
+  "secret": "rsfa-test-vector-secret-NOT-FOR-USE-0001",
+  "timestamp": "1793152800",
+  "body": "{\"contractVersion\":\"masterboard.v1\"}",
+  "signingInput": "1793152800.{\"contractVersion\":\"masterboard.v1\"}",
+  "expectedSignatureHex": "3089d368d7df95f95bafd039bc244e302c350d306f1095ebe43466b47f49601b"
+}

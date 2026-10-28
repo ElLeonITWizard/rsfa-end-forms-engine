@@ -11,7 +11,10 @@ still to be handed back. Revision 1 (`00001-6qm`) remains the rollback target.
 - A future revision follows the same `UPDATE_EXISTING=1` no-traffic candidate procedure below, after RSFA approves the
   exact bundle, and adding any template to the allowlist needs RSFA's approval record.
 
-**Proposed next deployment (iteration 7, not prepared as commands yet; needs RSFA approval, docs/07 section 3):**
+**Proposed next deployment (iterations 7–8, not prepared as commands yet; needs RSFA approval).** Full resource list,
+IAM, costs and rollback: [docs/10 §7–8](10-relay-security-and-infrastructure.md). Iteration 8 adds the replay bucket
+(`<project>-relay-replay`, the relay SA has `storage.objectCreator` on it only) and deploys the relay first **without**
+`allUsers` so it can be verified through `gcloud run services proxy`.
 1. Engine revision 3 with `/v1/masterboard/documents`, same image procedure (`UPDATE_EXISTING=1`, no-traffic tag,
    verify, promote). The allowlist stays BNZ-only unless RSFA records an approval for GHL Individual/Trust after
    acceptance testing. Rollback: `update-traffic --to-revisions=rsfa-end-forms-engine-00002-nan=100`.

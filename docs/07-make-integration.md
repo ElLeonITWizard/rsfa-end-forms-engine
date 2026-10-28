@@ -1,9 +1,14 @@
 # 07 — Make integration contract and proposed architecture (prepared, not connected)
 
-**Status (2026-10-28, iteration 7):**
+**Status (2026-10-28, iteration 8):**
 - **Engine side:** implemented and tested locally (`POST /v1/masterboard/documents`).
 - **Recommended authentication:** the relay (section 3). It is implemented in the same jar (`ENGINE_ROLE=relay`) and
   proven locally end-to-end: Make-style signed request → relay → IAM stand-in → engine.
+- **Iteration 8:**
+  - durable cross-instance replay protection (Cloud Storage, D-031);
+  - security architecture and minimum infrastructure: [docs/10](10-relay-security-and-infrastructure.md);
+  - Make signing (D-032) and the module-by-module test scenario: [docs/11](11-make-test-scenario.md);
+  - production finding on `8731317` (`Banks to Send` rename): [docs/09](09-macroforge-banks-key-investigation.md).
 - **Not changed:** no Make scenario, Monday board, SharePoint site or Google Cloud resource was created or changed.
   The live Cloud Run revision (`00002-nan`) does not contain `/v1` or the relay.
 - **Proposals:** everything below that touches Make, Monday, SharePoint or GCP needs RSFA's approval of exact steps.
@@ -167,16 +172,19 @@ So a public-facing entry point is needed, and it must authenticate Make itself.
 | Make → entry point | Every request is **signed**: `X-RSFA-Timestamp: <unix seconds>`, `X-RSFA-Signature: v1=<hex HMAC-SHA256(secret, timestamp + "." + body)>`. The relay is the only public endpoint and accepts nothing unsigned (only `/health` and `/v1/masterboard/documents` exist). |
 | Entry point → engine | The relay's own service account (`rsfa-make-relay@`) gets a Google-signed ID token from the **Cloud Run metadata server** (audience = engine URL; cached until 5 min before expiry). It is the only invoker added to the engine. No key file anywhere. |
 | Secrets and rotation | One HMAC secret in **Secret Manager**, mounted as `RELAY_HMAC_SECRETS`, with `secretAccessor` for the relay SA on that secret only. The same value is stored in Make (see "Make side"). Rotation, two secrets active at once: add version 2, deploy the relay with `old,new`, switch Make, then deploy with `new` only. Tested (`RelayServerTest`). |
-| Replay protection | The timestamp must be within ±300 s, and each signature is accepted once per instance while fresh (`409 REPLAYED_REQUEST`). With at most 2 instances, a replay within 5 min that lands on the other instance is still possible. It would only re-generate identical documents for the same requester. Accepted, documented risk. |
+| Replay protection | The timestamp must be within ±300 s, and each signature is accepted once (`409 REPLAYED_REQUEST`), recorded in a **shared Cloud Storage bucket** with an atomic create-if-absent, so a replay on another instance is also refused (iteration 8, D-031; the per-instance memory store is refused on Cloud Run unless the relay runs as a single instance). The store fails closed (503). |
 | Request and response size | Request ≤ 1 MiB (checked before the signature, `413`), response ≤ 32 MiB passed through; engine limits unchanged (20 MiB raw PDFs). Upstream timeout 110 s, below Cloud Run's 120 s. |
 | Rate limiting, logging | Fixed window per instance (default 30/min, `429` with `Retry-After: 60`). One log line per request: `relay correlationId=… status=… outcome=… ms=…`. No body, values, secrets or tokens. |
 | Retry and idempotency | Relay errors carry `retryable`: true for `429`, `502 UPSTREAM_UNAVAILABLE`, `503 IDENTITY_TOKEN_UNAVAILABLE` and `504`. Engine responses are passed through unchanged, so engine idempotency (`requestDigest`, deterministic file names) is preserved. A retry must be **re-signed** with a new timestamp; Make re-evaluates the expressions when it re-runs the module. |
-| Cost and maintenance | Same container image as the engine, so no new build pipeline or runtime. Scale-to-zero, within the Cloud Run free tier at RSFA volumes. Secret Manager costs cents per month (list price, verify). New: 1 API (Secret Manager), 1 secret, 1 service account, 1 Cloud Run service. About 300 lines of tested code to maintain. |
+| Cost and maintenance | Same container image as the engine, so no new build pipeline or runtime. Scale-to-zero, within the Cloud Run free tier at RSFA volumes. Secret Manager and the replay bucket cost cents per month (list price, verify). New: 1 API (Secret Manager), 1 secret, 1 service account, 1 bucket, 1 Cloud Run service. About 450 lines of tested code to maintain (docs/10 §7). |
 | Failure recovery | The relay is stateless: redeploy or roll back its revision independently of the engine. If the engine is down, Make gets `502`/`504` with `retryable: true`. |
 
 ### Is HMAC signing possible in Make without external code?
 
-**Probably yes, but not verified.**
+**Yes, with Make's Code module: implemented and tested (iteration 8, D-032).** `make/test-scenario/code-module-sign.js`
+computes SHA-256/HMAC in plain JavaScript. It is checked against Node's crypto, the Java relay and the vector in
+`contracts/hmac-test-vector.json` (44 checks). It needs the premium `code:ExecuteCode` module, which `8731317` already
+uses. **Make's native `sha256` with a key: still not verified** (details below).
 - **Indications:** Make's `sha256(text; [encoding]; [key]; [key encoding])` computes an HMAC when a key is given,
   according to Make Community threads that point to the official functions reference.
 - **Why it could not be confirmed:** `www.make.com` and `community.make.com` are not reachable from this session.
@@ -224,6 +232,9 @@ authentication is the HMAC. Two notes:
 
 ### Estimated infrastructure changes (B; nothing done; exact commands will be prepared for approval)
 
+Superseded in detail by [docs/10 §7](10-relay-security-and-infrastructure.md). Iteration 8 adds the replay bucket
+(`storage.objectCreator` for the relay SA on that bucket only).
+
 | # | Change | Approval |
 |---|---|---|
 | 1 | Enable `secretmanager.googleapis.com` | RSFA |
@@ -238,65 +249,16 @@ relay SA's invoker binding on the engine. The engine revision rolls back with `u
 
 ## 4. Isolated Make test scenario (designed, not created)
 
-**Name:** `TEST – Masterboard to End Forms Engine (synthetic)`, in a dedicated folder.
+**Superseded by [docs/11](11-make-test-scenario.md)** (iteration 8):
+- module-by-module guide with module identifiers verified against the Make API;
+- controlled retries that **re-sign** each attempt (Make's `Break` would resend a stale or already-claimed signature);
+- raw request body, idempotency data store, test-only SharePoint folder;
+- synthetic payloads T1–T12 in `make/test-scenario/payloads/`, run locally through the same Code module against the
+  real jar.
 
-**What it must not touch:**
-- no trigger on board `5026186805`;
-- no use of `8731317`, `9254149` or `8732008`;
-- no production SharePoint folder.
-
-**Inputs:** synthetic payloads only, i.e. the `contracts/examples/*.json` bodies stored in a Make data store
-`engine-test-payloads` (key = test case), or pasted into a "Create JSON" module.
-
-```text
-1  Manual run (Run once) + "Set variable": testCase (T1…T9)
-2  Data store "engine-test-payloads": Get record(testCase) → body template
-3  Set multiple variables (all computed at run time, so a retry re-signs):
-     itemId          = synthetic item id from the payload (10000000xx)
-     correlationId   = "mb-5026186805-" + itemId + "-" + {{executionId}}
-     idempotencyKey  = itemId + "-" + testCase + "-" + <test run date>
-     body            = payload with correlationId/idempotencyKey/today substituted (one string; sent byte-for-byte)
-     ts              = formatDate(now; "X")                        (unix seconds; verify token)
-     signature       = "v1=" + sha256(ts + "." + body; "hex"; <relay secret>)
-4  Data store "engine-test-runs": Search idempotencyKey; Filter: continue only if no record with status "filed"
-     (prevents duplicate files when a run is repeated)
-5  HTTP "Make a request": POST https://<relay>/v1/masterboard/documents, raw body = body (application/json),
-     headers X-RSFA-Timestamp = ts, X-RSFA-Signature = signature, timeout 120 s, parse response = yes,
-     "Evaluate all states as errors" = no (4xx bodies are routed, not thrown)
-     Error handler (network/5xx only): Break, 3 attempts, 2 min interval (needs "store incomplete executions")
-6  Router on status code and body.status:
-   a) 200 complete|partial → Iterator(documents) → Filter status = generated
-        → SharePoint "Upload a file": site/library = the TEST library named by RSFA,
-          folder = /End Forms Engine TEST/<itemId>/, name = fileName, content = toBinary(pdfBase64; "base64"),
-          on conflict = replace (same fileName ⇒ same requestDigest ⇒ same content)
-      → Array aggregator: uploaded file names + documents[].status/code + notMigrated[].legacyPdfName
-   b) 422 / 400 / 401 / 409 / 413 → no upload; summary = code + per-document error codes and keys (never values)
-   c) 429 / 502 / 503 / 504 with retryable = true → Break (retry); after 3 attempts → summary "failed after retries"
-7  Data store "engine-test-runs": Add/replace {idempotencyKey, correlationId, testCase, httpStatus, status,
-     requestDigest, fileNames, errorCodes, notMigratedCount, finishedAt} ← traceable execution summary
-8  E-mail (or Slack test channel) to the tester: the same summary, codes and file names only
-```
-
-**Test cases (synthetic):**
-
-| Case | Payload | Expected |
-|---|---|---|
-| T1 | `request.bank-bnz.json` | 200 complete; 1 PDF uploaded; SHA-256 `2ae7bfac…`; 6 `notMigrated` reported |
-| T2 | `request.bank-asb-acceptance.json` | 200 complete; 2 PDFs (GHL Individual and GHL Trust) |
-| T3 | `request.bank-asb-acceptance-dry-run.json` | 200; no PDFs (`includePdf=false`); nothing uploaded |
-| T4 | `request.negative-contradictory-transfers.json` | 422; `PRECONDITION_FAILED` `GHL-TRUST-OUT-NEVER-*`; nothing uploaded |
-| T5 | `request.negative-unknown-bank.json` | 422 `UNKNOWN_BANK`; nothing uploaded |
-| T6 | Run T1 again | Step 4 stops: no new file; summary "duplicate" |
-| T7 | T1 with a wrong secret | 401 `INVALID_SIGNATURE`; nothing uploaded |
-| T8 | T1 while the relay target is wrong (test revision) | 502/503, 3 retries, then "failed after retries" |
-| T9 | T1 with the system clock skewed (`ts` − 10 min) | 401 `STALE_TIMESTAMP` |
-
-**Acceptance for Phase 1:**
-- every case behaves as expected;
-- the uploaded files are only in the TEST location;
-- the `engine-test-runs` record exists for each run;
-- the execution history of `8731317`/`9254149`/`8732008` is unchanged during the test window;
-- Cloud Run, relay and Make logs contain no data values.
+T1's expected PDF SHA-256 depends on the request's `today`. With `today = 2026-10-28` (the contract example) BNZ
+Boarder is `e08a79e00e8702eb…`, byte-identical to the fixture filled with that date. The fixture SHA `2ae7bfac…` is
+for `2026-10-27`.
 
 ## 5. Reflecting completion in Monday without recursive runs
 
@@ -325,6 +287,9 @@ relay SA's invoker binding on the engine. The engine revision rolls back with `u
 | Contract unit tests | `MasterboardApiTest`: several forms per call, determinism, all-or-nothing vs per-document, bank routing + `notMigrated`, invalid contracts, engine HMAC | **Passed** (5) |
 | Relay unit tests | `RelayServerTest`: signed request → IAM stand-in → engine; rotation; tampered/stale/replayed/unsigned; rate limit; wrong identity; size; unsafe config | **Passed** (4) |
 | Real templates, local chain | engine (`ENGINE_AUTH=NONE`) → IAM stand-in (403 without the relay's token) → relay (`ENGINE_ROLE=relay`) ← `tools/make_like_client.py` with `contracts/examples/*` | **Passed** 2026-10-28 (results in section 3) |
+| Relay hardening | `RelayHardeningTest`: shared replay store across instances, concurrency, fail-closed store, malformed JSON/signatures, timeouts, engine/identity failures, pass-through, logs, Cloud Run guard, test vector | **Passed** (9), iteration 8 |
+| Make Code-module signer | `tests/make/code_module_sign_test.js` | **Passed** (44 checks) |
+| Make test payloads through the signer → relay → engine | `tests/make/run_payloads_against_relay.js` (T1–T5, T7, T9–T12, replay) | **Passed** 2026-10-28 |
 | POC image (local container) | iteration 6: `/v1` in the staged image | **Passed** 2026-10-27 |
 | Cloud Run (engine revision 3 + relay) | after approval, no-traffic tag first (docs/04) | Planned |
 | Isolated Make scenario | section 4, T1–T9 | Planned (needs approval) |

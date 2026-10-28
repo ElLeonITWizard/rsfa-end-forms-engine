@@ -133,11 +133,20 @@ Unresolved items (138) are listed per manifest in `unresolvedLegacyMappings`.
 | HTTP API (PLATFORM_IAM only with `K_SERVICE`, `X-Engine`/`X-Template`, demo page allowlist, CSP and auth, `/health` usable templates) | (same) | 9 |
 | Make contract `/v1/masterboard/documents` (several forms per record, determinism, all-or-nothing/per-document, bank routing + `notMigrated`, invalid contracts, HMAC) | (same) | 5 |
 | Relay (`ENGINE_ROLE=relay`): signed request → IAM stand-in → engine; rotation; tampered/stale/replayed/unsigned; rate limit; wrong identity; size; unsafe config | (same) | 4 |
+| Relay hardening (iteration 8): shared replay store across instances and under concurrency, fail-closed store, malformed JSON and signature headers, future/stale timestamps, timeouts, engine/identity unavailable, 422/partial pass-through, logs without data, Cloud Run store guard, shared test vector | (same) | 9 |
 | Demo page forms = manifest keys; samples = fixtures. **Skipped without `mappings/`** | (same) | 1 |
-| Legacy templates: BNZ Boarder (+ macrons), BNZ Handover, the DDMMYYYY gap, GHL Trust (2 fixtures, **in/out separation, contradictory transfers**), ASB Boarder, ANZ Boarder, **GHL Individual (reconciled labels, section 5, refusals), boarder amount guards**, no unruled ticks, manifest resolution. **Skipped without `.local` templates** | (same) | 14 |
+| Legacy templates: BNZ Boarder (+ macrons), BNZ Handover, the DDMMYYYY gap, GHL Trust (2 fixtures, **in/out separation, contradictory transfers**), ASB Boarder, ANZ Boarder, **GHL Individual (reconciled labels, section 5, refusals), boarder amount guards**, no unruled ticks, manifest resolution. **Skipped without `.local` templates**. Iteration 8: ANZ inclusive "Yes" refused, GHL missing names refused, GHL Trust unknown/ambiguous selections | (same) | 17 |
 | Demo page in a real browser (needs a running server and the machine's Playwright) | `node tests/ui/demo_smoke.js <base-url> <out-dir> <forms>` | 27 checks with 5 forms; 21 with 1 |
+| Make material (Node): proposed `8731317` module-8 alias against the production code in `.local` (skipped without it); Code-module signer | `node tests/make/module8_banks_alias_test.js`; `node tests/make/code_module_sign_test.js` | 12; 44 |
+| Make test payloads → signer → relay → IAM stand-in → engine (needs the local chain running) | `RELAY_HMAC_SECRET=… node tests/make/run_payloads_against_relay.js <relay-url>` | 12 |
 
-Last full run (2026-10-28, iteration 7):
+Last full run (2026-10-28, iteration 8):
+- Host: **102 passed** (25 Python + 77 Java, none skipped); Node: 12 + 44 checks; local Make-payload chain 12/12;
+  browser smoke test 27 checks.
+- BNZ Boarder regression: SHA-256 still `2ae7bfac…` for `today = 2026-10-27` (CLI). Through the relay with the contract
+  example (`today = 2026-10-28`): `e08a79e0…`, identical to the fixture filled with that date.
+
+Iteration 7 run (2026-10-28):
 - Host: **90 passed** (25 Python + 65 Java, none skipped).
 - BNZ Boarder regression: SHA-256 still `2ae7bfac…` (CLI).
 - Browser smoke test: 27 checks passed with 5 forms (status suffixes shown; GHL contradictory cash answers and ANZ

@@ -23,6 +23,32 @@
           "value": "Weekly"
         },
         "reason": "the ANZ form only has a 'Weekly board amount' box; a fortnightly or monthly amount would be misstated"
+      },
+      {
+        "id": "ANZ-INCLUSIVE-YES-1",
+        "when": {
+          "key": "Boarder 1 amount inclusive of food and/or bills/utilities",
+          "operator": "equals",
+          "value": "Yes"
+        },
+        "require": {
+          "key": "Boarder 1 amount inclusive of food and/or bills/utilities",
+          "operator": "absent"
+        },
+        "reason": "'B1 Inclusive' Yes cannot be recorded: in ANZ's PDF both widgets export 'No', so a ticked Yes would be read as No (bank template defect; needs ANZ's corrected form or RSFA's decision)"
+      },
+      {
+        "id": "ANZ-INCLUSIVE-YES-2",
+        "when": {
+          "key": "Boarder 2 amount inclusive of food and/or bills/utilities?",
+          "operator": "equals",
+          "value": "Yes"
+        },
+        "require": {
+          "key": "Boarder 2 amount inclusive of food and/or bills/utilities?",
+          "operator": "absent"
+        },
+        "reason": "'B2 Inclusive' Yes cannot be recorded: in ANZ's PDF both widgets export 'No', so a ticked Yes would be read as No (bank template defect; needs ANZ's corrected form or RSFA's decision)"
       }
     ]
   },

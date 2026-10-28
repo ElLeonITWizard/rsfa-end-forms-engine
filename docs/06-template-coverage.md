@@ -1,4 +1,4 @@
-# 06 — Form validation: status, corrections, decisions (iteration 7)
+# 06 — Form validation: status, corrections, decisions (iteration 8)
 
 The detailed report per form is generated: [`docs/generated/template-coverage.md`](generated/template-coverage.md)
 (`tools/coverage_report.py`). It lists, for every form:
@@ -16,6 +16,18 @@ This page summarises it and explains the reasoning.
 - rendered synthetic outputs.
 
 **Nothing here is approved by RSFA, and no form is compared with a MacroForge output.**
+
+**Iteration 8 changes (D-034):**
+- Statuses are unchanged.
+- **GHL Individual and Trust** now refuse to generate without the customer/trust name.
+- **New decision RSFA-DECISION-3:** MacroForge fills **both** GHL questionnaires for every ASB deal (no
+  individual/trust condition in Flow C). So for an individual client the Trust form is refused, and an all-or-nothing
+  ASB request fails until RSFA says which form applies to which client.
+- **ANZ Boarder** refuses an inclusive-of-food/bills **Yes**, which its PDF would record as No, instead of silently
+  leaving it blank.
+- **ASB Boarder:** re-checked against the same evidence; nothing new. The property-address and signature-date
+  questions remain RSFA-DECISION-1/2.
+- **Business checklists for Rod:** [docs/12](12-acceptance-checklists.md).
 
 ## Readiness levels
 
@@ -42,10 +54,10 @@ Reviewed corrections live in `curation/<ID>@<version>.json`, next to the closed 
 | Form | Status | Confirmed | Corrected | Unresolved (left blank) | Decision needed |
 |---|---|---|---|---|---|
 | BNZ Boarder `BNZ_BOARDER_FORM@2.0_8-24` | tested | 7 fields + 2 overlays | — | `Text 1` (legacy) | — |
-| GHL Account Use — Individual `GHL_NP_INDIVIDUAL_FORM@8-19` | **ready-for-acceptance-testing** | 10 fields | 6: three renamed labels; section 5 Yes/No + details | 10 (internal-use boxes, dates) | — (two review questions) |
-| GHL Account Use — Trust `GHL_NP_TRUST_FORM@8-19` | **ready-for-acceptance-testing** | 13 fields | 8: **3d/3e in/out details from dedicated columns**; 3c details; `$1,000-$10,000` ×2; multi-select sources | 11, incl. 3c average value (no matching column) | — (review questions) |
+| GHL Account Use — Individual `GHL_NP_INDIVIDUAL_FORM@8-19` | **ready-for-acceptance-testing** | 10 fields | 6: three renamed labels; section 5 Yes/No + details | 10 (internal-use boxes, dates) | RSFA-DECISION-3 (which GHL form per client); two review questions |
+| GHL Account Use — Trust `GHL_NP_TRUST_FORM@8-19` | **ready-for-acceptance-testing** | 13 fields | 8: **3d/3e in/out details from dedicated columns**; 3c details; `$1,000-$10,000` ×2; multi-select sources | 11, incl. 3c average value (no matching column) | RSFA-DECISION-3; review questions |
 | ASB Boarder `ASB_BOARDER_DECLARATION@12-22` | **blocked** | 13 fields (names, household, boarders, amounts, frequencies); 6 under decision | — | — | RSFA-DECISION-1 (address), RSFA-DECISION-2 (signature dates) |
-| ANZ Boarder `ANZ_BOARDER_INCOME_DECLARATION@02-24` | **blocked** | 5 fields + 2 overlays; 3 under decision | — | food/bills Yes/No (**bank template defect**), signature dates | RSFA-DECISION-1 (address) |
+| ANZ Boarder `ANZ_BOARDER_INCOME_DECLARATION@02-24` | **blocked** | 5 fields + 2 overlays; 3 under decision | — | food/bills Yes/No (**bank template defect**: "Yes" refused, "No" left for the customer), signature dates | RSFA-DECISION-1 (address); ANZ form defect |
 
 ### GHL Individual: ready for acceptance testing
 
@@ -59,6 +71,7 @@ Reviewed corrections live in `curation/<ID>@<version>.json`, next to the closed 
   - Section 5 "anything other than personal use?" from `Use account for anything other than personal use?` (Yes/No)
     and `Other account use details (GHL)`. The legacy configuration leaves it empty.
 - **Refused:**
+  - a missing or blank customer name (`GHL-IND-NAME-REQUIRED`, iteration 8);
   - two "intend to use" labels at once: one checkbox field, so only one state can be recorded;
   - any unknown label;
   - contradictions: cash or international "Never" with an average value or details; other use "No" with details.
@@ -78,6 +91,7 @@ Reviewed corrections live in `curation/<ID>@<version>.json`, next to the closed 
   - `$1,000-$10,000` for both average-value questions.
   - `Sources of credits` uses `includes`: each selected source ticks its own checkbox.
 - **Refused:**
+  - a missing or blank trust/organisation name (`GHL-TRUST-NAME-REQUIRED`, iteration 8);
   - IN/OUT/cash "Never" combined with an average or details;
   - third parties "No" combined with a purpose;
   - unknown sources;
@@ -118,6 +132,8 @@ Reviewed corrections live in `curation/<ID>@<version>.json`, next to the closed 
   - But in ANZ's PDF **both** widgets of `B1 Inclusive`/`B2 Inclusive` export the value `No` (`/Opt ['No','No']`).
     A visually ticked Yes would be recorded as No.
   - Not filled. Needs ANZ's corrected form or RSFA's explicit acceptance of a visual-only tick.
+  - Iteration 8: a **Yes** answer now refuses generation (`ANZ-INCLUSIVE-YES-1/2`) instead of being dropped silently.
+    A **No** is left blank for the customer, as in the legacy configuration (tested).
 - **Risk:** `Customer number(s)` takes one Monday column, so a second customer's number cannot be printed.
 
 ## Forms reviewed and not selected (this iteration)

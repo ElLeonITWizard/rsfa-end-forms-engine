@@ -42,6 +42,18 @@
     ],
     "requires": [
       {
+        "id": "GHL-IND-NAME-REQUIRED",
+        "when": {
+          "key": "Applicant 1 Full Name",
+          "operator": "absent"
+        },
+        "require": {
+          "key": "Applicant 1 Full Name",
+          "operator": "present"
+        },
+        "reason": "the customer name identifies whose questionnaire this is; without it the form cannot be used (data-quality guard, D-034)"
+      },
+      {
         "id": "GHL-IND-CASH-NEVER-AVG",
         "when": {
           "key": "Cash deposits frequency (ASB)",

@@ -17,7 +17,7 @@
     "legacyPdfName": "GHL_N&P Trust_8 19.pdf",
     "lenderCondition": "Banks to Send Contains ASB",
     "importedOn": "2026-10-28",
-    "curation": "curation/GHL_NP_TRUST_FORM@8-19.json sha256 1ccec14e4d63"
+    "curation": "curation/GHL_NP_TRUST_FORM@8-19.json sha256 53abc2fb2502"
   },
   "pdf": {
     "pages": 2,
@@ -886,6 +886,18 @@
       }
     ],
     "requires": [
+      {
+        "id": "GHL-TRUST-NAME-REQUIRED",
+        "when": {
+          "key": "Applicant 1 Organisation legal name (entity_company_trust_branch)",
+          "operator": "absent"
+        },
+        "require": {
+          "key": "Applicant 1 Organisation legal name (entity_company_trust_branch)",
+          "operator": "present"
+        },
+        "reason": "the trust/organisation name identifies whose questionnaire this is; without it the form cannot be used (data-quality guard, D-034)"
+      },
       {
         "id": "GHL-TRUST-IN-NEVER-AVG",
         "when": {

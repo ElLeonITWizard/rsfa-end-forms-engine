@@ -423,3 +423,66 @@ Lightweight ADR log, newest last. Status: `proposed` | `accepted` | `superseded`
   - Report, not fix: MacroForge's `Banks to Send Contains` conditions probably no longer match (inference, unobserved).
 - **Possible future change (RSFA):** key `data` by column ID in a later contract version.
 
+### D-031 Relay replay protection is durable and shared: Cloud Storage create-if-absent; the store fails closed
+- **Date:** 2026-10-28 · **Status:** proposed (needs RSFA approval of the bucket; nothing created)
+- **Context:** the iteration-7 replay cache was per instance and evicted fresh entries when full. With more than one
+  Cloud Run instance, a captured request could be replayed through another instance.
+- **Decision:**
+  - `ReplayStore` interface.
+  - `GcsReplayStore` writes `replay/<sha256(signature)>` with `ifGenerationMatch=0`. Cloud Storage's atomic
+    precondition makes exactly one claim win across instances. Objects hold only an expiry second; a lifecycle rule
+    deletes them after 1 day. The relay SA has `storage.objectCreator` on that bucket only.
+  - Any other answer → 503 `REPLAY_STORE_UNAVAILABLE`; nothing is forwarded.
+  - The memory store remains for local use. On Cloud Run it is refused unless `RELAY_SINGLE_INSTANCE=true`.
+  - The relay also refuses non-JSON bodies (400) and malformed signature headers before anything is forwarded.
+- **Rejected:**
+  - Firestore or Memorystore: a new API, plus a VPC connector for Memorystore.
+  - Deduplicating by `idempotencyKey` in the relay: it would require storing responses (client data) or would block
+    legitimate retries. Duplicate *filing* is prevented in Make.
+- **Validation:** `RelayHardeningTest` (9):
+  - cross-instance replay; 12 concurrent copies → 1 accepted;
+  - fail-closed store; malformed JSON and signatures; future/stale timestamps;
+  - timeouts; engine and identity failures; pass-through of 422 and partial results;
+  - logs without data or secrets; Cloud Run configuration guard; the shared test vector.
+
+### D-032 Signing in Make: Code-module HMAC (tested) unless Make's native function is verified; raw body
+- **Date:** 2026-10-28 · **Status:** proposed
+- **Context:** whether Make's `sha256(text; "hex"; key)` computes an HMAC is not verified (docs unreachable from this
+  environment; one community report of a mismatch). The signature must cover the exact bytes sent.
+- **Decision:**
+  - The test scenario builds the body and signs it in one Code module (`make/test-scenario/code-module-sign.js`, plain
+    JavaScript SHA-256/HMAC, no external code, 44 checks against Node crypto, the vector and the Java relay).
+  - The HTTP module sends that string with **Body content type: Custom** (`application/json`), so it is never
+    re-serialised.
+  - Retries go through a repeater that re-runs the Code module (fresh timestamp), not Make's `Break` handler, which
+    would resend a stale or already-claimed signature.
+  - The native function may replace the Code module only after the vector `contracts/hmac-test-vector.json` is
+    reproduced in Make.
+
+### D-033 `8731317` "Banks to Send" alias: prepared, not applied
+- **Date:** 2026-10-28 · **Status:** proposed (needs explicit approval; see docs/09)
+- **Context:**
+  - Column `dropdown_mkzvfgeg` was renamed `Selected Banks` (2026-10-25, activity log).
+  - Module 8 keys columns by live title, and MacroForge Flow C tests `Banks to Send Contains <bank>`.
+  - Reproduced locally; MacroForge's handling of the missing key and any production impact are unverified (no run
+    since 2026-10-01).
+- **Decision (proposal):** add 6 lines after `mapColumns` in module 8 that restore `Banks to Send` from the column ID
+  when it is missing. Additive only; the rest of the payload is byte-identical (tested). No other module, the trigger
+  or the schedule changes.
+- **Alternatives:** rename the column back (Monday change); edit MacroForge conditions; key all columns by ID (not
+  minimal).
+
+### D-034 Data-quality refusals added to curated forms
+- **Date:** 2026-10-28 · **Status:** accepted for the engine (business confirmation in docs/12)
+- **Decision:**
+  - GHL Individual and GHL Trust refuse to generate without the customer/trust name (`GHL-IND-NAME-REQUIRED`,
+    `GHL-TRUST-NAME-REQUIRED`).
+  - ANZ Boarder refuses an inclusive-of-food/bills answer of **Yes** (`ANZ-INCLUSIVE-YES-1/2`), because both PDF
+    widgets export `No` and a ticked Yes would be recorded as No. A "No" stays blank for the customer, as in the
+    legacy configuration.
+  - These refuse; they never change what is printed.
+- **Consequence:** MacroForge fills both GHL questionnaires for every ASB deal. For an individual client the Trust form
+  is now refused. Under the default all-or-nothing policy, an ASB request for an individual client therefore fails
+  until RSFA-DECISION-3 (which GHL form applies to which client) is answered. Tested as Make case T12 with the
+  per-document policy.
+

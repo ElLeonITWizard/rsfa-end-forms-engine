@@ -6,7 +6,9 @@ bank end forms. Mappings are version-controlled and the service can run on Cloud
 - A private Cloud Run service is deployed by RSFA: BNZ Boarder only, demo page, revision `00002-nan` (docs/04).
 - Two more forms are *ready for acceptance testing* locally (GHL Individual and Trust); ASB and ANZ Boarder are
   *blocked* pending RSFA decisions (docs/06).
-- The Make integration contract and an authenticating relay are implemented but not connected (docs/07). See `CLAUDE.md` for the rules and the current status.
+- The Make integration contract and an authenticating relay are implemented but not connected (docs/07, docs/10, docs/11).
+- A probable production issue in Make `8731317` (Monday column renamed `Banks to Send` → `Selected Banks`) is
+  investigated with a prepared fix; **production was not changed** (docs/09). See `CLAUDE.md` for the rules and the current status.
 
 ## Prerequisites
 
@@ -51,8 +53,8 @@ To view the output without poppler, run `java -jar engine/target/end-forms-engin
 | Form | Template key | Status |
 |---|---|---|
 | BNZ Boarder | `BNZ_BOARDER_FORM@2.0_8-24` | tested; deployed |
-| GHL Account Use, Individual | `GHL_NP_INDIVIDUAL_FORM@8-19` | ready for acceptance testing (local) |
-| GHL Account Use, Trust | `GHL_NP_TRUST_FORM@8-19` | ready for acceptance testing (local; in/out defect fixed) |
+| GHL Account Use, Individual | `GHL_NP_INDIVIDUAL_FORM@8-19` | ready for acceptance testing (local; checklist docs/12) |
+| GHL Account Use, Trust | `GHL_NP_TRUST_FORM@8-19` | ready for acceptance testing (local; in/out defect fixed; checklist docs/12) |
 | ASB Boarder | `ASB_BOARDER_DECLARATION@12-22` | blocked (RSFA-DECISION-1 address, RSFA-DECISION-2 dates) |
 | ANZ Boarder | `ANZ_BOARDER_INCOME_DECLARATION@02-24` | blocked (RSFA-DECISION-1 address; bank template defect) |
 
@@ -92,8 +94,13 @@ Schema and examples: `contracts/`. Design, authentication options, filing, Monda
 
 **Relay (recommended Make entry point, D-027; local only):** the same jar with `ENGINE_ROLE=relay` verifies an
 HMAC-SHA256 signature (`X-RSFA-Timestamp`, `X-RSFA-Signature: v1=…`), timestamp skew, replay and rate limits, then
-calls the private engine with its own service-account ID token. `tools/make_like_client.py` signs requests like Make
-would and prints a summary only.
+calls the private engine with its own service-account ID token.
+- Replays are refused across instances through a Cloud Storage create-if-absent store (`RELAY_REPLAY_STORE=gcs`,
+  `RELAY_REPLAY_BUCKET`; D-031). `memory` is for local use.
+- `tools/make_like_client.py` signs requests like Make would and prints a summary only.
+- `make/test-scenario/code-module-sign.js` is the tested signer for Make's Code module (D-032).
+- Security and infrastructure: [`docs/10`](docs/10-relay-security-and-infrastructure.md). Make test scenario:
+  [`docs/11`](docs/11-make-test-scenario.md).
 
 ```bash
 curl -s -H 'Content-Type: application/json' --data @contracts/examples/request.bank-bnz.json \

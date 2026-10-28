@@ -52,6 +52,18 @@
     ],
     "requires": [
       {
+        "id": "GHL-TRUST-NAME-REQUIRED",
+        "when": {
+          "key": "Applicant 1 Organisation legal name (entity_company_trust_branch)",
+          "operator": "absent"
+        },
+        "require": {
+          "key": "Applicant 1 Organisation legal name (entity_company_trust_branch)",
+          "operator": "present"
+        },
+        "reason": "the trust/organisation name identifies whose questionnaire this is; without it the form cannot be used (data-quality guard, D-034)"
+      },
+      {
         "id": "GHL-TRUST-IN-NEVER-AVG",
         "when": {
           "key": "International Money Transfers – In frequency",

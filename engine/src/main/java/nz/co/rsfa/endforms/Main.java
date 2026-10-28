@@ -9,7 +9,10 @@ import nz.co.rsfa.endforms.fill.FormFiller;
 import nz.co.rsfa.endforms.http.ApiServer;
 import nz.co.rsfa.endforms.mapping.Manifest;
 import nz.co.rsfa.endforms.pdf.TemplateInspector;
+import nz.co.rsfa.endforms.relay.GcsReplayStore;
+import nz.co.rsfa.endforms.relay.MetadataAccessTokenSource;
 import nz.co.rsfa.endforms.relay.MetadataIdTokenSource;
+import nz.co.rsfa.endforms.relay.ReplayStore;
 import nz.co.rsfa.endforms.relay.RelayServer;
 
 import java.io.File;
@@ -159,7 +162,9 @@ public final class Main {
     /**
      * Authenticated intermediary for Make (D-027): verifies the HMAC signature and calls the private engine with the
      * service account's Google ID token from the metadata server. Env: RELAY_TARGET_URL, RELAY_HMAC_SECRETS (1-2,
-     * comma-separated, from Secret Manager), RELAY_RATE_PER_MINUTE (default 30), PORT, ENGINE_BIND.
+     * comma-separated, from Secret Manager), RELAY_RATE_PER_MINUTE (default 30), PORT, ENGINE_BIND,
+     * RELAY_REPLAY_STORE ({@code gcs} with RELAY_REPLAY_BUCKET, or {@code memory}). On Cloud Run the per-instance
+     * {@code memory} store is refused unless RELAY_SINGLE_INSTANCE=true acknowledges {@code --max-instances=1}.
      */
     private static int relay(Map<String, String> env) throws Exception {
         String target = env.get("RELAY_TARGET_URL");
@@ -178,15 +183,34 @@ public final class Main {
         } else {
             tokens = new MetadataIdTokenSource(target, java.time.Clock.systemUTC());
         }
+        ReplayStore replay = replayStore(env);
         RelayServer relay = new RelayServer(java.net.URI.create(target),
                 Arrays.stream(secrets.split(",")).map(String::trim).filter(x -> !x.isEmpty()).toList(), tokens,
-                java.time.Clock.systemUTC(), Integer.parseInt(env.getOrDefault("RELAY_RATE_PER_MINUTE", "30")));
+                java.time.Clock.systemUTC(), Integer.parseInt(env.getOrDefault("RELAY_RATE_PER_MINUTE", "30")), replay);
         String host = env.getOrDefault("ENGINE_BIND", "127.0.0.1");
         int bound = relay.start(host, Integer.parseInt(env.getOrDefault("PORT", "8080")));
         System.err.printf("end-forms relay listening on %s:%d%n", host, bound);
         Runtime.getRuntime().addShutdownHook(new Thread(relay::stop));
         Thread.currentThread().join();
         return 0;
+    }
+
+    static ReplayStore replayStore(Map<String, String> env) {
+        String kind = env.getOrDefault("RELAY_REPLAY_STORE", env.get("K_SERVICE") != null ? "gcs" : "memory");
+        switch (kind) {
+            case "gcs" -> {
+                return new GcsReplayStore(java.net.URI.create("https://storage.googleapis.com"),
+                        env.get("RELAY_REPLAY_BUCKET"), new MetadataAccessTokenSource(java.time.Clock.systemUTC()));
+            }
+            case "memory" -> {
+                if (env.get("K_SERVICE") != null && !"true".equals(env.get("RELAY_SINGLE_INSTANCE"))) {
+                    throw new IllegalStateException("the memory replay store detects replays only within one instance; on "
+                            + "Cloud Run use RELAY_REPLAY_STORE=gcs or set RELAY_SINGLE_INSTANCE=true with --max-instances=1");
+                }
+                return new ReplayStore.Memory(10_000);
+            }
+            default -> throw new IllegalArgumentException("RELAY_REPLAY_STORE must be gcs or memory");
+        }
     }
 
     private static List<Path> dirs(String spec) {

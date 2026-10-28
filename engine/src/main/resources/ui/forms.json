@@ -278,6 +278,15 @@
               ]
             },
             {
+              "key": "Boarder 1 amount inclusive of food and/or bills/utilities",
+              "label": "Boarder 1 amount inclusive of food and/or bills/utilities (\"Yes\" is refused: the ANZ form cannot record it)",
+              "type": "select",
+              "options": [
+                "No",
+                "Yes"
+              ]
+            },
+            {
               "key": "Boarders - Boarder two name (if known)",
               "label": "Boarders - Boarder two name (if known)"
             },
@@ -295,6 +304,15 @@
                 "Fortnightly",
                 "Monthly"
               ]
+            },
+            {
+              "key": "Boarder 2 amount inclusive of food and/or bills/utilities?",
+              "label": "Boarder 2 amount inclusive of food and/or bills/utilities? (\"Yes\" is refused: the ANZ form cannot record it)",
+              "type": "select",
+              "options": [
+                "No",
+                "Yes"
+              ]
             }
           ]
         }
@@ -309,16 +327,21 @@
         "data": {
           "Applicant 1 Full Name": "Jane Example",
           "Applicant 2 Full Name": "John Sample",
-          "ANZ Customer Number (if known)": "100200300",
           "Applicant 1 Physical Address": "12 Example Street, Testville",
           "Applicant 1 Residential City/Town": "Auckland",
           "Applicant 1 Residential Postcode/Zip": "0999",
+          "ANZ Customer Number (if known)": "100200300",
           "Boarders - Boarder one name (if known)": "Alex Boarder",
           "Boarders - Board amount 1": "250",
           "Boarders - Board amount 1 frequency": "Weekly",
           "Boarders - Boarder two name (if known)": "Sam Lodger",
           "Boarders - Board amount 2": "230",
-          "Boarders - Board amount 2 frequency": "Weekly"
+          "Boarders - Board amount 2 frequency": "Weekly",
+          "1st Property Address": "7 Purchase Lane, Sampleton, Hamilton 3200",
+          "1st Property Address City": "Hamilton",
+          "1st Property Address Postcode": "3200",
+          "Boarder 1 amount inclusive of food and/or bills/utilities": "No",
+          "Boarder 2 amount inclusive of food and/or bills/utilities?": "No"
         }
       }
     },

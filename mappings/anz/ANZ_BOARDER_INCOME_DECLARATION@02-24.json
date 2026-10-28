@@ -17,7 +17,7 @@
     "legacyPdfName": "Boarder-Income-Declaration 12.02.24.pdf",
     "lenderCondition": "Banks to Send Contains ANZ",
     "importedOn": "2026-10-28",
-    "curation": "curation/ANZ_BOARDER_INCOME_DECLARATION@02-24.json sha256 f7d88462b4e1"
+    "curation": "curation/ANZ_BOARDER_INCOME_DECLARATION@02-24.json sha256 027a9151fedb"
   },
   "pdf": {
     "pages": 1,
@@ -282,6 +282,32 @@
           "value": "Weekly"
         },
         "reason": "the ANZ form only has a 'Weekly board amount' box; a fortnightly or monthly amount would be misstated"
+      },
+      {
+        "id": "ANZ-INCLUSIVE-YES-1",
+        "when": {
+          "key": "Boarder 1 amount inclusive of food and_or bills_utilities",
+          "operator": "equals",
+          "value": "Yes"
+        },
+        "require": {
+          "key": "Boarder 1 amount inclusive of food and_or bills_utilities",
+          "operator": "absent"
+        },
+        "reason": "'B1 Inclusive' Yes cannot be recorded: in ANZ's PDF both widgets export 'No', so a ticked Yes would be read as No (bank template defect; needs ANZ's corrected form or RSFA's decision)"
+      },
+      {
+        "id": "ANZ-INCLUSIVE-YES-2",
+        "when": {
+          "key": "Boarder 2 amount inclusive of food and_or bills_utilities?",
+          "operator": "equals",
+          "value": "Yes"
+        },
+        "require": {
+          "key": "Boarder 2 amount inclusive of food and_or bills_utilities?",
+          "operator": "absent"
+        },
+        "reason": "'B2 Inclusive' Yes cannot be recorded: in ANZ's PDF both widgets export 'No', so a ticked Yes would be read as No (bank template defect; needs ANZ's corrected form or RSFA's decision)"
       }
     ]
   },
