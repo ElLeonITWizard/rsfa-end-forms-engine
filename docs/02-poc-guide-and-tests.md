@@ -128,7 +128,7 @@ Unresolved items (138) are listed per manifest in `unresolvedLegacyMappings`.
 
 | Suite | Command | Count |
 |---|---|---|
-| Importer (synthetic .mforge, incl. `--curation` and **corrections**) + deployment staging + coverage report + schema drift + contract examples vs JSON Schema + **admin deployment scripts (stubbed gcloud) and admin staging** | `python3 -m unittest discover -s tests/importer -v` | 14 + 7 + 1 + 1 + 2 + 10 |
+| Importer (synthetic .mforge, incl. `--curation` and **corrections**) + deployment staging + coverage report + schema drift + contract examples vs JSON Schema + **admin deployment scripts (stubbed gcloud) and admin staging** | `python3 -m unittest discover -s tests/importer -v` | 14 + 7 + 1 + 1 + 2 + 13 |
 | Engine unit (synthetic AcroForm): widget kinds, errors, normalisation, line items, overlays, fonts, approval validation, template presets, comb appearance, rendering, no value echo, closed options and preconditions, **`includes`/`absent` operators, `when` requirements** | `cd engine && mvn -B test` | 32 |
 | HTTP API (PLATFORM_IAM only with `K_SERVICE`, `X-Engine`/`X-Template`, demo page allowlist, CSP and auth, `/health` usable templates) | (same) | 9 |
 | Make contract `/v1/masterboard/documents` (several forms per record, determinism, all-or-nothing/per-document, bank routing + `notMigrated`, invalid contracts, HMAC) | (same) | 5 |
@@ -145,7 +145,7 @@ Unresolved items (138) are listed per manifest in `unresolvedLegacyMappings`.
 | Make test payloads → signer → relay → IAM stand-in → engine (needs the local chain running) | `RELAY_HMAC_SECRET=… node tests/make/run_payloads_against_relay.js <relay-url>` | 12 |
 
 Last full run (2026-10-28, iteration 11):
-- Host: **132 passed** (35 Python + 97 Java, none skipped); Node: 12 + 44 checks; browser: demo 27 checks (5 forms),
+- Host: **135 passed** (38 Python + 97 Java, none skipped); Node: 12 + 44 checks; browser: demo 27 checks (5 forms),
   local admin 27, private admin end-to-end 42 (real image).
 - BNZ Boarder regression: SHA-256 still `2ae7bfac…` (CLI).
 

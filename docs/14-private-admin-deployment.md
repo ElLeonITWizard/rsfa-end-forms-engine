@@ -67,7 +67,10 @@ The local development identity (`ENGINE_ADMIN=local`, `ADMIN_ACTOR`) is unchange
   - the log is the audit trail and cannot be rewritten by the application;
   - the service account needs **no overwrite or delete permission**;
   - test outputs live in the bucket (`results/`, deleted after a day by a lifecycle rule), so any instance can serve them.
-- The bucket is versioned: anything RSFA overwrites or deletes by hand stays recoverable for 90 days.
+- The bucket is versioned: anything RSFA overwrites or deletes by hand is kept as a non-current version.
+- **No automatic deletion of drafts, approvals or audit history** until RSFA confirms a retention policy (D-043). The
+  only lifecycle rules delete synthetic test outputs under `results/` after a day. The deploy verification fails if
+  any rule could reach another prefix.
 
 ### Logs (requirement 5)
 
@@ -102,6 +105,23 @@ The admin role refuses to start in any of these cases:
 The engine role also refuses to start on a service named like the admin service.
 
 ## 2. Google Cloud facts, and how each was established
+
+**Update 2026-10-28 (pre-deployment review):** RSFA reports that it has verified the current official documentation:
+direct IAP on Cloud Run is supported, including projects without an organization, and initial setup may need the
+console and OAuth configuration. Its docs host is still blocked from this environment, so the items the scripts
+depend on were re-checked against **snippets of the official pages** via search. Confirmed:
+- `gcloud run deploy … --no-allow-unauthenticated --iap` for a new service;
+- IAP's service agent needs `roles/run.invoker` (the console grants it automatically; gcloud users grant it, as
+  `deploy_admin.sh` does);
+- users need `roles/iap.httpsResourceAccessor`;
+- a project without an organization can see a warning on first enablement (the console path);
+- the Cloud Run audience format;
+- the `x-goog-iap-jwt-assertion` header and ES256 keys at `public_key-jwk` (rotated periodically);
+- the unsigned `x-goog-authenticated-user-*` headers can be forged if IAP is bypassed.
+
+The official page shows `gcloud beta run services update --iap` for an existing service. The GA
+`gcloud run services update` in gcloud 570 also has `--[no-]iap` (CLI), and `deploy_admin.sh` uses that. The preflight
+also requires `gcloud beta`, for `services identity create`.
 
 This environment cannot reach `docs.cloud.google.com` or `www.gstatic.com` (network policy). Facts below are from the
 **locally installed gcloud CLI (570.0.0) help**, marked CLI, or from **search summaries of the official pages**, marked
@@ -144,7 +164,7 @@ Sources:
 |---|---|---|
 | API `iap.googleapis.com` | **new** | the others (run, artifactregistry, cloudbuild, iam, storage, logging) are already enabled for the engine |
 | Service account `rsfa-end-forms-admin@rsfa-end-forms-engine.iam.gserviceaccount.com` | **new** | **no project roles** |
-| Bucket `gs://rsfa-end-forms-engine-admin` | **new** | australia-southeast1, Standard, uniform access, public access prevention, versioning, lifecycle `deploy/admin/bucket-lifecycle.json` (results 1 day; non-current versions 90 days) |
+| Bucket `gs://rsfa-end-forms-engine-admin` | **new** | australia-southeast1, Standard, uniform access, public access prevention, versioning, lifecycle `deploy/admin/bucket-lifecycle.json`: **only `results/`** (synthetic test outputs) after 1 day; drafts, approvals, audit and versions are never auto-deleted (D-043) |
 | Bucket IAM | **new** | admin SA: `roles/storage.objectCreator` + `roles/storage.objectViewer` (no overwrite, no delete) |
 | Cloud Run service `rsfa-end-forms-admin` | **new** | `--no-allow-unauthenticated --ingress=all --iap`, 1 vCPU, 1 GiB, min 0, max 2, concurrency 10, timeout 60 s, request-based billing |
 | Service IAM | **new** | `roles/run.invoker`: the IAP service agent only |
@@ -209,7 +229,51 @@ Changing users later: re-run with the new `ADMIN_USERS` (`UPDATE_EXISTING=1`, th
 To remove someone, remove their IAP binding too:
 `gcloud iap web remove-iam-policy-binding --resource-type=cloud-run --service=rsfa-end-forms-admin --region=australia-southeast1 --member=user:EMAIL --role=roles/iap.httpsResourceAccessor`.
 
-### Prepared bundle (2026-10-28)
+### Pre-deployment safety review (2026-10-28)
+
+| Requirement | How it holds | Evidence |
+|---|---|---|
+| Deployment and rollback cannot alter the engine or `00005-rih` | Every write targets `$ADMIN_SERVICE`, `$ADMIN_SA` or `$ADMIN_BUCKET`. These names must contain `admin`, differ from the engine and the build-source bucket, or both scripts stop. The engine is only described (`describe`, `get-iam-policy`), fingerprinted before and after, and any difference fails the run. Deploy also stops unless the engine serves exactly `00005-rih`. | `test_admin_names_can_never_point_at_the_engine`, `test_scripts_never_write_to_the_engine_service`, `test_wrong_engine_revision…`, `test_apply_creates_only_admin_resources…` |
+| A dry run changes nothing | Default mode is PLAN. Every mutating command is printed as `[plan] …` and not run. `CLOUDSDK_CORE_DISABLE_PROMPTS=1` means no "enable API?" prompt can be answered. | `test_plan_is_the_default_and_changes_nothing`, `test_prompts_are_disabled…`; simulated plan with these settings: 15 gcloud calls, 0 mutating |
+| Unsigned IAP headers and unauthorised identities are rejected | JWT verified (signature, issuer, audience, expiry; plain email characters only); `ADMIN_USERS` checked per request; the unsigned email header alone gives 401 | `AdminCloudTest` (10 refusal cases); private e2e: direct, forged and unsigned → 401, IAP-only account → refusal page |
+| The initial administrator email matches the Google identity | IAP presents the Google account's email. The preflight compares the authenticated gcloud account with `ADMIN_USERS` (`[ok] … is in ADMIN_USERS`). A signed-in but unlisted user sees "You are signed in as …" (shown only to that user; never logged). | `test_prompts_are_disabled_and_the_identity_is_matched`; `AdminCloudTest` |
+| Test PDFs, drafts and audit records cannot be publicly accessed | Bucket: public access prevention enforced, uniform access, no public member; only the admin SA (create + read) and project owners. Results, drafts and audit are served only through the authenticated, allowlisted API; Cloud Run invoker = the IAP agent only. | verification step 9 (`deploy_admin.sh`), `test_verification_fails_on_a_public_invoker` |
+| No automatic deletion of approval or audit history | The lifecycle touches only `results/`; versioning keeps overwritten or deleted objects | `test_lifecycle_never_deletes_drafts_approvals_or_audit` + verification check |
+
+### Dry run in Cloud Shell (exact procedure; read-only)
+
+1. Download the bundle `rsfa-end-forms-admin-bundle.tar.gz` and its `.sha256` (delivered in the session; §Prepared
+   bundle). In Cloud Shell, use *More (⋮) → Upload* for both files.
+2. Run:
+
+```bash
+gcloud config set project rsfa-end-forms-engine
+gcloud auth list                                  # the active account must be tech@rsfa.co.nz
+sha256sum -c rsfa-end-forms-admin-bundle.tar.gz.sha256      # expect: rsfa-end-forms-admin-bundle.tar.gz: OK
+tar -xzf rsfa-end-forms-admin-bundle.tar.gz && cd admin-bundle
+less deploy_admin.sh                              # optional: read the script before running it
+ADMIN_USERS='tech@rsfa.co.nz:admin' SEPARATE_APPROVER=false bash deploy_admin.sh 2>&1 | tee admin-plan.txt
+```
+
+**What the dry run does.** It only runs read-only calls:
+- `projects describe`, the testIamPermissions query, `run services describe` and `get-iam-policy` (engine);
+- `iam service-accounts describe`, `artifacts repositories describe`, `storage buckets describe`.
+
+It writes only local files in `./admin-deploy-output/`:
+- the engine fingerprint;
+- `admin-env.yaml` (mode 600);
+- the record.
+
+**What to check in `admin-plan.txt`:**
+- every change line starts with `[plan]`;
+- `engine rsfa-end-forms-engine serves rsfa-end-forms-engine-00005-rih`;
+- `tech@rsfa.co.nz is in ADMIN_USERS`;
+- the organization line;
+- the resource names in §3.
+
+A simulated run with these settings (stubbed gcloud) produced exactly the commands of §3: 15 read calls, 0 changes.
+
+### Prepared bundle (2026-10-28, superseded below)
 
 | | |
 |---|---|
@@ -218,6 +282,16 @@ To remove someone, remove their IAP binding too:
 | Built from | commit `946b5fb`; staged context 66 files, identical to the commit (the bundle script refuses a stale context); no PDF except the fictional `example-bank-form.pdf` |
 | Sanitised schema | 401 columns, SHA-256 `8be789c7…` |
 | Cloud Build rehearsal | the extracted bundle built with `deploy/admin/Dockerfile --target admin --no-cache` (all unit tests ran inside the build): **passed**. That image then passed the 42-check private end-to-end test. Local note: this environment's proxy refuses plain-HTTP apt, so the rehearsal used `--build-arg APT_MIRROR=https://archive.ubuntu.com/ubuntu` (Cloud Build does not need it). |
+
+### Prepared bundle for the dry run (current)
+
+| | |
+|---|---|
+| File | `rsfa-end-forms-admin-bundle.tar.gz` (205 KB; not committed). Delivered as a download in the session; regenerate with `tools/stage_admin.py` + `deploy/admin/make_admin_bundle.sh` |
+| SHA-256 | `aa3281c4b8d829b839f1779ec07692829cf86787cb54aa98c832912e01726c61` (built twice, identical) |
+| Built from | commit `45621bb`; staged context 66 files, identical to the commit; no PDF except the fictional `example-bank-form.pdf` |
+| Sanitised schema | 401 columns, SHA-256 `8be789c7a2bc594f4af038e71a62dfa9fb444a97da1b53234a9fb02d54077277` |
+| Rehearsal | Cloud Build-style build from the extracted archive (`--target admin --no-cache`, unit tests ran inside: 28 s step): **passed**. That image passed the 42-check private e2e. |
 
 ## 6. Rollback
 
@@ -318,5 +392,5 @@ See §5 and the final report of iteration 11. In short:
    in §4.3.
 4. **Defaults to confirm:**
    - bucket name `rsfa-end-forms-engine-admin`;
-   - retention: results 1 day, non-current versions 90 days, current objects kept;
+   - retention: synthetic test outputs 1 day; everything else kept indefinitely (no automatic deletion) until RSFA sets a policy;
    - `SEPARATE_APPROVER=false` (one admin can approve their own version in this test environment).

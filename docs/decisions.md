@@ -652,3 +652,23 @@ Lightweight ADR log, newest last. Status: `proposed` | `accepted` | `superseded`
     Default false; RSFA decides.
 - **Revisit when:** RSFA decides on real templates in this environment, a publication step (PR-based, docs/13),
   Entra ID sign-in, or an AI provider.
+
+### D-043 Pre-deployment review of the private admin service: settings confirmed, no automatic audit deletion
+- **Date:** 2026-10-28 · **Status:** accepted; deployment still awaits RSFA's separate approval of the dry-run output
+- **Settings confirmed by RSFA:**
+  - project `rsfa-end-forms-engine`, region `australia-southeast1`;
+  - service `rsfa-end-forms-admin`, bucket `rsfa-end-forms-engine-admin`;
+  - initial administrator `tech@rsfa.co.nz` (admin);
+  - Google IAP; separate approver false;
+  - publishing disabled, real AI disabled, real customer documents prohibited.
+- **Changes:**
+  - **Retention:** the 90-day deletion of non-current versions (D-041) is removed. Lifecycle rules may delete only
+    synthetic test outputs under `results/`, and the verification fails otherwise. A retention policy for drafts,
+    approvals and audit needs RSFA's explicit confirmation.
+  - **Name guards:** the admin service, SA and bucket names must contain `admin` and can never be the engine's, so
+    no override can point a write or a rollback delete at the engine.
+  - **gcloud:** prompts are disabled in both scripts; `gcloud beta` is checked.
+  - **Identity:** the preflight reports whether the authenticated identity is in `ADMIN_USERS`. The verifier accepts
+    plain email characters only. A signed-in but unlisted user is told which account they used (never logged).
+- **Verification of Google's procedure:** RSFA verified the official documentation; this environment re-checked the
+  relied-on items against official page snippets (docs/14 §2). The docs host remains blocked here.

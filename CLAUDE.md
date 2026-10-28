@@ -155,12 +155,19 @@ extracted to `.local/generated/templates/`. A green build without them proves on
     - Rollback script and validation checklist in docs/14.
   - IAP facts come from the local gcloud CLI and from search summaries: the official docs host is blocked here.
     **Verify them at deployment.**
-  - Tests: 97 Java + 35 Python; production-like environment (real image ×2 + IAP stand-in + fake GCS): 42 browser
+  - Tests: 97 Java + 38 Python; production-like environment (real image ×2 + IAP stand-in + fake GCS): 42 browser
     checks. BNZ Boarder bytes unchanged.
-  - Bundle `ef877463…` (commit `946b5fb`, reproducible): its Cloud Build-style image build passed with the tests inside,
-    and that image passed the 42 checks (docs/14 §5).
-  - **Needs from RSFA:** approval of the plan output; the `ADMIN_USERS` emails and roles (Google accounts); an Owner to
-    run it and the console IAP step; the bucket name, retention and separate-approver defaults.
+  - Bundle `aa3281c4…` (commit `45621bb`, reproducible) supersedes `ef877463…`: its Cloud Build-style image build
+    passed with the tests inside, and that image passed the 42 checks (docs/14 §5).
+  - **Pre-deployment review (D-043):**
+    - RSFA confirmed the settings: `tech@rsfa.co.nz:admin`, bucket `rsfa-end-forms-engine-admin`, separate
+      approver false.
+    - No automatic deletion except synthetic `results/`.
+    - Name guards: no write or rollback can reach the engine.
+    - Prompts are disabled; the identity match is reported.
+    - Dry-run bundle `aa3281c4…` (commit `45621bb`, rehearsed). Procedure in docs/14 "Dry run in Cloud Shell".
+  - **Next:** RSFA runs the dry run and reviews `admin-plan.txt`; `APPLY=1` needs a separate explicit approval.
+    Without an organization, the console IAP step needs RSFA.
 
 ## Status of iteration 10 — platform
 
