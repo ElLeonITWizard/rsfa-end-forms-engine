@@ -201,6 +201,25 @@ class RelayHardeningTest {
         return HTTP.send(b.build(), HttpResponse.BodyHandlers.ofString());
     }
 
+    /**
+     * Sends only the request line and headers (declaring a body of {@code declaredLength} bytes) and reads the status
+     * line: a refusal decided from the headers must arrive without any body byte having been sent.
+     */
+    static int headersOnly(String base, int declaredLength, Map<String, String> headers) throws Exception {
+        URI u = URI.create(base);
+        try (java.net.Socket sock = new java.net.Socket(u.getHost(), u.getPort())) {
+            sock.setSoTimeout(5000);
+            StringBuilder req = new StringBuilder("POST /v1/masterboard/documents HTTP/1.1\r\nHost: " + u.getHost()
+                    + "\r\nContent-Type: application/json\r\nContent-Length: " + declaredLength + "\r\n");
+            headers.forEach((k, v) -> req.append(k).append(": ").append(v).append("\r\n"));
+            sock.getOutputStream().write(req.append("\r\n").toString().getBytes(StandardCharsets.US_ASCII));
+            sock.getOutputStream().flush();
+            String status = new java.io.BufferedReader(new java.io.InputStreamReader(sock.getInputStream(),
+                    StandardCharsets.US_ASCII)).readLine();
+            return Integer.parseInt(status.split(" ")[1]);
+        }
+    }
+
     static String code(HttpResponse<String> r) throws IOException {
         return JSON.readTree(r.body()).path("code").asText();
     }
@@ -414,15 +433,14 @@ class RelayHardeningTest {
     @Test
     void headersAreCheckedBeforeTheBodyAndOversizedDeclaredBodiesAreRefusedUnread() throws Exception {
         String a = base(gcsRelay());
-        String big = "{\"pad\":\"" + "x".repeat(2 * 1024 * 1024) + "\"}";
-        HttpResponse<String> unsigned = post(a, big, Map.of());
-        assertEquals(401, unsigned.statusCode(), "no signature: refused before the 2 MiB body is read");
-        assertEquals("MISSING_SIGNATURE", code(unsigned));
-        HttpResponse<String> stale = post(a, big, Map.of("X-RSFA-Timestamp", Long.toString(NOW.getEpochSecond() - 900),
-                "X-RSFA-Signature", "v1=" + "0".repeat(64)));
-        assertEquals("STALE_TIMESTAMP", code(stale));
-        HttpResponse<String> declared = post(a, big, signed(NOW.getEpochSecond(), big));
-        assertEquals(413, declared.statusCode(), "Content-Length above 1 MiB: refused from the header");
+        int len = 2 * 1024 * 1024;
+        assertEquals(401, headersOnly(a, len, Map.of()), "no signature: refused before any body byte is sent");
+        assertEquals(401, headersOnly(a, len, Map.of("X-RSFA-Timestamp", Long.toString(NOW.getEpochSecond() - 900),
+                "X-RSFA-Signature", "v1=" + "0".repeat(64))), "stale timestamp: refused from the headers");
+        assertEquals(413, headersOnly(a, len, Map.of("X-RSFA-Timestamp", Long.toString(NOW.getEpochSecond()),
+                "X-RSFA-Signature", "v1=" + "0".repeat(64))), "Content-Length above 1 MiB: refused from the header");
+        String body = synthBody();
+        assertEquals(200, post(a, body, signed(NOW.getEpochSecond(), body)).statusCode(), "the relay still serves normally");
     }
 
     @Test

@@ -3,12 +3,15 @@
 A deterministic PDF form-filling engine that will replace the MacroForge desktop filler for RSFA
 bank end forms. Mappings are version-controlled and the service can run on Cloud Run.
 **Status: proof of concept.**
-- A private Cloud Run service is deployed by RSFA: BNZ Boarder only, demo page, revision `00002-nan` (docs/04).
+- A private Cloud Run service is deployed by RSFA: BNZ Boarder only, demo page and `/v1`, revision
+  `rsfa-end-forms-engine-00005-rih` (revision 3, 2026-10-28; docs/04).
+- A **local-only administration area** (template upload and validation, field inspector, mapping editor, synthetic test
+  PDFs, versioned drafts, review status, *mock* mapping suggestions) runs with `ENGINE_ADMIN=local` (docs/13).
 - Two more forms are *ready for acceptance testing* locally (GHL Individual and Trust); ASB and ANZ Boarder are
   *blocked* pending RSFA decisions (docs/06).
 - The Make integration contract and an authenticating relay are implemented but not connected (docs/07, docs/10, docs/11).
-- A probable production issue in Make `8731317` (Monday column renamed `Banks to Send` → `Selected Banks`) is
-  investigated with a prepared fix; **production was not changed** (docs/09). See `CLAUDE.md` for the rules and the current status.
+- Make `8731317` (Monday column renamed `Banks to Send` → `Selected Banks`): the approved 7-line module-8 alias was
+  applied and verified on 2026-10-28 (docs/09). See `CLAUDE.md` for the rules and the current status.
 
 ## Prerequisites
 
@@ -154,6 +157,31 @@ ENGINE_AUTH=NONE java -jar engine/target/end-forms-engine.jar serve    # loopbac
   `node tests/ui/demo_smoke.js http://127.0.0.1:8080/ .local/output/ui-smoke`.
 - What to click during a demo: [`docs/05-demo-script.md`](docs/05-demo-script.md).
 
+## Administration area (local only)
+
+A browser tool for preparing new bank forms. It runs **on your machine only**: it is off unless `ENGINE_ADMIN=local`,
+it is refused on Cloud Run (`K_SERVICE`) and off loopback, and it has no login. Details, the production design and the
+private-access plan (IAP): [`docs/13-admin-platform-architecture.md`](docs/13-admin-platform-architecture.md).
+
+```bash
+(cd engine && mvn -B package)
+java -jar engine/target/end-forms-engine.jar example-form --out .local/output/example-bank-form.pdf   # fictional form
+ENGINE_AUTH=NONE ENGINE_ADMIN=local ADMIN_ACTOR="Your name" java -jar engine/target/end-forms-engine.jar serve
+# open http://localhost:8080/admin/
+```
+
+- Optional variables:
+  - `ADMIN_WORKSPACE` (default `.local/admin-workspace`, git-ignored);
+  - `ADMIN_SCHEMA` (default: the newest `.local/reference/masterboard-columns-*.json`);
+  - `ADMIN_REPO_ROOT`.
+- Workflow: upload a blank PDF → create a draft → click a field → map it to a Monday column (by column ID) → save →
+  generate a test PDF from fictional values → mark ready for review → record a human approval. **There is no publish
+  button.** A production form still goes through a reviewed manifest, the allowlist and an RSFA deployment (docs/04).
+- Suggestions are a **mock heuristic, not AI**, and are labelled as such (contract
+  `contracts/mapping-suggestions.v1.schema.json`).
+- Browser test: `node tests/ui/admin_smoke.js http://127.0.0.1:8080/ .local/output/admin-smoke`, with the example form
+  in that directory and a fresh workspace.
+
 ## Docker (local only, nothing deployed)
 
 ```bash
@@ -166,7 +194,7 @@ docker run --rm -p 127.0.0.1:8080:8080 -e ENGINE_AUTH=API_KEY -e ENGINE_API_KEY=
 The default target (`docker build -f engine/Dockerfile .`) compiles and tests inside Docker. Proxy and CA options are in
 the Dockerfile header. The verification results are in `docs/02-poc-guide-and-tests.md`.
 
-## Google Cloud Run (revision 1 deployed by RSFA; revision 2 with the demo page prepared)
+## Google Cloud Run (revision 3 `00005-rih` deployed by RSFA)
 
 The first private deployment generates BNZ Boarder only. The full runbook, with exact `gcloud` commands, IAM, the
 authenticated `/health` and `/generate` calls, and rollback, is in [`docs/04-cloud-run-deployment.md`](docs/04-cloud-run-deployment.md).
@@ -186,7 +214,8 @@ Authentication modes:
 ## Current limitations
 
 - Six real templates are tested end-to-end: BNZ Boarder, ASB Boarder, ANZ Boarder, GHL Individual, GHL Trust, and BNZ
-  Handover partially. Only BNZ Boarder is deployed. ASB and ANZ Boarder are blocked (docs/06).
+  Handover partially.
+- The administration area is local only: a local directory for storage, no login and mock suggestions (docs/13). Only BNZ Boarder is deployed. ASB and ANZ Boarder are blocked (docs/06).
 - 138 legacy mappings are unresolved and 19 are unsupported (docs/03). Notable cases:
   - LineItems term/period name conflicts;
   - BNZ Gifting has no form fields;

@@ -16,6 +16,7 @@ import nz.co.rsfa.endforms.relay.ReplayStore;
 import nz.co.rsfa.endforms.relay.RelayServer;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
@@ -31,6 +32,7 @@ import java.util.Map;
  *   inspect  --pdf FILE
  *   fill     --manifest FILE --data FILE --out FILE [--templates DIR[:DIR]] [--today YYYY-MM-DD]
  *   render   --pdf FILE --out-dir DIR [--dpi N]   (PNG per page, for visual verification only)
+ *   example-form [--out FILE]                    (fictional "Example Bank" form for admin demos and tests)
  *   serve    (configured by environment; see README)
  * </pre>
  * Exit codes: 0 ok, 1 usage, 2 I/O, 3 validation failed.
@@ -58,6 +60,12 @@ public final class Main {
             }
             case "fill" -> {
                 return fill(opt, json);
+            }
+            case "example-form" -> { // fictional bank form for admin demos and browser tests (no real lender content)
+                Path out = Path.of(opt.getOrDefault("out", "example-bank-form.pdf"));
+                Files.write(out, nz.co.rsfa.endforms.admin.ExampleForm.build());
+                System.out.println(out);
+                return 0;
             }
             case "render" -> {
                 if (!opt.containsKey("pdf") || !opt.containsKey("out-dir")) return usage();
@@ -152,6 +160,11 @@ public final class Main {
         String hmac = env.get("ENGINE_HMAC_SECRET"); // optional request signature for /v1 (D-026); never logged
         ApiServer server = new ApiServer(catalog, new FormFiller(), auth, apiKey,
                 hmac == null || hmac.isBlank() ? null : hmac, java.time.Clock.systemUTC());
+        if ("local".equals(env.get("ENGINE_ADMIN"))) {
+            server.withAdmin(admin(env, host, catalog));
+        } else if (env.get("ENGINE_ADMIN") != null) {
+            throw new IllegalStateException("ENGINE_ADMIN accepts only 'local'");
+        }
         int bound = server.start(host, port);
         System.err.printf("end-forms-engine listening on %s:%d auth=%s templates=%d%n", host, bound, auth,
                 catalog.manifests().size());
@@ -204,6 +217,35 @@ public final class Main {
      * {@code relay} or {@code engine} (default). Fails closed on a misspelt role, and refuses to run the engine on a
      * Cloud Run service named like the relay: a forgotten ENGINE_ROLE there would expose the engine publicly.
      */
+    /**
+     * Local administration area (D-038): loopback only, never on Cloud Run. Env: ADMIN_WORKSPACE (default
+     * .local/admin-workspace), ADMIN_SCHEMA (Monday column export, default the newest .local/reference/masterboard-columns-*.json),
+     * ADMIN_ACTOR (name for the audit trail), ADMIN_REPO_ROOT (default ".").
+     */
+    static nz.co.rsfa.endforms.admin.AdminApi admin(Map<String, String> env, String host, TemplateCatalog catalog) throws IOException {
+        nz.co.rsfa.endforms.admin.AdminApi.requireLocal(host, env);
+        Path schemaFile = env.containsKey("ADMIN_SCHEMA") ? Path.of(env.get("ADMIN_SCHEMA")) : newestSchema(Path.of(".local/reference"));
+        nz.co.rsfa.endforms.admin.MondaySchema schema = schemaFile == null ? nz.co.rsfa.endforms.admin.MondaySchema.empty()
+                : nz.co.rsfa.endforms.admin.MondaySchema.load(schemaFile);
+        java.time.Clock clock = java.time.Clock.systemUTC();
+        System.err.printf("admin area enabled (local only): workspace=%s schema=%s columns=%d%n",
+                env.getOrDefault("ADMIN_WORKSPACE", ".local/admin-workspace"), schema.source(), schema.columns().size());
+        return new nz.co.rsfa.endforms.admin.AdminApi(
+                new nz.co.rsfa.endforms.admin.Workspace(Path.of(env.getOrDefault("ADMIN_WORKSPACE", ".local/admin-workspace")), clock),
+                catalog, schema, Path.of(env.getOrDefault("ADMIN_REPO_ROOT", ".")).toAbsolutePath().normalize(),
+                new nz.co.rsfa.endforms.admin.MockSuggestionProvider(clock), clock, env.getOrDefault("ADMIN_ACTOR", "local-admin"));
+    }
+
+    private static Path newestSchema(Path dir) throws IOException {
+        if (!Files.isDirectory(dir)) {
+            return null;
+        }
+        try (var s = Files.list(dir)) {
+            return s.filter(p -> p.getFileName().toString().matches("masterboard-columns-.*\\.json")).sorted()
+                    .reduce((a, b) -> b).orElse(null);
+        }
+    }
+
     static String roleOf(Map<String, String> env) {
         String role = env.getOrDefault("ENGINE_ROLE", "engine").trim();
         if (!role.equals("engine") && !role.equals("relay")) {

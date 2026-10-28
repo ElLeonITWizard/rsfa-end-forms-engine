@@ -1,0 +1,10 @@
+{
+  "purpose": "What is deployed, as reported back by RSFA (docs/04 'Deployment record'). Read by the local administration area to label templates 'deployed'; it never changes a deployment.",
+  "service": "rsfa-end-forms-engine",
+  "region": "australia-southeast1",
+  "revision": "rsfa-end-forms-engine-00005-rih",
+  "imageDigest": "sha256:e0d8ed0e5128dec2e791974a6ac9a71f82f33f7eac93a49dbf592ae0c33d48de",
+  "recordedOn": "2026-10-28",
+  "source": "deployment-record.json handed back by RSFA (revision 3 run, 2026-10-28T13:05:24Z-13:11:01Z)",
+  "templates": ["BNZ_BOARDER_FORM@2.0_8-24"]
+}

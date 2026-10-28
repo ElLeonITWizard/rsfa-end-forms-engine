@@ -198,8 +198,8 @@ class RelayServerTest {
         } finally {
             wrong.stop();
         }
-        String big = "{\"pad\":\"" + "x".repeat(1024 * 1024) + "\"}";
-        assertEquals(413, post(relayBase, big, signed(CURRENT, ts, big)).statusCode());
+        // oversized: refused from the declared length, before any body byte (streaming 1 MiB raced the early refusal)
+        assertEquals(413, RelayHardeningTest.headersOnly(relayBase, 1024 * 1024 + 16, signed(CURRENT, ts, "{}")));
         assertEquals(200, HTTP.send(HttpRequest.newBuilder(URI.create(relayBase + "/health")).build(),
                 HttpResponse.BodyHandlers.ofString()).statusCode());
         assertEquals(404, HTTP.send(HttpRequest.newBuilder(URI.create(relayBase + "/generate"))

@@ -208,6 +208,43 @@ The manual runbook follows. The script runs exactly these steps.
 Goal: a **private** Cloud Run service that generates the BNZ Boarder PDF from a synthetic JSON payload,
 without MacroForge. Commands were written for and checked against `gcloud` 570.0.0 (flag names verified offline).
 
+## Deployment record: revision 3 → `rsfa-end-forms-engine-00005-rih` (deployed by RSFA, 2026-10-28)
+
+Source: the `deployment-record.json` handed back by RSFA (deployment approved 2026-10-28). Values are copied from it;
+the deployer's identity is withheld in the record itself.
+
+| Item | Value |
+|---|---|
+| Run | 2026-10-28T13:05:24Z → 13:11:01Z, `deploy_poc.sh` in update mode, bundle `7a570707…` (commit `a34bd0c`) |
+| Previous revision | `rsfa-end-forms-engine-00002-nan` (the rollback target) |
+| New revision | **`rsfa-end-forms-engine-00005-rih`**, 100% traffic (`rsfa-end-forms-engine-00005-rih=100`) |
+| Image | `australia-southeast1-docker.pkg.dev/rsfa-end-forms-engine/rsfa-end-forms/end-forms-engine@sha256:e0d8ed0e5128dec2e791974a6ac9a71f82f33f7eac93a49dbf592ae0c33d48de` (tag `poc-20261028-130713`), built with Cloud Build |
+| URL | `https://rsfa-end-forms-engine-zjsgxv2kxq-ts.a.run.app` (IAM required); the candidate tag was verified first |
+| Configuration | ingress all, IAM required, runtime SA `rsfa-end-forms-runtime@…`, 1 vCPU, 1 GiB, min 0, max 2, concurrency 1, timeout 120 s, request-based billing, `ENGINE_AUTH=PLATFORM_IAM`. Unchanged from revision 2 |
+| Invokers | the deployer's own identity only |
+
+**Verification (all `ok`):**
+- **Without a token:** `/health` and `/` → 403.
+- **With a token:**
+  - `/health` → 200 (BNZ Boarder only);
+  - `/generate` → 200;
+  - demo page → 200;
+  - `/v1/masterboard/documents` → 200 `complete`, 1 document `BNZ_BOARDER_FORM`, PDF SHA-256 equal, 6 `notMigrated`.
+- **PDF check (`verify_pdf.py`):**
+  - SHA-256 `2ae7bfacf48b8ee8e63aaf9ce28997650abd2c07b59ddbeade9928ce3269d6f6` (identical to revisions 1–2 and the
+    local build);
+  - all 7 fields and both customer-name overlays present;
+  - no ticked buttons; no signature field with a value.
+- **Main URL after promotion:** ok.
+- **Logs:** 61 entries, 0 fixture values.
+
+**Rollback:**
+`gcloud run services update-traffic rsfa-end-forms-engine --region=australia-southeast1 --project=rsfa-end-forms-engine --to-revisions=rsfa-end-forms-engine-00002-nan=100`
+
+**Not in the record (TODO: verify):** why the revision number is `00005`. Revisions `00003` and `00004` are not
+described by this record; they may come from earlier deploy attempts. Check with
+`gcloud run revisions list --service=rsfa-end-forms-engine --region=australia-southeast1`.
+
 ## Revision 3: add `/v1/masterboard/documents` (prepared 2026-10-28, iteration 9; deployment approved 2026-10-28, to be run by RSFA from Cloud Shell)
 
 **What changes compared to `00002-nan`:**

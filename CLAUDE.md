@@ -40,6 +40,7 @@ docs/09-macroforge-banks-key-investigation.md  8731317 'Banks to Send' rename: e
 docs/10-relay-security-and-infrastructure.md   relay security architecture, durable replay, minimum GCP resources, costs, rollback
 docs/11-make-test-scenario.md         isolated Make test scenario, module by module (designed, not created)
 docs/12-acceptance-checklists.md      business acceptance checklists for Rod (GHL Individual / Trust)
+docs/13-admin-platform-architecture.md local admin MVP, AI-suggestion contract (mock), production storage design, IAP access plan
 docs/generated/template-coverage.md   GENERATED per-form coverage report (tools/coverage_report.py)
 docs/generated/monday-schema-drift.md GENERATED ID-by-ID schema comparison (tools/schema_drift.py)
 docs/decisions.md                     decision log (ADR-lite)
@@ -51,18 +52,20 @@ tools/reimport_curated.sh re-imports the four curated forms (optionally a .local
 tools/make_like_client.py signs /v1 requests like Make (HMAC) for local relay tests; prints a summary only
 curation/                 reviewed per-form validation (closedOptions, requires), corrections (evidence | decision, D-028)
                           and review status, merged by the importer
-contracts/                Make contract JSON Schema (masterboard.v1) + fictional example requests + HMAC test vector
+contracts/                Make contract JSON Schema (masterboard.v1) + fictional example requests + HMAC test vector;
+                          mapping-suggestions.v1 JSON Schema (D-039)
 make/                     Make material prepared here, never applied automatically: proposed 8731317 module-8 snippet,
                           test-scenario Code module (build + HMAC sign) and synthetic payloads T1–T12
-deploy/                   poc-allowlist.json (approved templates), cloudbuild.yaml, deploy_poc.sh (end-to-end deployment),
+deploy/                   poc-allowlist.json (approved templates), deployment-state.json (what RSFA deployed), cloudbuild.yaml, deploy_poc.sh (end-to-end deployment),
                           make_bundle.sh (Cloud Shell bundle), verify_pdf.py (post-deploy PDF checks), bucket lifecycle
-engine/                   Maven project: library, CLI (inspect | fill | render | serve), HTTP API (/health, /generate,
-                          /v1/masterboard/documents), relay (ENGINE_ROLE=relay, D-027), demo page, routing table
-                          (resources/routing), Dockerfile
+engine/                   Maven project: library, CLI (inspect | fill | render | serve | example-form), HTTP API (/health,
+                          /generate, /v1/masterboard/documents), relay (ENGINE_ROLE=relay, D-027), demo page, routing table
+                          (resources/routing), local admin area (package admin, resources/ui/admin; ENGINE_ADMIN=local,
+                          D-038), Dockerfile
 mappings/<lender>/<TEMPLATE_ID>@<version>.json   imported manifests (no client data; reviewed)
 tests/fixtures/           synthetic requests (fictional "Jane Example" data only)
 tests/importer/           importer + staging unit tests (synthetic .mforge)
-tests/ui/                 browser smoke test of the demo page (Playwright from the machine) + PDF checker
+tests/ui/                 browser smoke tests of the demo page and the admin area (Playwright from the machine) + PDF checker
 tests/make/               Node tests of the make/ material (+ a runner for the local relay chain)
 .local/                   GIT-IGNORED: reference exports, lender PDFs, generated output
 ```
@@ -83,6 +86,9 @@ java -jar engine/target/end-forms-engine.jar render --pdf .local/output/BNZ_Boar
 docker build --network host -f engine/Dockerfile --target runtime-prebuilt -t end-forms-engine:prebuilt .   # see docs/02
 ENGINE_AUTH=NONE java -jar engine/target/end-forms-engine.jar serve                 # demo page on http://localhost:8080/ (loopback only)
 node tests/ui/demo_smoke.js http://127.0.0.1:8080/ .local/output/ui-smoke 5        # browser smoke test (server running; 5 = forms offered)
+java -jar engine/target/end-forms-engine.jar example-form --out .local/output/admin-smoke/example-bank-form.pdf   # fictional form
+ENGINE_AUTH=NONE ENGINE_ADMIN=local java -jar engine/target/end-forms-engine.jar serve   # + admin area at /admin/ (local only, D-038)
+node tests/ui/admin_smoke.js http://127.0.0.1:8080/ .local/output/admin-smoke       # admin browser test (fresh ADMIN_WORKSPACE)
 bash tools/reimport_curated.sh ".local/reference/<file>.mforge" <YYYY-MM-DD> [--preview-pending .local/preview]
 python3 tools/schema_drift.py --help                                               # schema drift report (docs/08)
 node tests/make/code_module_sign_test.js && node tests/make/module8_banks_alias_test.js   # Make material (docs/09, docs/11)
@@ -116,9 +122,30 @@ extracted to `.local/generated/templates/`. A green build without them proves on
 8. Nothing is deployed or changed in Google Cloud without RSFA's explicit approval of the exact commands (docs/04).
    Never build from the repo root for deployment: only from the staged context.
 
-## Current status (2026-10-28, iteration 10)
+## Current status (2026-10-28, iteration 10 — platform)
 
-- **Iteration 10:**
+- **Production: revision 3 `rsfa-end-forms-engine-00005-rih` deployed by RSFA (2026-10-28, all checks ok).**
+  - Image `sha256:e0d8ed0e…`, previous `00002-nan`. BNZ Boarder only, IAM required, `/v1` present.
+  - Record: docs/04 and `deploy/deployment-state.json`. Rollback target: `00002-nan`.
+  - Do not change this revision without RSFA's explicit approval.
+- **Administration area (local only, D-038, docs/13):**
+  - `ENGINE_ADMIN=local` serves `/admin/`: template library with statuses, blank-PDF upload validation, field
+    inspector, mapping editor (Monday column IDs), synthetic test PDFs with comparison, and versioned audited drafts.
+  - Review flow `draft → ready-for-review → approved`; approval is a human record.
+  - **No publish action.** Off by default, refused on Cloud Run and off loopback, no login.
+  - Storage is a local directory under `.local/`.
+- **Mapping suggestions (D-039):**
+  - Contract `mapping-suggestions.v1`, structure-only.
+  - The only provider is a **mock** heuristic, labelled "not an AI model". No AI service has been created.
+- **Production design (D-040, proposed, nothing created):**
+  - GCS bucket for drafts and audit; publication as a Git PR through the existing allowlist and deploy pipeline;
+  - a separate admin Cloud Run service behind IAP;
+  - the engine stays IAM-only (IAP would replace the relay's identity);
+  - identity provider (Google vs Entra) is an RSFA decision.
+- **Tests:** 88 Java + 25 Python + 12/44 Node + 27 demo + 27 admin browser checks; BNZ Boarder bytes unchanged.
+  - Two intermittent relay tests were fixed by sending headers only.
+
+- **Iteration 10 (Make and deployment):**
   - **`8731317` alias approved** (scope: module-8 code only). All pre-save checks passed: the live read is identical
     to the verified backup and 24/24 regression checks pass.
   - **APPLIED 2026-10-28T12:43:58Z, result PASS** (docs/09 "Iteration 10c"):
@@ -133,6 +160,7 @@ extracted to `.local/generated/templates/`. A green build without them proves on
       revision was created; `00002-nan` is still serving.
     - Corrected bundle `7a570707…` (commit `a34bd0c`) is rehearsed from the extracted archive and `gcloud`'s exact
       upload set (docs/04). This environment never deploys.
+    - **Deployed by RSFA with that bundle:** revision `00005-rih`, all verification checks ok (docs/04 record).
 
 - **Iteration 9 (production unchanged; nothing deployed; `00002-nan` untouched):**
   - **`8731317` fix ready for approval (docs/09):**
@@ -212,9 +240,8 @@ extracted to `.local/generated/templates/`. A green build without them proves on
 - **Cloud Run: revision 1 deployed by RSFA (2026-10-27).**
   - `rsfa-end-forms-engine-00001-6qm`, IAM required, BNZ Boarder only, verified (docs/04 "Deployment record").
   - It has no demo page.
-- **Revision 2 `rsfa-end-forms-engine-00002-nan` (demo page) is live**, as reported by RSFA; its record is not yet
-  handed back. Rollback target: `00001-6qm` (docs/04). It must stay stable: no new revision without RSFA's explicit
-  approval. This environment has no Google Cloud credentials and never deploys.
+- Revision 2 `rsfa-end-forms-engine-00002-nan` (demo page) was superseded by revision 3 `00005-rih` on 2026-10-28; it is
+  now the rollback target. This environment has no Google Cloud credentials and never deploys.
 - `/health` reports usable templates only (`templates` + `available`, D-022). The demo badge counts the forms the page
   offers that are usable.
 - **Open decisions** (docs/02 "Known gaps", docs/06, docs/07):
@@ -225,7 +252,8 @@ extracted to `.local/generated/templates/`. A green build without them proves on
   - 36 constant ticks;
   - the DDMMYYYY → 6-cell date transform;
   - the LineItems name conflict;
-  - the `8731317` re-trigger guard.
+  - the `8731317` re-trigger guard;
+  - admin platform: identity provider, roles and two-person approval, AI provider, live Monday schema reads (docs/13).
 
 ## Keep the docs true
 

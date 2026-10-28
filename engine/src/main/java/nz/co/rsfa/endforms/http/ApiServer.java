@@ -99,6 +99,14 @@ public final class ApiServer {
         }
     }
 
+    private nz.co.rsfa.endforms.admin.AdminApi admin;
+
+    /** Local administration area (D-038); only {@code Main} with ENGINE_ADMIN=local on loopback ever sets it. */
+    public ApiServer withAdmin(nz.co.rsfa.endforms.admin.AdminApi admin) {
+        this.admin = admin;
+        return this;
+    }
+
     public int start(String host, int port) throws IOException {
         InetSocketAddress addr = new InetSocketAddress(host, port);
         if (auth == AuthMode.NONE && !addr.getAddress().isLoopbackAddress()) {
@@ -109,6 +117,9 @@ public final class ApiServer {
         server.createContext("/generate", this::generate);
         server.createContext("/v1/masterboard/documents", this::masterboardDocuments);
         server.createContext("/", this::ui);
+        if (admin != null) {
+            server.createContext("/admin", ex -> admin.handle(ex, authorised(ex)));
+        }
         server.setExecutor(Executors.newVirtualThreadPerTaskExecutor());
         server.start();
         return server.getAddress().getPort();

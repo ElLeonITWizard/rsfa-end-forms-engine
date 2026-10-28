@@ -539,3 +539,67 @@ Lightweight ADR log, newest last. Status: `proposed` | `accepted` | `superseded`
   - The Cloud Build timeout is raised from 20 to 40 minutes (secondary, for slow pulls).
   - Rehearsals now build from the extracted archive.
 - **Not changed:** tests, Java 21, application code, allowlist, IAM, validations, rollback.
+
+### D-038 Administration area: local only, drafts never published, same manifest format
+- **Date:** 2026-10-28 · **Status:** accepted (local MVP); production form pending D-040
+- **Decision:**
+  - `ENGINE_ADMIN=local` adds `/admin/` to the local server. Off by default (404).
+  - The admin area is refused when `K_SERVICE` is set (Cloud Run) or the host is not loopback. Any other value
+    of `ENGINE_ADMIN` stops the server.
+  - Uploads are accepted only when blank and fillable (`TemplateAnalysis`). A refused upload stores nothing.
+  - Drafts store stable Monday **column IDs**. The runtime key is the column's current title, because `8731317`
+    module 8 keys by title. Derived keys (GPT/date splits) are allowed but always warned.
+  - `DraftCompiler` emits a schemaVersion-1 manifest for the unchanged `FormFiller`. It refuses:
+    - signature and push-button targets;
+    - constant ticks;
+    - conflicting rules;
+    - unknown fields, columns and options.
+  - Statuses are `draft → ready-for-review → approved`:
+    - approval needs a passing test of the same version and a human record;
+    - approval is labelled a *local development approval*;
+    - there is **no publish/deploy action**;
+    - any save returns the draft to `draft`.
+  - The audit trail records field names and change types only.
+  - `deploy/deployment-state.json` records what RSFA deployed (revision `00005-rih`, BNZ Boarder) and labels the
+    library's `deployed` status.
+- **Not changed:**
+  - `/health`, `/generate`, `/v1`, the demo page, the allowlist and IAM;
+  - PDF generation code;
+  - BNZ Boarder bytes (SHA-256 `2ae7bfac…` unchanged).
+- **Tests:** `AdminApiTest` (7) and `tests/ui/admin_smoke.js` (27 browser checks).
+- **Test fixes in the same iteration:**
+  - `RelayHardeningTest` and `RelayServerTest` sent large bodies that raced the relay's early 413/401 refusal
+    (intermittent "connection reset").
+  - They now send headers only over a raw socket. The behaviour asserted is unchanged.
+
+### D-039 Mapping suggestions: provider-independent contract, mock only
+- **Date:** 2026-10-28 · **Status:** accepted (contract); provider choice open
+- **Decision:**
+  - The contract is `contracts/mapping-suggestions.v1.schema.json` (`MappingSuggestions`).
+  - Requests are **structure-only**: fields, printed labels, the Monday column schema and reference mappings. No
+    data values and no PDF bytes.
+  - Responses are proposals with confidence, evidence, ambiguities and alternatives. A person accepts each one.
+    The compile, test and approval gates still apply.
+  - Signatures and declarations are refused by the provider and, independently, by the compiler.
+  - The only provider is `MockSuggestionProvider`, a word-overlap heuristic:
+    - `isMock: true`;
+    - the banner reads "MOCK … not an AI model".
+  - No AI service or paid resource has been created. The engine has no model at runtime.
+
+### D-040 Production administration: GCS + Git publication; separate admin service behind IAP (proposed)
+- **Date:** 2026-10-28 · **Status:** proposed (design only, docs/13); nothing created
+- **Decision proposed:**
+  - Drafts, tests and audit go to a private, versioned GCS bucket (create-if-absent writes).
+  - Publication is a **pull request** with the compiled manifest, the allowlist entry and the approval record.
+  - Deployment stays RSFA's explicit action (docs/04).
+  - Browser access goes through a **separate** Cloud Run admin service with IAP.
+  - The engine stays IAM-only and unchanged: IAP replaces the caller identity and would break the relay's
+    service-to-service call.
+- **Open (RSFA):**
+  - identity provider (Google vs Microsoft Entra via Identity Platform);
+  - roles and two-person approval;
+  - AI provider;
+  - demo-page location;
+  - live Monday schema reads.
+- **To verify before any change:** the IAP-on-Cloud-Run documentation and prices. The docs host was not reachable
+  from this environment; facts come from search summaries.
