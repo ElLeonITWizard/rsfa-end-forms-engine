@@ -114,7 +114,16 @@ extracted to `.local/generated/templates/`. A green build without them proves on
 8. Nothing is deployed or changed in Google Cloud without RSFA's explicit approval of the exact commands (docs/04).
    Never build from the repo root for deployment: only from the staged context.
 
-## Current status (2026-10-28, iteration 9)
+## Current status (2026-10-28, iteration 10)
+
+- **Iteration 10:**
+  - **`8731317` alias approved** (scope: module-8 code only). All pre-save checks passed: the live read is identical
+    to the verified backup and 24/24 regression checks pass.
+  - **Not saved by Claude:** the update tool needs the full 305 KB blueprint inline, including webhook URLs and
+    sample data. RSFA applies the 7 lines in the Make UI, then Claude verifies read-only with
+    `tools/verify_8731317_change.py` (tested; also has `--rollback`). **Production is still unchanged** (docs/09).
+  - **Revision 3:** deployment approved; **RSFA runs it** from Cloud Shell with the bundle of docs/04. This
+    environment never deploys.
 
 - **Iteration 9 (production unchanged; nothing deployed; `00002-nan` untouched):**
   - **`8731317` fix ready for approval (docs/09):**

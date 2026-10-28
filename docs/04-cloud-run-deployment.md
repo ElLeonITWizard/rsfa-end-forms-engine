@@ -208,7 +208,7 @@ The manual runbook follows. The script runs exactly these steps.
 Goal: a **private** Cloud Run service that generates the BNZ Boarder PDF from a synthetic JSON payload,
 without MacroForge. Commands were written for and checked against `gcloud` 570.0.0 (flag names verified offline).
 
-## Revision 3: add `/v1/masterboard/documents` (prepared 2026-10-28, iteration 9; NOT deployed)
+## Revision 3: add `/v1/masterboard/documents` (prepared 2026-10-28, iteration 9; deployment approved 2026-10-28, to be run by RSFA from Cloud Shell)
 
 **What changes compared to `00002-nan`:**
 - The image adds the Make contract endpoint `POST /v1/masterboard/documents` (D-025) and the relay code.

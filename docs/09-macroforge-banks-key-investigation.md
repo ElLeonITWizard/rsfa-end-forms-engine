@@ -220,3 +220,63 @@ module 8 in the Make UI and save. Then repeat the step-3 checks against the roll
 
 **Validation without client operations:** as in the section above. No test run is triggered. The first natural run
 is observed: execution `SUCCESS`, and RSFA confirms the selected banks' PDFs are filed.
+
+## Iteration 10 (2026-10-28): approved; not saved by Claude (tool limitation). Production still unchanged
+
+**Approval:** the change was explicitly approved by the user (tech@rsfa.co.nz) on 2026-10-28. The approval is
+**limited to** the additive module-8 alias: only `/flow[8]/mapper/codeEditorJavascript` may change, and everything
+else must be preserved, including the active state.
+
+**Pre-save checks, all passed:**
+- Fresh live read (`.local/reference/make/8731317-PRE-CHANGE-2026-10-28-iter10.txt`, mode 600) is **byte-identical**
+  to the iteration-9 verified backup (SHA-256 `c6c9f44a…`):
+  - `lastEdit` 2026-07-16T22:05:49.471Z; active, hook `3905270`, scheduling unchanged.
+- `tools/make_8731317_proposal.py` reproduced the same proposal:
+  - one path differs; 7 lines added;
+  - proposed blueprint `1369b087…`; rollback blueprint `ab76a676…`.
+- Regression: 24/24 checks.
+
+**Why it was not saved here:**
+- The only write tool, `scenarios_update`, replaces the whole blueprint and needs it inline in the call: about
+  305,000 characters.
+- That blueprint contains the MacroForge webhook URLs (module 13) and the editor's cached sample bundles.
+- Re-transmitting it through the conversation would expose client data and webhook URLs (CLAUDE.md rules 1–2), and
+  risks a transcription error in production.
+- This is a stop condition ("the current tools cannot safely perform the change"). **No write call was made.**
+
+**Equivalent safe path (RSFA in the Make UI, about 2 minutes):**
+1. Open scenario `8731317` in Make, then module **8** ("Run code").
+2. Find the line `const result = mapColumns(input.column_values);` (line 138).
+3. Insert directly after it the 7 lines of `make/8731317/module8-banks-alias.snippet.js`, unchanged.
+4. Click **OK**, then **Save** the scenario.
+   - Do **not** click "Run once".
+   - Do not touch the scheduling switch or any other module.
+5. Tell Claude. Claude re-reads the scenario (read-only) and runs
+   `python3 tools/verify_8731317_change.py <pre-change read> <post-change read>`.
+
+**What the verifier requires (self-tested on simulated reads):**
+
+| Check | Requirement |
+|---|---|
+| Active state, pause, hook, scheduling, validity, folder, name | unchanged |
+| Changed paths | module 8's code only. Editor-only metadata (`/metadata/designer`, `/metadata/scenario`) that the UI rewrites on save is reported separately |
+| Module 8 code | equals the old code plus exactly the 7 approved lines after the anchor (CRLF normalised) |
+| Live code | parses |
+
+Self-test results:
+- the exact change, and a CRLF and editor-metadata variant, both pass;
+- an extra change elsewhere, a missing change and a deactivated scenario all fail.
+
+**Rollback (tested the same way):**
+- **In the UI:** delete the 7 lines and save. Then run
+  `python3 tools/verify_8731317_change.py --rollback <pre-change read> <post-rollback read>` (module 8 back to the
+  original; nothing else changed).
+- **Alternative:** Make's scenario version history ("Previous versions"), restoring the version saved
+  2026-07-16T22:05:49Z.
+- **Full backup** of the pre-change blueprint: `.local/reference/make/8731317-ROLLBACK-blueprint.json` and the
+  pre-change read. Never committed.
+
+**Business validation:** on the next normal execution (no test run). Claude checks `8731317`'s execution status
+read-only; RSFA confirms the selected banks' PDFs are filed. **No historical production failure has been
+confirmed.** The change removes the confirmed key incompatibility; whether earlier runs were affected cannot be
+known (no run since the rename).
