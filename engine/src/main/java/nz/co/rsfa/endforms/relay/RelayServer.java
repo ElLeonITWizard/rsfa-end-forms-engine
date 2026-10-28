@@ -22,7 +22,12 @@ import java.time.Duration;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
@@ -38,7 +43,10 @@ import java.util.regex.Pattern;
  *   <li>The body must be a JSON object (checked after the signature, before anything is forwarded).</li>
  *   <li>The relay calls the engine with a Google-signed ID token for its own service account (Cloud Run metadata
  *       server), so the engine keeps {@code --no-allow-unauthenticated}; no key file exists anywhere.</li>
- *   <li>Request ≤ 1 MiB, response ≤ 32 MiB, per-instance rate limit, upstream timeout below Cloud Run's 120 s.</li>
+ *   <li>Header format, freshness and Content-Length are checked before the body is read; request ≤ 1 MiB,
+ *       response ≤ 32 MiB, per-instance rate limit, one upstream deadline (body included) below Cloud Run's 120 s.</li>
+ *   <li>The rate limit and the identity token come before the replay claim, so a retryable refusal never consumes
+ *       the signature.</li>
  * </ul>
  * Never logs bodies, values, secrets or tokens: one line per request with correlation id, codes and timings.
  */
@@ -49,7 +57,11 @@ public final class RelayServer {
     static final int MAX_BODY_BYTES = 1024 * 1024;
     static final long MAX_RESPONSE_BYTES = 32L * 1024 * 1024;
     static final long MAX_SKEW_SECONDS = 300;
-    static final Duration UPSTREAM_TIMEOUT = Duration.ofSeconds(110);
+    /**
+     * One deadline for the whole upstream exchange, response body included. With the replay store (≤ 10 s) and the
+     * identity token (≤ 10 s) the relay answers well inside Cloud Run's 120 s request timeout.
+     */
+    static final Duration UPSTREAM_TIMEOUT = Duration.ofSeconds(90);
     private static final Pattern CORRELATION = Pattern.compile("[A-Za-z0-9._:-]{8,128}");
     private static final Pattern SIGNATURE = Pattern.compile("v1=[0-9a-fA-F]{64}");
 
@@ -67,6 +79,7 @@ public final class RelayServer {
     private final HttpClient http = HttpClient.newBuilder().proxy(HttpClient.Builder.NO_PROXY)
             .connectTimeout(Duration.ofSeconds(10)).build();
     private final ReplayStore replay;
+    private final ExecutorService upstreamCalls = Executors.newVirtualThreadPerTaskExecutor();
     private volatile Duration upstreamTimeout = UPSTREAM_TIMEOUT;
     private HttpServer server;
 
@@ -116,6 +129,7 @@ public final class RelayServer {
         if (server != null) {
             server.stop(0);
         }
+        upstreamCalls.shutdownNow();
     }
 
     private void handle(HttpExchange ex) throws IOException {
@@ -141,6 +155,20 @@ public final class RelayServer {
                 status = 405;
                 outcome = "method";
                 send(ex, 405, error("METHOD_NOT_ALLOWED", false));
+                return;
+            }
+            String pre = checkHeaders(ex); // format and freshness only, before a single body byte is read
+            if (pre != null) {
+                status = 401;
+                outcome = pre;
+                send(ex, status, error(pre, false));
+                return;
+            }
+            String length = ex.getRequestHeaders().getFirst("Content-Length");
+            if (length != null && (!length.matches("[0-9]{1,10}") || Long.parseLong(length) > MAX_BODY_BYTES)) {
+                status = 413;
+                outcome = "too_large";
+                send(ex, 413, error("PAYLOAD_TOO_LARGE", false));
                 return;
             }
             byte[] body = readLimited(ex.getRequestBody());
@@ -171,23 +199,8 @@ public final class RelayServer {
             }
             String c = parsed.path("correlationId").asText("");
             cid = CORRELATION.matcher(c).matches() ? c : null;
-            String sig = ex.getRequestHeaders().getFirst("X-RSFA-Signature").toLowerCase(Locale.ROOT);
-            long now = clock.instant().getEpochSecond();
-            boolean first;
-            try {
-                first = replay.claim(sha256Hex(sig), now + 2 * MAX_SKEW_SECONDS, now);
-            } catch (IOException | RuntimeException e) {
-                status = 503;
-                outcome = "replay_store_unavailable";
-                send(ex, 503, error("REPLAY_STORE_UNAVAILABLE", true));
-                return;
-            }
-            if (!first) {
-                status = 409;
-                outcome = "REPLAYED_REQUEST";
-                send(ex, 409, error("REPLAYED_REQUEST", false));
-                return;
-            }
+            // Everything that can fail transiently without contacting the engine happens BEFORE the signature is
+            // claimed, so a retryable answer never consumes the signature (a retry may resend the same bytes).
             if (!limiter.tryAcquire()) {
                 status = 429;
                 outcome = "rate_limited";
@@ -200,8 +213,25 @@ public final class RelayServer {
                 token = tokens.token();
             } catch (IOException | RuntimeException e) {
                 status = 503;
-                outcome = "token_unavailable";
+                outcome = "token_unavailable:" + e.getClass().getSimpleName();
                 send(ex, 503, error("IDENTITY_TOKEN_UNAVAILABLE", true));
+                return;
+            }
+            String sig = ex.getRequestHeaders().getFirst("X-RSFA-Signature").toLowerCase(Locale.ROOT);
+            long now = clock.instant().getEpochSecond();
+            boolean first;
+            try {
+                first = replay.claim(sha256Hex(sig), now + 2 * MAX_SKEW_SECONDS, now);
+            } catch (IOException | RuntimeException e) {
+                status = 503;
+                outcome = "replay_store_unavailable:" + e.getClass().getSimpleName();
+                send(ex, 503, error("REPLAY_STORE_UNAVAILABLE", true));
+                return;
+            }
+            if (!first) {
+                status = 409;
+                outcome = "REPLAYED_REQUEST";
+                send(ex, 409, error("REPLAYED_REQUEST", false));
                 return;
             }
             HttpRequest.Builder up = HttpRequest.newBuilder(target.resolve(PATH)).timeout(upstreamTimeout)
@@ -210,38 +240,37 @@ public final class RelayServer {
             if (cid != null) {
                 up.header("X-Correlation-Id", cid);
             }
-            HttpResponse<InputStream> res;
+            Upstream res;
+            Future<Upstream> call = upstreamCalls.submit(() -> exchange(up.build()));
             try {
-                res = http.send(up.build(), HttpResponse.BodyHandlers.ofInputStream());
-            } catch (HttpTimeoutException e) {
+                res = call.get(upstreamTimeout.toMillis(), TimeUnit.MILLISECONDS);
+            } catch (TimeoutException e) {
+                call.cancel(true);
                 status = 504;
                 outcome = "upstream_timeout";
                 send(ex, 504, error("UPSTREAM_TIMEOUT", true));
                 return;
-            } catch (IOException e) {
-                status = 502;
-                outcome = "upstream_unreachable";
-                send(ex, 502, error("UPSTREAM_UNAVAILABLE", true));
+            } catch (ExecutionException e) {
+                boolean timeout = e.getCause() instanceof HttpTimeoutException;
+                status = timeout ? 504 : 502;
+                outcome = (timeout ? "upstream_timeout:" : "upstream_unreachable:") + e.getCause().getClass().getSimpleName();
+                send(ex, status, error(timeout ? "UPSTREAM_TIMEOUT" : "UPSTREAM_UNAVAILABLE", true));
                 return;
             }
-            if (res.statusCode() == 401 || res.statusCode() == 403) {
-                res.body().close();
+            if (res.status() == 401 || res.status() == 403) {
                 status = 502;
-                outcome = "upstream_auth_" + res.statusCode();
+                outcome = "upstream_auth_" + res.status();
                 send(ex, 502, error("UPSTREAM_AUTH_FAILED", false)); // relay misconfiguration; never shown as Make's fault
                 return;
             }
-            byte[] payload;
-            try (InputStream in = res.body()) {
-                payload = in.readNBytes((int) MAX_RESPONSE_BYTES + 1);
-            }
+            byte[] payload = res.body();
             if (payload.length > MAX_RESPONSE_BYTES) {
                 status = 502;
                 outcome = "upstream_too_large";
                 send(ex, 502, error("UPSTREAM_RESPONSE_TOO_LARGE", false));
                 return;
             }
-            status = res.statusCode();
+            status = res.status();
             outcome = "forwarded";
             var h = ex.getResponseHeaders();
             h.set("Content-Type", res.headers().firstValue("Content-Type").orElse("application/json"));
@@ -264,23 +293,41 @@ public final class RelayServer {
         }
     }
 
-    /** Null when authentic and fresh; otherwise the error code (no detail about which check failed beyond the code). */
-    private String authenticate(HttpExchange ex, byte[] body) {
+    /** Header format and freshness, checked before the body is read; null when acceptable. */
+    private String checkHeaders(HttpExchange ex) {
         String ts = ex.getRequestHeaders().getFirst("X-RSFA-Timestamp");
         String sig = ex.getRequestHeaders().getFirst("X-RSFA-Signature");
         if (ts == null || sig == null || !ts.matches("[0-9]{1,12}") || !SIGNATURE.matcher(sig).matches()) {
             return "MISSING_SIGNATURE";
         }
         long now = clock.instant().getEpochSecond();
-        if (Math.abs(now - Long.parseLong(ts)) > MAX_SKEW_SECONDS) {
-            return "STALE_TIMESTAMP";
-        }
+        return Math.abs(now - Long.parseLong(ts)) > MAX_SKEW_SECONDS ? "STALE_TIMESTAMP" : null;
+    }
+
+    /** Null when the signature matches the exact received bytes (headers already checked by {@link #checkHeaders}). */
+    private String authenticate(HttpExchange ex, byte[] body) {
+        String ts = ex.getRequestHeaders().getFirst("X-RSFA-Timestamp");
+        String sig = ex.getRequestHeaders().getFirst("X-RSFA-Signature");
         byte[] given = sig.substring(3).toLowerCase(Locale.ROOT).getBytes(StandardCharsets.UTF_8);
         boolean ok = false;
         for (byte[] secret : secrets) {
             ok |= MessageDigest.isEqual(hmacHex(secret, ts, body).getBytes(StandardCharsets.UTF_8), given);
         }
         return ok ? null : "INVALID_SIGNATURE";
+    }
+
+    /** Upstream answer, fully read (bounded) inside the overall deadline. */
+    private record Upstream(int status, java.net.http.HttpHeaders headers, byte[] body) {
+    }
+
+    private Upstream exchange(HttpRequest request) throws IOException, InterruptedException {
+        HttpResponse<InputStream> r = http.send(request, HttpResponse.BodyHandlers.ofInputStream());
+        try (InputStream in = r.body()) {
+            if (r.statusCode() == 401 || r.statusCode() == 403) {
+                return new Upstream(r.statusCode(), r.headers(), new byte[0]);
+            }
+            return new Upstream(r.statusCode(), r.headers(), in.readNBytes((int) MAX_RESPONSE_BYTES + 1));
+        }
     }
 
     static String sha256Hex(String s) {

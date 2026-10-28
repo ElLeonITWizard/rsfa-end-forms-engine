@@ -114,9 +114,25 @@ extracted to `.local/generated/templates/`. A green build without them proves on
 8. Nothing is deployed or changed in Google Cloud without RSFA's explicit approval of the exact commands (docs/04).
    Never build from the repo root for deployment: only from the staged context.
 
-## Current status (2026-10-28, iteration 8)
+## Current status (2026-10-28, iteration 9)
 
-- **Iteration 8 (nothing deployed; no change in Make, Monday, SharePoint or GCP; `00002-nan` untouched):**
+- **Iteration 9 (production unchanged; nothing deployed; `00002-nan` untouched):**
+  - **`8731317` fix ready for approval (docs/09):**
+    - Fresh read is byte-identical to the backup (`lastEdit` 2026-07-16).
+    - The proposal (7 lines in module 8) differs from the current blueprint in exactly one path.
+    - Rollback blueprint is kept in `.local/`. Make validates the module configuration; 24 regression checks pass.
+    - **Not applied:** it awaits explicit approval.
+  - **Engine revision 3 bundle (docs/04, D-035):**
+    - `/v1` added; allowlist, demo page and IAM unchanged.
+    - Reproducible archive with SHA-256. The deploy script verifies `/v1` and requires `EXPECT_PREVIOUS_REVISION`.
+    - Locally rehearsed: image built from the staged context, run as `PLATFORM_IAM` behind an IAM stand-in.
+  - **Relay (docs/10 §9, D-036):**
+    - Independent review: no HIGH issues. M1, M2, M4 and L1 fixed locally; M3 (Cloud Storage 403 vs 412) must be
+      verified at deployment.
+    - 17 relay tests.
+  - **Tests:** 81 Java + 25 Python + 68 Node checks; local Make-payload chain 12/12; BNZ Boarder bytes unchanged.
+
+- **Iteration 8 (superseded where iteration 9 differs; nothing deployed; no change in Make, Monday, SharePoint or GCP; `00002-nan` untouched):**
   - **`8731317` investigation (docs/09, D-033):**
     - Confirmed: `dropdown_mkzvfgeg` was renamed 2026-10-25, module 8 keys by live title, and MacroForge still tests
       `Banks to Send`. Reproduced locally.

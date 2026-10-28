@@ -412,6 +412,94 @@ class RelayHardeningTest {
     }
 
     @Test
+    void headersAreCheckedBeforeTheBodyAndOversizedDeclaredBodiesAreRefusedUnread() throws Exception {
+        String a = base(gcsRelay());
+        String big = "{\"pad\":\"" + "x".repeat(2 * 1024 * 1024) + "\"}";
+        HttpResponse<String> unsigned = post(a, big, Map.of());
+        assertEquals(401, unsigned.statusCode(), "no signature: refused before the 2 MiB body is read");
+        assertEquals("MISSING_SIGNATURE", code(unsigned));
+        HttpResponse<String> stale = post(a, big, Map.of("X-RSFA-Timestamp", Long.toString(NOW.getEpochSecond() - 900),
+                "X-RSFA-Signature", "v1=" + "0".repeat(64)));
+        assertEquals("STALE_TIMESTAMP", code(stale));
+        HttpResponse<String> declared = post(a, big, signed(NOW.getEpochSecond(), big));
+        assertEquals(413, declared.statusCode(), "Content-Length above 1 MiB: refused from the header");
+    }
+
+    @Test
+    void aRetryableRefusalNeverConsumesTheSignature() throws Exception {
+        AtomicInteger calls = new AtomicInteger();
+        String a = base(new RelayServer(target, List.of(SECRET), () -> {
+            if (calls.incrementAndGet() == 1) {
+                throw new IOException("metadata server briefly unavailable");
+            }
+            return TOKEN;
+        }, CLOCK, 1000, new GcsReplayStore(gcsBase, "rsfa-relay-replay-test", () -> GCS_TOKEN)));
+        String body = synthBody();
+        Map<String, String> h = signed(NOW.getEpochSecond(), body);
+        HttpResponse<String> first = post(a, body, h);
+        assertEquals(503, first.statusCode());
+        assertEquals("IDENTITY_TOKEN_UNAVAILABLE", code(first));
+        assertEquals(200, post(a, body, h).statusCode(), "the same signed bytes can be resent after a retryable refusal");
+        assertEquals(409, post(a, body, h).statusCode(), "once forwarded, the signature is used up");
+        // rate limit: refused before the claim as well
+        String limited = base(new RelayServer(target, List.of(SECRET), () -> TOKEN, CLOCK, 1,
+                new GcsReplayStore(gcsBase, "rsfa-relay-replay-test", () -> GCS_TOKEN)));
+        String b1 = synthBody();
+        assertEquals(200, post(limited, b1, signed(NOW.getEpochSecond(), b1)).statusCode());
+        String b2 = synthBody();
+        Map<String, String> h2 = signed(NOW.getEpochSecond(), b2);
+        assertEquals(429, post(limited, b2, h2).statusCode());
+        assertFalse(objects.containsKey("replay%2F" + sha256(h2.get("X-RSFA-Signature"))), "a 429 leaves no replay record");
+    }
+
+    @Test
+    void aStalledUpstreamBodyIsCutOffByTheOverallDeadline() throws Exception {
+        HttpServer stall = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        stall.createContext("/", ex -> {
+            try {
+                ex.getResponseHeaders().set("Content-Type", "application/json");
+                ex.sendResponseHeaders(200, 1000); // headers now, body never completes
+                ex.getResponseBody().write("{\"status\":".getBytes(StandardCharsets.UTF_8));
+                ex.getResponseBody().flush();
+                Thread.sleep(5000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            } finally {
+                ex.close();
+            }
+        });
+        stall.setExecutor(Executors.newVirtualThreadPerTaskExecutor());
+        stall.start();
+        try {
+            String a = base(new RelayServer(URI.create("http://127.0.0.1:" + stall.getAddress().getPort()), List.of(SECRET),
+                    () -> TOKEN, CLOCK, 1000, new ReplayStore.Memory(100)).withUpstreamTimeout(Duration.ofMillis(400)));
+            String body = synthBody();
+            long t0 = System.nanoTime();
+            HttpResponse<String> r = post(a, body, signed(NOW.getEpochSecond(), body));
+            assertEquals(504, r.statusCode());
+            assertEquals("UPSTREAM_TIMEOUT", code(r));
+            assertTrue((System.nanoTime() - t0) / 1_000_000 < 3000, "answered at the deadline, not when the body ends");
+        } finally {
+            stall.stop(0);
+        }
+    }
+
+    @Test
+    void aMisconfiguredRoleFailsClosed() {
+        assertEquals("engine", Main.roleOf(Map.of()));
+        assertEquals("relay", Main.roleOf(Map.of("ENGINE_ROLE", "relay", "K_SERVICE", "rsfa-end-forms-relay")));
+        assertThrows(IllegalStateException.class, () -> Main.roleOf(Map.of("ENGINE_ROLE", "realy")), "misspelt role");
+        assertThrows(IllegalStateException.class, () -> Main.roleOf(Map.of("K_SERVICE", "rsfa-end-forms-relay")),
+                "forgotten ENGINE_ROLE on the relay service would expose the engine publicly");
+        assertEquals("engine", Main.roleOf(Map.of("K_SERVICE", "rsfa-end-forms-engine")));
+    }
+
+    static String sha256(String s) throws Exception {
+        return java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
+                .digest(s.toLowerCase(java.util.Locale.ROOT).getBytes(StandardCharsets.UTF_8)));
+    }
+
+    @Test
     void theDocumentedTestVectorIsWhatTheRelayVerifies() throws Exception {
         // inline, so it also runs in the staged image build, where contracts/ is not part of the context
         String secret = "rsfa-test-vector-secret-NOT-FOR-USE-0001";

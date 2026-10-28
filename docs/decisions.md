@@ -500,3 +500,20 @@ Lightweight ADR log, newest last. Status: `proposed` | `accepted` | `superseded`
   deployment step and is approved separately (docs/10 §8).
 - **Validation:** local rehearsal (docs/04 "Revision 3"). It found and fixed a test that read a file outside the
   staged context.
+
+### D-036 Relay hardening after the independent review
+- **Date:** 2026-10-28 · **Status:** accepted (code); deployment items need RSFA approval
+- **Decision:**
+  - Check signature headers, freshness and `Content-Length` before reading the body; bound request read time to 15 s.
+  - Rate limit and identity token before the replay claim.
+  - One 90 s upstream deadline including the body.
+  - Fail closed on an unknown `ENGINE_ROLE` and on an engine started on a `*relay*` service.
+  - Log exception classes only.
+- **Deployment rules:**
+  - a different secret per environment;
+  - pinned secret versions with a new revision per rotation step;
+  - bucket lifecycle age ≥ 1 day;
+  - billing budget alert and log exclusion for unauthenticated relay noise;
+  - verify whether Cloud Storage answers 403 or 412 for an existing object with `objectCreator` only.
+- **Details:** docs/10 §9.
+

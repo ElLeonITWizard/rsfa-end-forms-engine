@@ -35,7 +35,8 @@ Make editor when building. None is invented here.
         │    14 builtin:BasicAggregator v1  (source 12) fileName, status, code, webUrl
         │    15 datastore:AddRecord v1      status = filed | filed-partial | dry-run
         │    16 gateway:WebhookRespond v1   200 summary
-        ├ B  filter: statusCode in (400,401,404,409,413,422)   (never retried)
+        ├ B  filter: statusCode in (400,401,404,409,413,422)   (never retried; 409 = this signature was already
+        │                                                        forwarded once: a later attempt re-signs anyway)
         │    17 datastore:AddRecord v1      status = failed, codes
         │    18 gateway:WebhookRespond v1   summary
         └ C  filter: statusCode in (429,502,503,504,599) OR 10.data.retryable = true
@@ -134,6 +135,7 @@ All rows except T6 and T8 (Make-side behaviour) were run locally on 2026-10-28 t
 | T10 | `T10.json` BNZ + ASB | ✔ 200; 3 PDFs in one response; 3 uploads |
 | T11 | `T11.json` per-document | ✔ 200 `partial`; BNZ + GHL Individual uploaded; GHL Trust failed (missing trust name); record `filed-partial` |
 | T12 | `T12.json` individual client, ASB | ✔ 200 `partial`; GHL Individual only; Trust refused (missing trust name). Illustrates RSFA-DECISION-3 |
+| T13 | T1 while the relay's replay bucket is unreachable (test relay revision with a wrong bucket name) | 503 `REPLAY_STORE_UNAVAILABLE` ×3, **re-signed each time**, record `failed-after-retries`; no PDF. Repeat with the bucket restored: 200 |
 
 The same run also confirmed that an **exact replay** of a signed request is refused (409).
 

@@ -137,7 +137,8 @@ public final class Main {
 
     private static int serve() throws Exception {
         Map<String, String> env = System.getenv();
-        if ("relay".equals(env.get("ENGINE_ROLE"))) {
+        String role = roleOf(env);
+        if ("relay".equals(role)) {
             return relay(env);
         }
         String host = env.getOrDefault("ENGINE_BIND", "127.0.0.1");
@@ -184,6 +185,10 @@ public final class Main {
             tokens = new MetadataIdTokenSource(target, java.time.Clock.systemUTC());
         }
         ReplayStore replay = replayStore(env);
+        // Bounds how long a client may take to send its request (slow-body connections cannot hold the few slots).
+        if (System.getProperty("sun.net.httpserver.maxReqTime") == null) {
+            System.setProperty("sun.net.httpserver.maxReqTime", env.getOrDefault("RELAY_MAX_REQUEST_SECONDS", "15"));
+        }
         RelayServer relay = new RelayServer(java.net.URI.create(target),
                 Arrays.stream(secrets.split(",")).map(String::trim).filter(x -> !x.isEmpty()).toList(), tokens,
                 java.time.Clock.systemUTC(), Integer.parseInt(env.getOrDefault("RELAY_RATE_PER_MINUTE", "30")), replay);
@@ -193,6 +198,23 @@ public final class Main {
         Runtime.getRuntime().addShutdownHook(new Thread(relay::stop));
         Thread.currentThread().join();
         return 0;
+    }
+
+    /**
+     * {@code relay} or {@code engine} (default). Fails closed on a misspelt role, and refuses to run the engine on a
+     * Cloud Run service named like the relay: a forgotten ENGINE_ROLE there would expose the engine publicly.
+     */
+    static String roleOf(Map<String, String> env) {
+        String role = env.getOrDefault("ENGINE_ROLE", "engine").trim();
+        if (!role.equals("engine") && !role.equals("relay")) {
+            throw new IllegalStateException("ENGINE_ROLE must be 'engine' or 'relay'");
+        }
+        String service = env.getOrDefault("K_SERVICE", "");
+        if (role.equals("engine") && service.contains("relay")) {
+            throw new IllegalStateException("Cloud Run service '" + service + "' looks like the relay but ENGINE_ROLE is not "
+                    + "'relay'; refusing to start the engine there");
+        }
+        return role;
     }
 
     static ReplayStore replayStore(Map<String, String> env) {
