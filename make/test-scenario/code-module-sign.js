@@ -111,13 +111,102 @@ function buildRequest(p, executionId, today) {
   };
 }
 
+// Monday mode (iteration 12, docs/15): an APPROVED test item read with monday:GetItemV2, its columns mapped into this
+// module BY STABLE COLUMN ID (input names = column IDs). Titles below are the runtime keys the engine manifests use
+// (what 8731317 module 8 produces today); the IDs are the source of truth. BNZ Boarder only.
+const MONDAY_BOARD = '5026186805';
+const BNZ_COLUMNS = {
+  text_mm2tsfyq: 'Applicant 1 Full Name',
+  text_mm2tgjpw: 'Applicant 2 Full Name',
+  numeric_mkzvmp91: 'Number of rooms proposed to be rented',
+  numeric_mkzvk0wg: 'Proposed weekly amount(s) per room',
+};
+const ADDRESS_COLUMN = 'text_mkzvqaw7'; // "1st Property Address" (free text)
+const BANKS_COLUMN = 'dropdown_mkzvfgeg'; // "Selected Banks" (was "Banks to Send" until 2026-10-25)
+const REQUIRED = ['Applicant 1 Full Name', 'Number of rooms proposed to be rented', 'Proposed weekly amount(s) per room'];
+
+class Refused extends Error {
+  constructor(code, detail) { super(code + (detail ? ': ' + detail : '')); this.code = code; }
+}
+
+// Strict, deterministic split of "<street>, [<suburb>,] <city> <4-digit postcode>". 8731317 uses GPT for this; the
+// POC never guesses: anything else is refused (ADDRESS_UNPARSEABLE) and no PDF is requested. Values are never echoed.
+function splitAddress(text) {
+  const t = String(text || '').replace(/\s+/g, ' ').trim().replace(/,?\s*New Zealand$/i, '');
+  const parts = t.split(',').map(s => s.trim()).filter(Boolean);
+  if (parts.length < 2) throw new Refused('ADDRESS_UNPARSEABLE', 'expected "street, city postcode"');
+  const m = /^(.*\S)\s+([0-9]{4})$/.exec(parts[parts.length - 1]);
+  if (!m || !/[0-9]/.test(parts[0])) throw new Refused('ADDRESS_UNPARSEABLE', 'expected "street, city postcode"');
+  const street = parts.slice(0, parts.length - 1).join(', ');
+  return { street, city: m[1], postcode: m[2] };
+}
+
+function canonical(o) {
+  return Array.isArray(o) ? '[' + o.map(canonical).join(',') + ']'
+    : o && typeof o === 'object' ? '{' + Object.keys(o).sort().map(k => JSON.stringify(k) + ':' + canonical(o[k])).join(',') + '}'
+      : JSON.stringify(o);
+}
+
+function buildMondayRequest(inp) {
+  const itemId = String(inp.itemId || '').trim();
+  const approved = String(inp.approvedItemIds || '').split(',').map(s => s.trim()).filter(Boolean);
+  if (!/^[0-9]{6,20}$/.test(itemId)) throw new Refused('INVALID_ITEM', 'itemId must be numeric');
+  if (!approved.includes(itemId)) throw new Refused('ITEM_NOT_APPROVED', 'only explicitly approved test items may be used');
+  if (String(inp.boardId || '') !== MONDAY_BOARD) throw new Refused('WRONG_BOARD', 'the item is not on the SOP Masterboard');
+  if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(String(inp.today || ''))) throw new Refused('INVALID_TODAY');
+  if (!/^[A-Za-z0-9._:-]{1,64}$/.test(String(inp.executionId || ''))) throw new Refused('INVALID_EXECUTION_ID');
+  const labels = String(inp[BANKS_COLUMN] || '').split(',').map(s => s.trim()).filter(Boolean);
+  if (!labels.includes('BNZ')) throw new Refused('BNZ_NOT_SELECTED', 'Selected Banks (dropdown_mkzvfgeg) has no BNZ');
+  const data = {};
+  for (const [id, title] of Object.entries(BNZ_COLUMNS)) {
+    const v = inp[id] == null ? '' : String(inp[id]).trim();
+    if (v) data[title] = v;
+  }
+  const addr = splitAddress(inp[ADDRESS_COLUMN]);
+  data['1st Property Address Street'] = addr.street;
+  data['1st Property Address City'] = addr.city;
+  data['1st Property Address Postcode'] = addr.postcode;
+  const missing = REQUIRED.filter(k => !data[k]);
+  if (missing.length) throw new Refused('MISSING_REQUIRED_DATA', missing.length + ' required column(s) empty');
+  const digest = sha256(utf8Bytes(canonical({ itemId, data, banks: ['BNZ'] })))
+    .slice(0, 6).map(b => (b < 16 ? '0' : '') + b.toString(16)).join('');
+  return {
+    request: {
+      contractVersion: 'masterboard.v1',
+      correlationId: 'mb-' + MONDAY_BOARD + '-' + itemId + '-' + inp.executionId,
+      idempotencyKey: itemId + '-bnz-boarder-' + digest,
+      today: inp.today,
+      source: { boardId: MONDAY_BOARD, itemId },
+      selection: { banks: ['BNZ'] },
+      options: { failurePolicy: 'all-or-nothing', includePdf: true },
+      data,
+    },
+    otherBanks: labels.filter(l => l !== 'BNZ'),
+  };
+}
+
 // --- module body (the Code module runs this with `input` provided by Make) ---
-// raw = true: payload is a complete request as JSON text, signed byte-for-byte (test vectors, replaying a stored body).
+// mode = "monday": approved test item, columns by ID (above); refusals return {refused: CODE} instead of throwing, so
+// the scenario can record them. raw = true: payload is a complete request as JSON text, signed byte-for-byte.
 // Otherwise payload is a synthetic Masterboard payload (object, or the webhook's JSON pass-through text): normalised first.
 let body;
 let request;
-const given = typeof input.payload === 'string' ? JSON.parse(input.payload) : input.payload; // malformed JSON fails here
-if (input.raw === true) {
+let otherBanks = [];
+if (input.mode === 'monday') {
+  try {
+    const built = buildMondayRequest(input);
+    request = built.request;
+    otherBanks = built.otherBanks;
+  } catch (e) {
+    if (e instanceof Refused) return { refused: e.code, message: e.message };
+    throw e;
+  }
+}
+const given = input.mode === 'monday' ? null
+  : typeof input.payload === 'string' ? JSON.parse(input.payload) : input.payload; // malformed JSON fails here
+if (input.mode === 'monday') {
+  body = JSON.stringify(request);
+} else if (input.raw === true) {
   if (typeof input.payload !== 'string') throw new Error('raw mode needs the request as JSON text');
   body = input.payload;
   request = given;
@@ -129,4 +218,5 @@ const timestamp = String(input.timestamp);
 if (!/^[0-9]{1,12}$/.test(timestamp)) throw new Error('timestamp must be unix seconds');
 if (!input.secret || String(input.secret).length < 32) throw new Error('secret missing or too short');
 return { body, timestamp, correlationId: request.correlationId || null, idempotencyKey: request.idempotencyKey || null,
+  itemId: request.source ? request.source.itemId : null, otherBanks: otherBanks.join(', '), refused: null,
   signature: 'v1=' + hmacSha256Hex(String(input.secret), timestamp + '.' + body) };

@@ -179,7 +179,7 @@ public final class Main {
     /**
      * Authenticated intermediary for Make (D-027): verifies the HMAC signature and calls the private engine with the
      * service account's Google ID token from the metadata server. Env: RELAY_TARGET_URL, RELAY_HMAC_SECRETS (1-2,
-     * comma-separated, from Secret Manager), RELAY_RATE_PER_MINUTE (default 30), PORT, ENGINE_BIND,
+     * comma-separated, from Secret Manager), RELAY_RATE_PER_MINUTE (default 30), RELAY_UPSTREAM_TIMEOUT_SECONDS (default 90), PORT, ENGINE_BIND,
      * RELAY_REPLAY_STORE ({@code gcs} with RELAY_REPLAY_BUCKET, or {@code memory}). On Cloud Run the per-instance
      * {@code memory} store is refused unless RELAY_SINGLE_INSTANCE=true acknowledges {@code --max-instances=1}.
      */
@@ -208,6 +208,14 @@ public final class Main {
         RelayServer relay = new RelayServer(java.net.URI.create(target),
                 Arrays.stream(secrets.split(",")).map(String::trim).filter(x -> !x.isEmpty()).toList(), tokens,
                 java.time.Clock.systemUTC(), Integer.parseInt(env.getOrDefault("RELAY_RATE_PER_MINUTE", "30")), replay);
+        String timeout = env.get("RELAY_UPSTREAM_TIMEOUT_SECONDS"); // default 90 s; must stay below Cloud Run's timeout
+        if (timeout != null) {
+            int t = Integer.parseInt(timeout.trim());
+            if (t < 1 || t > 110) {
+                throw new IllegalStateException("RELAY_UPSTREAM_TIMEOUT_SECONDS must be 1..110");
+            }
+            relay.withUpstreamTimeout(java.time.Duration.ofSeconds(t));
+        }
         String host = env.getOrDefault("ENGINE_BIND", "127.0.0.1");
         int bound = relay.start(host, Integer.parseInt(env.getOrDefault("PORT", "8080")));
         System.err.printf("end-forms relay listening on %s:%d%n", host, bound);
@@ -216,14 +224,14 @@ public final class Main {
         return 0;
     }
 
-    /**
-     * Private administration service behind IAP (D-041): its own Cloud Run service, service account and bucket; it never
-     * calls the engine. Configuration and fail-closed checks: {@link nz.co.rsfa.endforms.admin.AdminService}.
-     */
     /** Strong references: java.util.logging keeps loggers weakly, and a collected logger loses its level. */
     private static final List<java.util.logging.Logger> QUIET = List.of(java.util.logging.Logger.getLogger("org.apache.pdfbox"),
             java.util.logging.Logger.getLogger("org.apache.fontbox"));
 
+    /**
+     * Private administration service behind IAP (D-041): its own Cloud Run service, service account and bucket; it never
+     * calls the engine. Configuration and fail-closed checks: {@link nz.co.rsfa.endforms.admin.AdminService}.
+     */
     private static int adminService(Map<String, String> env) throws Exception {
         // PDFBox may log details of uploaded templates (object numbers, font names): keep only its severe messages.
         QUIET.forEach(l -> l.setLevel(java.util.logging.Level.SEVERE));

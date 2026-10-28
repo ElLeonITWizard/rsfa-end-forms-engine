@@ -1,0 +1,28 @@
+{
+  "_comment": "FICTIONAL Masterboard items shaped like monday:GetItemV2 output (mappable_column_values.<columnId>.text). Item ids 99000000xx are not real Monday ids; they are only accepted when listed in approvedItemIds. Used by tests/make/e2e_scenario_test.js (docs/15).",
+  "9900000001": {"board": {"id": "5026186805"}, "mappable_column_values": {
+    "text_mm2tsfyq": {"text": "Jane Example"}, "text_mm2tgjpw": {"text": "John Sample"},
+    "text_mkzvqaw7": {"text": "12 Example Street, Testville, Auckland 0999"},
+    "numeric_mkzvmp91": {"text": "2"}, "numeric_mkzvk0wg": {"text": "250.00"},
+    "dropdown_mkzvfgeg": {"text": "BNZ, ASB"}}},
+  "9900000002": {"board": {"id": "5026186805"}, "mappable_column_values": {
+    "text_mm2tsfyq": {"text": ""}, "text_mm2tgjpw": {"text": ""},
+    "text_mkzvqaw7": {"text": "5 Sample Road, Exampleton 0998"},
+    "numeric_mkzvmp91": {"text": "1"}, "numeric_mkzvk0wg": {"text": "180"},
+    "dropdown_mkzvfgeg": {"text": "BNZ"}}},
+  "9900000003": {"board": {"id": "5026186805"}, "mappable_column_values": {
+    "text_mm2tsfyq": {"text": "Jane Example"}, "text_mm2tgjpw": {"text": ""},
+    "text_mkzvqaw7": {"text": "somewhere near the harbour"},
+    "numeric_mkzvmp91": {"text": "1"}, "numeric_mkzvk0wg": {"text": "180"},
+    "dropdown_mkzvfgeg": {"text": "BNZ"}}},
+  "9900000004": {"board": {"id": "5026186805"}, "mappable_column_values": {
+    "text_mm2tsfyq": {"text": "Jane Example"}, "text_mm2tgjpw": {"text": ""},
+    "text_mkzvqaw7": {"text": "5 Sample Road, Exampleton 0998"},
+    "numeric_mkzvmp91": {"text": "1"}, "numeric_mkzvk0wg": {"text": "180"},
+    "dropdown_mkzvfgeg": {"text": "ASB"}}},
+  "9900000005": {"board": {"id": "5026186805"}, "mappable_column_values": {
+    "text_mm2tsfyq": {"text": "Jane Example"}, "text_mm2tgjpw": {"text": ""},
+    "text_mkzvqaw7": {"text": "7 Fictional Lane, Testburg 0997"},
+    "numeric_mkzvmp91": {"text": "3"}, "numeric_mkzvk0wg": {"text": "210.00"},
+    "dropdown_mkzvfgeg": {"text": "BNZ"}}}
+}
