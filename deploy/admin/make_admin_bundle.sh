@@ -17,6 +17,18 @@ JAR=$ROOT/engine/target/end-forms-engine.jar
 [ -f "$JAR" ] || { echo "build the jar first: (cd engine && mvn -B package)" >&2; exit 1; }
 [ -z "$(git -C "$ROOT" status --porcelain -- engine deploy mappings curation tools/stage_admin.py)" ] \
   || { echo "uncommitted changes in engine/deploy/mappings/curation: commit first" >&2; exit 1; }
+python3 - "$WORK/context" "$ROOT" <<'PY' || { echo "the staged context is stale: re-run tools/stage_admin.py" >&2; exit 1; }
+import hashlib, sys
+from pathlib import Path
+ctx, root = Path(sys.argv[1]), Path(sys.argv[2])
+staged = {l.split(" ", 2)[2].strip(): l.split(" ", 1)[0] for l in (ctx / "STAGED_FILES.txt").read_text().splitlines() if l.strip()}
+repo = {str(p.relative_to(root)) for base in ("engine/src", "mappings", "curation") for p in (root / base).rglob("*") if p.is_file()}
+repo |= {"engine/pom.xml", "deploy/admin/Dockerfile", "deploy/admin/cloudbuild.yaml", "deploy/poc-allowlist.json", "deploy/deployment-state.json"}
+diff = [r for r in sorted(repo) if staged.get(r) != hashlib.sha256((root / r).read_bytes()).hexdigest()]
+diff += [s for s in staged if s not in repo and s != "cloudbuild.yaml"]
+print(f"staged context vs repository: {len(staged)} files, {len(diff)} differ" + (f" (e.g. {diff[0]})" if diff else ""))
+sys.exit(1 if diff else 0)
+PY
 rm -rf "$OUT"; mkdir -p "$OUT/config"
 cp -r "$WORK/context" "$OUT/context"
 cp "$WORK/config/monday-schema.json" "$OUT/config/"
