@@ -10,7 +10,7 @@ const root = path.resolve(__dirname, '..', '..');
 const original = process.argv[2] || path.join(root, '.local/reference/make/8731317-module8-code.js');
 if (!fs.existsSync(original)) { console.log('SKIPPED: production module-8 code not in .local'); process.exit(0); }
 const code = fs.readFileSync(original, 'utf8');
-const snippet = fs.readFileSync(path.join(root, 'make/8731317/module8-banks-alias.snippet.js'), 'utf8');
+const snippet = fs.readFileSync(path.join(root, 'make/8731317/module8-banks-alias.snippet.js'), 'utf8').replace(/\n+$/, '');
 const ANCHOR = 'const result = mapColumns(input.column_values);';
 assert.strictEqual(code.split(ANCHOR).length, 2, 'anchor must occur exactly once');
 const patched = code.replace(ANCHOR, ANCHOR + '\n' + snippet);
@@ -64,4 +64,23 @@ ok(back['Banks to Send'] === 'WBC' && !('Selected Banks' in back), 'patched + ti
 // 7. Column missing (deleted): no alias, no error.
 const missing = run(patched, { column_values: [], subitems: [], DateFieldsToSplit: '', split_addresses_json: '' });
 ok(!('Banks to Send' in missing), 'patched + column absent: no key, no exception');
+// 8. Alias strictly equals "Selected Banks" for every selection shape Monday can produce (dropdown text)
+const shapes = ['ASB', 'ANZ', 'BNZ', 'KiwiBank', 'WBC', 'ASB, BNZ', 'ANZ, KiwiBank, WBC', 'ASB, ANZ, BNZ, KiwiBank, WBC', '', null];
+for (const banks of shapes) {
+  const it = item('Selected Banks', banks);
+  if (banks === null) it.column_values[0].text = null;
+  const r = run(patched, it);
+  assert.strictEqual(r['Banks to Send'], r['Selected Banks']); checks++;
+}
+console.log(`ok   alias === "Selected Banks" for ${shapes.length} selection shapes (incl. empty and null)`);
+// 9. Same object keys as production plus exactly one
+const k0 = Object.keys(run(code, item('Selected Banks', 'BNZ')));
+const k1 = Object.keys(run(patched, item('Selected Banks', 'BNZ')));
+ok(k1.length === k0.length + 1 && k0.every(k => k1.includes(k)) && k1.filter(k => !k0.includes(k))[0] === 'Banks to Send',
+   'exactly one key added, no key removed or renamed');
+// 10. The module-8 code inside the proposed blueprint is exactly what this test ran
+const proposedPath = path.join(root, '.local/reference/make/8731317-module8-PROPOSED.js');
+if (fs.existsSync(proposedPath)) {
+  ok(fs.readFileSync(proposedPath, 'utf8') === patched, 'proposed blueprint module 8 == tested code (byte-identical)');
+}
 console.log(`MODULE 8 ALIAS TEST PASSED (${checks} checks)`);

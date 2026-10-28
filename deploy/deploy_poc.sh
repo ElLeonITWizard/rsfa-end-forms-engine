@@ -16,7 +16,11 @@
 #                       - deploys the new revision with NO traffic under the tag "$CANDIDATE_TAG" and verifies it there;
 #                       - only then moves 100% traffic to it, re-verifies the main URL and prints the rollback command.
 #                       If anything fails before promotion, the previous revision keeps serving all traffic.
-#   EXPECT_PREVIOUS_REVISION=<name>  (update) refuse unless this revision is the one currently serving 100%.
+#   EXPECT_PREVIOUS_REVISION=<name>  (update, REQUIRED) refuse unless this revision is the one currently serving 100%.
+#
+# Revision 3 (iteration 9) also verifies POST /v1/masterboard/documents on the candidate and on the main URL:
+# unauthenticated -> 401/403; BNZ request -> 200 complete with the expected PDF bytes; unknown bank -> 422 UNKNOWN_BANK;
+# an ASB request with candidates -> 422 UNKNOWN_TEMPLATE (proves no unapproved form is in the image).
 set -euo pipefail
 
 PROJECT_ID=${PROJECT_ID:-rsfa-end-forms-engine}
@@ -31,6 +35,9 @@ IMAGE_BASE=${REGION}-docker.pkg.dev/${PROJECT_ID}/${AR_REPO}/end-forms-engine
 HERE=$(cd "$(dirname "$0")" && pwd)
 CONTEXT=${CONTEXT:-$HERE/context}
 FIXTURE=${FIXTURE:-$HERE/fixture.request.json}
+V1_REQUEST=${V1_REQUEST:-$HERE/v1-bnz.request.json}
+V1_UNKNOWN=${V1_UNKNOWN:-$HERE/v1-unknown-bank.request.json}
+V1_UNAPPROVED=${V1_UNAPPROVED:-$HERE/v1-asb-candidates.request.json}
 [ -f "$FIXTURE" ] || FIXTURE=$HERE/../tests/fixtures/bnz-boarder.request.json
 VERIFY=${VERIFY:-$HERE/verify_pdf.py}
 OUT=${OUT:-$PWD/cloudrun-output}
@@ -39,7 +46,9 @@ mkdir -p "$OUT"
 
 step() { printf '\n=== %s ===\n' "$*"; }
 ok()   { printf '  [ok] %s\n' "$*"; }
-die()  { printf '\n  [BLOCKER] %s\n\n' "$*" >&2; exit 1; }
+die()  { printf '\n  [BLOCKER] %s\n' "$*" >&2
+         [ -z "${ROLLBACK_HINT:-}" ] || printf '  Traffic was already moved. Roll back now:\n  %s\n' "$ROLLBACK_HINT" >&2
+         printf '\n' >&2; exit 1; }
 gc()   { gcloud --project="$PROJECT_ID" "$@"; }
 CANDIDATE_TAG=${CANDIDATE_TAG:-candidate}
 EXPECTED_HEALTH='"templates":1,"available":["BNZ_BOARDER_FORM@2.0_8-24"]'
@@ -182,7 +191,9 @@ PY
 )
   [ -n "$PREV_REV" ] || die "Could not identify a single revision serving 100% of traffic. Inspect:
   gcloud run services describe $SERVICE --region=$REGION --format='yaml(status.traffic)'"
-  if [ -n "${EXPECT_PREVIOUS_REVISION:-}" ] && [ "$PREV_REV" != "$EXPECT_PREVIOUS_REVISION" ]; then
+  [ -n "${EXPECT_PREVIOUS_REVISION:-}" ] || die "UPDATE_EXISTING=1 needs EXPECT_PREVIOUS_REVISION=<revision serving 100% now>
+  (for revision 3: EXPECT_PREVIOUS_REVISION=rsfa-end-forms-engine-00002-nan). Nothing was changed."
+  if [ "$PREV_REV" != "$EXPECT_PREVIOUS_REVISION" ]; then
     die "The serving revision is $PREV_REV, not $EXPECT_PREVIOUS_REVISION. Nothing was changed."
   fi
   config_matches "$OUT/before-summary.json" || die "The live service configuration differs from what this script deploys
@@ -330,8 +341,39 @@ ok "demo UI: rejected without a token ($UI_UNAUTH), served with one (open it via
 grep -q '"ok": true' "$OUT/pdf-verification.json" || die "PDF verification failed: see $OUT/pdf-verification.json"
 rec pdfVerification "$(cat "$OUT/pdf-verification.json")"
 
+# Verifies POST /v1/masterboard/documents at $1 (no data values printed; codes, statuses and digests only).
+v1_checks() { local U=$1 C
+  [ -f "$V1_REQUEST" ] || die "Missing $V1_REQUEST in the bundle."
+  C=$(curl -s -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' --data @"$V1_REQUEST" "$U/v1/masterboard/documents")
+  [ "$C" = 403 ] || [ "$C" = 401 ] || die "Unauthenticated /v1 returned $C (expected 401/403)."
+  C=$(curl -s -o "$OUT/v1.json" -w '%{http_code}' -H "Authorization: Bearer $ID_TOKEN" -H 'Content-Type: application/json' \
+    --data @"$V1_REQUEST" "$U/v1/masterboard/documents")
+  python3 - "$OUT/v1.json" "$C" "$HERE/expected_v1_pdf_sha256.txt" > "$OUT/v1-check.json" <<'PY'
+import base64, hashlib, json, sys
+d = json.load(open(sys.argv[1])); want = open(sys.argv[3]).read().split()[0]
+docs = d.get("documents", [])
+got = [hashlib.sha256(base64.b64decode(x["pdfBase64"])).hexdigest() for x in docs if x.get("pdfBase64")]
+ok = (sys.argv[2] == "200" and d.get("status") == "complete" and [x.get("templateId") for x in docs] == ["BNZ_BOARDER_FORM"]
+      and got == [want] and len(d.get("notMigrated", [])) == 6)
+print(json.dumps({"http": int(sys.argv[2]), "status": d.get("status"), "documents": [x.get("templateId") for x in docs],
+                  "pdfSha256Matches": got == [want], "notMigrated": len(d.get("notMigrated", [])), "ok": ok}))
+PY
+  grep -q '"ok": true' "$OUT/v1-check.json" || die "/v1 BNZ check failed: $(cat "$OUT/v1-check.json")"
+  C=$(curl -s -o "$OUT/v1-unknown.json" -w '%{http_code}' -H "Authorization: Bearer $ID_TOKEN" -H 'Content-Type: application/json' \
+    --data @"$V1_UNKNOWN" "$U/v1/masterboard/documents")
+  [ "$C" = 422 ] && grep -q '"UNKNOWN_BANK"' "$OUT/v1-unknown.json" || die "/v1 unknown bank returned $C (expected 422 UNKNOWN_BANK)."
+  C=$(curl -s -o "$OUT/v1-unapproved.json" -w '%{http_code}' -H "Authorization: Bearer $ID_TOKEN" -H 'Content-Type: application/json' \
+    --data @"$V1_UNAPPROVED" "$U/v1/masterboard/documents")
+  [ "$C" = 422 ] && grep -q '"UNKNOWN_TEMPLATE"' "$OUT/v1-unapproved.json" && ! grep -q '"pdfBase64"' "$OUT/v1-unapproved.json" \
+    || die "/v1 with non-allowlisted forms returned $C (expected 422 UNKNOWN_TEMPLATE, no PDF)."
+  ok "/v1 at $U: unauthenticated rejected; BNZ 200 complete, identical PDF; unknown bank 422; non-allowlisted forms 422, no PDF"
+}
+v1_checks "$VURL"
+rec v1Check "$(cat "$OUT/v1-check.json")"
+
 if [ "$MODE" = update ]; then
   step "9. Promote $REV to 100% traffic, then re-verify the main URL"
+  ROLLBACK_HINT="gcloud run services update-traffic $SERVICE --region=$REGION --project=$PROJECT_ID --to-revisions=$PREV_REV=100"
   gc run services update-traffic "$SERVICE" --region="$REGION" --to-latest >/dev/null
   gc run services update-traffic "$SERVICE" --region="$REGION" --remove-tags="$CANDIDATE_TAG" >/dev/null
   gc run services describe "$SERVICE" --region="$REGION" --format=json > "$OUT/after-service.json"
@@ -353,6 +395,7 @@ if [ "$MODE" = update ]; then
   [ -n "$M_OK" ] || die "Main URL did not serve the new revision correctly. Roll back now:
   gcloud run services update-traffic $SERVICE --region=$REGION --project=$PROJECT_ID --to-revisions=$PREV_REV=100"
   ok "main URL: 100% on $REV; UI rejected without a token ($M_UNAUTH) and served with one; /health and /generate (identical PDF) OK"
+  v1_checks "$URL"
   rec traffic "\"$SERVING\""
   rec rollback "\"gcloud run services update-traffic $SERVICE --region=$REGION --project=$PROJECT_ID --to-revisions=$PREV_REV=100\""
 fi
@@ -371,7 +414,7 @@ PY
 cat "$OUT/log-check.json"
 grep -q '"ok": true' "$OUT/log-check.json" || die "Log check failed (no entries, or payload values in logs): $OUT/log-check.json"
 rec logCheck "$(cat "$OUT/log-check.json")"
-rec tests "{\"verifiedUrl\": \"$VURL\", \"unauthenticatedHealth\": $UNAUTH, \"authenticatedHealth\": 200, \"authenticatedGenerate\": 200, \"unauthenticatedUi\": $UI_UNAUTH, \"authenticatedUi\": 200, \"mainUrlAfterPromotion\": \"$([ -n "${M_OK:-}" ] && echo ok || echo not applicable)\"}"
+rec tests "{\"verifiedUrl\": \"$VURL\", \"unauthenticatedHealth\": $UNAUTH, \"authenticatedHealth\": 200, \"authenticatedGenerate\": 200, \"unauthenticatedUi\": $UI_UNAUTH, \"authenticatedUi\": 200, \"v1\": \"ok\", \"mainUrlAfterPromotion\": \"$([ -n "${M_OK:-}" ] && echo ok || echo not applicable)\"}"
 rec finishedAt "\"$(date -u +%FT%TZ)\""
 
 step "DONE"

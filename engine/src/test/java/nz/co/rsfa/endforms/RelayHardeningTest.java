@@ -413,11 +413,20 @@ class RelayHardeningTest {
 
     @Test
     void theDocumentedTestVectorIsWhatTheRelayVerifies() throws Exception {
-        JsonNode v = JSON.readTree(Files.readString(Path.of("..", "contracts", "hmac-test-vector.json")));
-        assertEquals(v.get("expectedSignatureHex").asText(), RelayServer.hmacHex(
-                v.get("secret").asText().getBytes(StandardCharsets.UTF_8), v.get("timestamp").asText(),
-                v.get("body").asText().getBytes(StandardCharsets.UTF_8)));
-        assertEquals(v.get("timestamp").asText() + "." + v.get("body").asText(), v.get("signingInput").asText());
+        // inline, so it also runs in the staged image build, where contracts/ is not part of the context
+        String secret = "rsfa-test-vector-secret-NOT-FOR-USE-0001";
+        String ts = "1793152800";
+        String body = "{\"contractVersion\":\"masterboard.v1\"}";
+        String expected = "3089d368d7df95f95bafd039bc244e302c350d306f1095ebe43466b47f49601b";
+        assertEquals(expected, RelayServer.hmacHex(secret.getBytes(StandardCharsets.UTF_8), ts,
+                body.getBytes(StandardCharsets.UTF_8)));
+        Path shared = Path.of("..", "contracts", "hmac-test-vector.json"); // the file Make testers use
+        if (Files.exists(shared)) {
+            JsonNode v = JSON.readTree(Files.readString(shared));
+            assertEquals(List.of(secret, ts, body, expected, ts + "." + body), List.of(v.get("secret").asText(),
+                    v.get("timestamp").asText(), v.get("body").asText(), v.get("expectedSignatureHex").asText(),
+                    v.get("signingInput").asText()), "contracts/hmac-test-vector.json must match the relay");
+        }
     }
 
     @Test
