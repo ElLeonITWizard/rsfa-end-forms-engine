@@ -517,3 +517,25 @@ Lightweight ADR log, newest last. Status: `proposed` | `accepted` | `superseded`
   - verify whether Cloud Storage answers 403 or 412 for an existing object with `objectCreator` only.
 - **Details:** docs/10 §9.
 
+
+### D-037 Revision-3 Cloud Build failure: epoch-0 file times in the bundle; real commit time and self-checks
+- **Date:** 2026-10-28 · **Status:** accepted
+- **Confirmed root cause:**
+  - Cloud Build `a88c4f73…` failed in the Maven test phase: `IllegalStateException: routing table missing from the
+    build` (`MasterboardApi.java:66`), in ApiServerTest, MasterboardApiTest, RelayHardeningTest and RelayServerTest.
+  - `make_bundle.sh` (iteration 9) wrote every archive entry with mtime `@0`. `maven-resources-plugin` 3.3.1 copies a
+    resource only when its source is newer than the target, and a missing target counts as time 0, so **no
+    resources** reached `target/classes` (routing table and demo UI).
+  - Reproduced locally from the extracted archive (same four tests, same exception). A controlled run showed
+    epoch-0 sources copy 0 files, while the same tree with a real date copies them all.
+  - The rehearsals had built from the staged directory, not from the extracted archive. That is why they passed.
+- **Not the cause:** the slow Maven base-image pull. It was observed (the layer took more than 15 minutes) but it
+  completed.
+- **Decision:**
+  - The archive mtime is the commit time (still reproducible per commit).
+  - `make_bundle.sh` extracts its own archive and checks timestamps, required resources and the `gcloud` upload
+    listing.
+  - `deploy_poc.sh` refuses pre-1980 file times before uploading.
+  - The Cloud Build timeout is raised from 20 to 40 minutes (secondary, for slow pulls).
+  - Rehearsals now build from the extracted archive.
+- **Not changed:** tests, Java 21, application code, allowlist, IAM, validations, rollback.

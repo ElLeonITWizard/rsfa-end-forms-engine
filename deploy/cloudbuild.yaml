@@ -11,4 +11,4 @@ images:
   - "${_IMAGE}"
 options:
   logging: CLOUD_LOGGING_ONLY   # required with a user-specified build service account
-timeout: 1200s
+timeout: 2400s   # 40 min: a slow base-image pull (2026-10-28: >15 min for one layer) must not end in TIMEOUT

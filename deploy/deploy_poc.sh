@@ -160,6 +160,9 @@ ok "all required permissions present"
     [ "$(sha256sum "$path" | cut -d' ' -f1)" = "$sum" ] || { echo "checksum mismatch: $path"; exit 1; }
   done < STAGED_FILES.txt ) || die "Staged context was modified after staging."
 [ "$(find "$CONTEXT/poc-templates" -type f | wc -l)" -eq 1 ] || die "Expected exactly one template in the context."
+OLD=$(find "$CONTEXT" -type f ! -newermt '1980-01-02' | head -3)
+[ -z "$OLD" ] || die "Files in the context have pre-1980 timestamps (e.g. ${OLD#$CONTEXT/}); Maven would silently skip
+  resources (D-037). Re-extract a current bundle, or run: find \"$CONTEXT\" -exec touch {} +   (then re-run)."
 ! grep -R -I -l -E 'hook\.[a-z0-9]+\.make\.com|sample_payload|__raw_webhook_payload' "$CONTEXT" >/dev/null \
   || die "Forbidden content found in the staged context."
 ok "staged context intact: $(wc -l < "$CONTEXT/STAGED_FILES.txt") files, 1 allowlisted template, no forbidden content"
