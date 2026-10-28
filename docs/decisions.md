@@ -486,3 +486,17 @@ Lightweight ADR log, newest last. Status: `proposed` | `accepted` | `superseded`
   until RSFA-DECISION-3 (which GHL form applies to which client) is answered. Tested as Make case T12 with the
   per-document policy.
 
+
+### D-035 Engine revision 3 package: `/v1` added, everything else unchanged; deployment checks extended
+- **Date:** 2026-10-28 · **Status:** prepared (deployment needs RSFA approval of the bundle SHA-256)
+- **Decision:**
+  - Revision 3 is the same image recipe with `/v1/masterboard/documents`.
+  - Same allowlist (BNZ only), demo page, IAM, invoker and service configuration.
+  - `deploy_poc.sh` verifies `/v1` on the candidate and the main URL, requires `EXPECT_PREVIOUS_REVISION`, and prints
+    the rollback command on any failure after promotion.
+  - `make_bundle.sh` produces a reproducible archive with per-file digests and refuses uncommitted engine or deploy
+    changes.
+- **Why not add the relay SA as invoker now:** the relay does not exist yet. The invoker change belongs to the relay
+  deployment step and is approved separately (docs/10 §8).
+- **Validation:** local rehearsal (docs/04 "Revision 3"). It found and fixed a test that read a file outside the
+  staged context.

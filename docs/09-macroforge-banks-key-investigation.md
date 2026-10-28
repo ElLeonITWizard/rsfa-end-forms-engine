@@ -144,3 +144,79 @@ involved.
 Check that `8731317` executions after the change stay `SUCCESS` with the usual operation count (20 in the last run),
 and that RSFA sees lender forms filed. Make retains no execution detail for this scenario, so the filing in SharePoint
 is the observable signal.
+
+## Iteration 9 (2026-10-28): pre-approval verification. Production still unchanged
+
+**Re-read of `8731317` (read-only) against the iteration-8 backup:**
+
+| Check | Result |
+|---|---|
+| Full API response vs backup | **byte-identical** (SHA-256 `c6c9f44a54f61d52…`). No top-level field differs |
+| `lastEdit` | `2026-07-16T22:05:49.471Z` (unchanged) |
+| State | active, not paused, not invalid, not locked; hook `3905270`; scheduling `immediately`, 100 runs/min; folder `296569`; team `85772` |
+| Executions since 2026-10-01 | none |
+| Blueprint digest (canonical JSON) | `ab76a6762bab8a60…` (this is the rollback blueprint) |
+| Module 8 code | SHA-256 `8656f40189a41fa7…`; anchor `const result = mapColumns(input.column_values);` occurs **once**, line 138 of 157; the new names `BANKS_COLUMN_ID`, `LEGACY_BANKS_KEY`, `banksColumn` are unused |
+
+**Exact proposal (`tools/make_8731317_proposal.py`, from the fresh read):**
+- **Inserted text:** the 7 lines of `make/8731317/module8-banks-alias.snippet.js` (1 comment + 6 code lines), placed
+  directly after the anchor.
+- **Structural diff of the whole blueprint:** exactly **one path**, `/flow[8]/mapper/codeEditorJavascript`.
+  - No connection (`__IMTCONN__`), hook (`__IMTHOOK__`), filter, router, error handler (`onerror`), module mapper,
+    metadata, scheduling or designer entry changes.
+  - Nothing is removed from the code; 7 lines are added.
+- **Digests:**
+  - proposed blueprint `1369b087b71c2981…`;
+  - proposed module-8 code `08543b93924c4653…`.
+- **Validation:**
+  - Make's `validate_module_configuration` (`code:ExecuteCode` v1, organisation `882256`, team `85772`):
+    `valid: true`, no errors or warnings. This checks the module configuration shape, not the whole program.
+  - The full program was syntax-checked and executed locally (below).
+
+**Regression (`node tests/make/module8_banks_alias_test.js`, 24 checks, all passed):**
+- The production code with the live title reproduces the missing `Banks to Send` key; the old title still produces it.
+- With the change, for 10 selection shapes (each bank, multi-selections, all five, empty, null), `"Banks to Send"`
+  is **strictly equal** (`===`) to `"Selected Banks"`, which itself is unchanged.
+- Exactly one key is added; no key is removed or renamed. Every other key and value is byte-identical (dates,
+  booleans, split dates, subitems, GPT address fields).
+- If the column is renamed back, nothing is overridden. If it is deleted, nothing is added and nothing fails.
+- The module-8 code inside the proposed blueprint is byte-identical to the code the test ran.
+
+**Backup and rollback files** (all in `.local/reference/make/`, mode 600, git-ignored; they contain webhook URLs and
+test payloads):
+- `8731317-blueprint-2026-10-28-iter8-backup.txt` and `8731317-current-2026-10-28-iter9.txt` (identical full reads);
+- `8731317-ROLLBACK-blueprint.json` (digest `ab76a676…`);
+- `8731317-PROPOSED-blueprint.json`;
+- `8731317-module8-PROPOSED.js`.
+
+**Risk assessment:**
+
+| Risk | Assessment |
+|---|---|
+| Payload change breaks MacroForge | Low. One extra key with the exact value MacroForge's own conditions expect; key order changes only by that insertion (MacroForge reads keys by name; inference) |
+| Code error in module 8 | Low. Syntax and behaviour tested on synthetic data. On a runtime error the existing handler calls `8732008` (e-mail), as today |
+| Saving changes trigger, schedule or activation | Low but unverifiable before the change. The API update replaces only the blueprint; scheduling is not sent. Mitigated by the re-read check below |
+| The change triggers a run | None. Saving a scenario does not run it; runs come only from the Monday hook |
+| Wrong diagnosis (MacroForge handles the missing key some other way) | The alias is still harmless: it restores the pre-2026-10-25 payload shape |
+| Concurrent edit by someone else | Step 1 below refuses if `lastEdit` or the digest changed |
+
+**Application procedure, only after explicit approval:**
+1. Re-read the scenario. Stop unless `lastEdit = 2026-07-16T22:05:49.471Z`, the blueprint digest is `ab76a676…`
+   and `isActive` is true. Re-run `tools/make_8731317_proposal.py` on that read; it must reproduce the proposed
+   digest `1369b087…`.
+2. `scenarios_update(scenarioId 8731317, blueprint = 8731317-PROPOSED-blueprint.json)`. No `scheduling`, `name`,
+   `folderId` or `description` argument.
+3. Re-read and verify:
+   - the diff against the rollback blueprint is exactly the 7 lines;
+   - `isActive`, `isPaused`, `hookId 3905270`, scheduling, `islinked`, `isinvalid = false` are unchanged;
+   - module count and module types are unchanged.
+
+   If anything else differs, roll back immediately (step R).
+4. Re-run the local regression against the code read back.
+5. Record the new `lastEdit` and digests in this document.
+
+**R. Rollback:** `scenarios_update(8731317, blueprint = 8731317-ROLLBACK-blueprint.json)`, or remove the 7 lines in
+module 8 in the Make UI and save. Then repeat the step-3 checks against the rollback digest `ab76a676…`.
+
+**Validation without client operations:** as in the section above. No test run is triggered. The first natural run
+is observed: execution `SUCCESS`, and RSFA confirms the selected banks' PDFs are filed.

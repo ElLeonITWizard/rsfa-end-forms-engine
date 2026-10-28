@@ -208,6 +208,71 @@ The manual runbook follows. The script runs exactly these steps.
 Goal: a **private** Cloud Run service that generates the BNZ Boarder PDF from a synthetic JSON payload,
 without MacroForge. Commands were written for and checked against `gcloud` 570.0.0 (flag names verified offline).
 
+## Revision 3: add `/v1/masterboard/documents` (prepared 2026-10-28, iteration 9; NOT deployed)
+
+**What changes compared to `00002-nan`:**
+- The image adds the Make contract endpoint `POST /v1/masterboard/documents` (D-025) and the relay code.
+  - The relay code is dormant: it only runs with `ENGINE_ROLE=relay`, which this service does not set.
+- **Unchanged:**
+  - allowlist: BNZ Boarder only, approval `RSFA-END-FORMS-POC-2026-10-27`;
+  - demo page: offers only templates `/health` reports usable, i.e. BNZ Boarder;
+  - `ENGINE_AUTH=PLATFORM_IAM`, `--no-allow-unauthenticated`;
+  - invoker: the deployer only (the relay SA is **not** added here);
+  - runtime SA, CPU, memory, instances, concurrency and timeout (the script refuses if the live config differs).
+- `/v1` in this image can generate only BNZ Boarder. A bank selection that routes other forms is refused with 422
+  `UNKNOWN_TEMPLATE` and no PDF. Forms MacroForge must still produce are listed in `notMigrated`.
+
+**Package** (built from commit `d35d5d5`, reproducible: a rebuild gives the same SHA-256):
+
+| Item | Value |
+|---|---|
+| Bundle | `.local/deploy/rsfa-end-forms-bundle.tar.gz` (git-ignored; sent separately) |
+| SHA-256 | `2596696611b0ce37374089170b1c3bb03693d22189f10cb7218f385890161e8d` |
+| Contents | `deploy_poc.sh`, `verify_pdf.py`, `BUNDLE_INFO.json` (commit and per-file SHA-256), staged context (36 files: engine sources and tests, BNZ manifest, the blank allowlisted BNZ template), `/generate` fixture, 3 `/v1` requests (fictional) |
+| Expected PDFs | `/generate` `2ae7bfacf48b8ee8e63aaf9ce28997650abd2c07b59ddbeade9928ce3269d6f6` (unchanged from revisions 1–2); `/v1` `e08a79e00e8702eb1acf56a055870ff6730826ea04bc5bfafb16c02a71088d78` (same data, `today` 2026-10-28) |
+
+**What the script verifies, on the no-traffic candidate URL and again on the main URL after promotion:**
+- Everything revision 2 checked:
+  - unauthenticated `/health` and `/` → 401/403;
+  - authenticated `/health` lists only BNZ Boarder;
+  - `/generate` PDF checked field by field and byte-identical;
+  - demo page served with a token;
+  - no fixture values in the logs.
+- **New for `/v1`:**
+  - unauthenticated → 401/403;
+  - BNZ request → 200 `complete`, one document, PDF SHA-256 equals `expected_v1_pdf_sha256.txt`, 6 `notMigrated`;
+  - unknown bank → 422 `UNKNOWN_BANK`;
+  - ASB with candidates → 422 `UNKNOWN_TEMPLATE` and no PDF.
+- **Update mode now requires** `EXPECT_PREVIOUS_REVISION`. Any failure after traffic moved prints the rollback
+  command.
+
+**Local rehearsal (2026-10-28):**
+- **Image build:** built from the staged context with the Cloud Build target (`poc`); the Maven tests ran inside the
+  build. 59 ran; 18 were skipped (legacy-template and demo-form tests need files outside the context, by design).
+  - The first rehearsal **failed**: a test read `contracts/`, which is not in the context. Fixed in `d35d5d5`.
+- **Image run:** with `K_SERVICE` and `ENGINE_AUTH=PLATFORM_IAM` behind a local IAM stand-in. All checks above passed:
+  - the script's own `v1_checks` function was executed;
+  - `verify_pdf.py` → `ok`;
+  - container logs contain no data values.
+- **Negative rehearsal:** a wrong expected `/v1` digest stops the script with `BLOCKER`.
+- **Not rehearsed:** real Cloud Build, Artifact Registry, Cloud Run IAM and traffic tagging. These only run in RSFA's
+  project.
+
+**Command (Cloud Shell, after RSFA approves this exact bundle and SHA-256):**
+```bash
+sha256sum -c rsfa-end-forms-bundle.tar.gz.sha256 && tar -xzf rsfa-end-forms-bundle.tar.gz && cd bundle
+UPDATE_EXISTING=1 EXPECT_PREVIOUS_REVISION=rsfa-end-forms-engine-00002-nan bash deploy_poc.sh
+```
+
+**Rollback:**
+```bash
+gcloud run services update-traffic rsfa-end-forms-engine --region=australia-southeast1 \
+  --project=rsfa-end-forms-engine --to-revisions=rsfa-end-forms-engine-00002-nan=100
+```
+Revision 3 is created with no traffic. If any check fails before promotion, `00002-nan` keeps 100% and nothing needs
+rolling back. The candidate tag can be removed with
+`gcloud run services update-traffic rsfa-end-forms-engine --region=australia-southeast1 --remove-tags=candidate`.
+
 ## Architecture of this deployment
 
 ```text
