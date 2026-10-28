@@ -14,8 +14,10 @@ Approved by the user on 2026-10-28, limited to /flow[<module 8>]/mapper/codeEdit
      unchanged). Prints PASS or FAIL. It never rolls back on its own: on FAIL run --rollback.
 It never prints blueprint values (webhook URLs, sample data); only digests, paths, states and HTTP codes.
 
-Environment: MAKE_API_TOKEN (scopes scenarios:read + scenarios:write; never logged), MAKE_API_BASE
-(default https://eu2.make.com, the organisation's zone).
+Authentication: either the environment's Network Secret for eu2.make.com (the proxy injects the Authorization
+header; this script never sees the token), or MAKE_API_TOKEN (scopes scenarios:read + scenarios:write; never logged).
+MAKE_API_BASE defaults to https://eu2.make.com, the organisation's zone. An explicit User-Agent is sent because
+Cloudflare in front of Make refuses Python's default one (error 1010).
 Usage:  python3 tools/apply_8731317_change.py [--dry-run]     # dry run: steps 1-3 only, no PATCH
         python3 tools/apply_8731317_change.py --rollback      # restore the saved pre-change blueprint, then verify
 """
@@ -36,8 +38,11 @@ SCENARIO = 8731317
 ANCHOR = "const result = mapColumns(input.column_values);"
 EXPECTED = {"lastEdit": "2026-07-16T22:05:49.471Z", "isActive": True, "isPaused": False, "hookId": 3905270,
             "scheduling": {"type": "immediately", "maximum_runs_per_minute": 100}}
-PRE_DIGEST = "ab76a6762bab8a60a77ee1faf412248cce201b92d63b4e275bde85e1e3146cb2"
-POST_DIGEST = "1369b087b71c2981c32ba51d31245b0f8b24c473c5cf10b306c4782511a2b7be"
+# Digests of the blueprint as the Make API returns it ({name, flow, metadata}). The MCP scenarios_get result folds
+# "interface" and "scheduling" into the blueprint; without those two keys it is identical (verified 2026-10-28), so
+# these correspond to the MCP-format digests ab76a676… (pre) and 1369b087… (approved proposal).
+PRE_DIGEST = "5861cc0ee3b987ebb441cfefedd6690c6b35aea88258b73bf3146392dce0d53a"
+POST_DIGEST = "e700f1a2b4c13e70a24694285ca177639da8adb38257a480bfa93abc7fea67fa"
 PRE_FILE = LOCAL / "8731317-PRE-CHANGE-api.json"
 
 
@@ -49,12 +54,12 @@ def api(method: str, path: str, body=None):
     base = os.environ.get("MAKE_API_BASE", "https://eu2.make.com").rstrip("/")
     if not (base.startswith("https://") or base.startswith("http://127.0.0.1")):
         sys.exit("FAIL: MAKE_API_BASE must be https (loopback http only for tests)")
+    headers = {"Content-Type": "application/json", "User-Agent": "rsfa-end-forms-8731317-fix/1.0"}
     token = os.environ.get("MAKE_API_TOKEN", "")
-    if len(token) < 16:
-        sys.exit("FAIL: MAKE_API_TOKEN is not set")
+    if token:  # otherwise the network secret injects Authorization at the proxy
+        headers["Authorization"] = f"Token {token}"
     data = json.dumps(body).encode() if body is not None else None
-    req = urllib.request.Request(f"{base}/api/v2{path}", data=data, method=method,
-                                 headers={"Authorization": f"Token {token}", "Content-Type": "application/json"})
+    req = urllib.request.Request(f"{base}/api/v2{path}", data=data, method=method, headers=headers)
     try:
         with urllib.request.urlopen(req, timeout=60) as r:
             return r.status, json.loads(r.read() or b"{}")
@@ -74,8 +79,13 @@ def read_live() -> dict:
     blueprint = (bp.get("response") or {}).get("blueprint")
     if scenario.get("id") != SCENARIO or not isinstance(blueprint, dict):
         sys.exit("FAIL: unexpected API response shape; nothing was changed")
+    s3, iface = api("GET", f"/scenarios/{SCENARIO}/interface")
+    if s3 != 200:
+        sys.exit(f"FAIL: reading the scenario interface returned HTTP {s3}; nothing was changed")
     out = dict(scenario)
     out["blueprint"] = blueprint
+    out["_interface"] = iface.get("interface", iface)  # compared before/after; never sent
+    out["_blueprintScheduling"] = (bp.get("response") or {}).get("scheduling")
     return out
 
 
@@ -133,8 +143,17 @@ def apply(dry_run: bool) -> int:
         print("FAIL: the update was not accepted; re-read and verify before anything else")
         return 1
     time.sleep(2)
-    post = save("8731317-POST-CHANGE-api.json", read_live())
-    ok = verify(pre, post, rollback=False)
+    after = read_live()
+    post = save("8731317-POST-CHANGE-api.json", after)
+    same_io = after["_interface"] == live["_interface"] and after["_blueprintScheduling"] == live["_blueprintScheduling"]
+    print("scenario interface and blueprint scheduling unchanged:", same_io)
+    ok = verify(pre, post, rollback=False) and same_io
+    if ok:
+        b = after["blueprint"]
+        m8 = [m for m in b["flow"] if m.get("id") == 8][0]["mapper"]["codeEditorJavascript"]
+        print("live blueprint digest equals the approved one:", digest(b) == POST_DIGEST)
+        print("module 8 restores 'Banks to Send' from column dropdown_mkzvfgeg and keeps 'Selected Banks':",
+              'const BANKS_COLUMN_ID = "dropdown_mkzvfgeg";' in m8 and "mapColumns(input.column_values)" in m8)
     print("PASS" if ok else "FAIL (rollback: python3 tools/apply_8731317_change.py --rollback)")
     return 0 if ok else 1
 

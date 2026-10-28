@@ -36,7 +36,7 @@ docs/05-demo-script.md                demo page: secure access (gcloud run servi
 docs/06-template-coverage.md          form selection, readiness levels, open questions, forms not chosen
 docs/07-make-integration.md           Make contract masterboard.v1, auth A vs B (relay recommended), Make test scenario design
 docs/08-monday-schema-drift.md        live Monday schema vs key contract: renames, replaced IDs, option drift (read-only)
-docs/09-macroforge-banks-key-investigation.md  8731317 'Banks to Send' rename: evidence, reproduction, prepared fix (NOT applied)
+docs/09-macroforge-banks-key-investigation.md  8731317 'Banks to Send' rename: evidence, fix APPLIED 2026-10-28 (approved), verification, rollback
 docs/10-relay-security-and-infrastructure.md   relay security architecture, durable replay, minimum GCP resources, costs, rollback
 docs/11-make-test-scenario.md         isolated Make test scenario, module by module (designed, not created)
 docs/12-acceptance-checklists.md      business acceptance checklists for Rod (GHL Individual / Trust)
@@ -101,6 +101,8 @@ extracted to `.local/generated/templates/`. A green build without them proves on
    `sample_payload`, `variable_map`, `flow_data` (`__raw_webhook_payload`, `current_parsed_pdf_data`), `export_folder`,
    `filename_generator` or `webhook_url`.
 3. Never call the MacroForge webhook or any production endpoint. Never modify Make scenarios `8731317` / `9254149`.
+   (Single recorded exception: the user-approved 7-line alias in `8731317` module 8, applied 2026-10-28, docs/09.
+   Any further change needs a new explicit approval.)
 4. Never fill signature or push-button fields. Never synthesise signatures. **No declaration is certified by default.**
    - Template-preset ticks are cleared.
    - Constant ticks need a validated `approval` record (approvedBy, approvedOn, reference; D-016).
@@ -119,11 +121,13 @@ extracted to `.local/generated/templates/`. A green build without them proves on
 - **Iteration 10:**
   - **`8731317` alias approved** (scope: module-8 code only). All pre-save checks passed: the live read is identical
     to the verified backup and 24/24 regression checks pass.
-  - **Not saved yet.** The MCP update tool needs the full 305 KB blueprint inline, which cannot be reproduced
-    reliably. `tools/apply_8731317_change.py` does it through the Make API from the fetched file, with digest
-    checks, a dry run, PASS/FAIL verification and `--rollback`; it was tested on a mock.
-  - **Blocked by this environment:** `eu2.make.com` is not allowed and there is no `MAKE_API_TOKEN`. Once both are
-    configured, run the script in a new session. **Production is still unchanged** (docs/09).
+  - **APPLIED 2026-10-28T12:43:58Z, result PASS** (docs/09 "Iteration 10c"):
+    - applied with `tools/apply_8731317_change.py` through the Make API (network-secret authentication);
+    - only module 8's code changed; the scenario is active, with the same hook, scheduling and interface;
+    - verified via both the API and MCP re-reads; no execution was triggered.
+  - **Rollback:** `--rollback` with the `.local` backup, or Make's version history.
+  - **Business validation:** on the next normal run. No historical failure is claimed.
+  - **Recommended:** revoke the temporary Make API token.
   - **Revision 3:** deployment approved; **RSFA runs it** from Cloud Shell with the bundle of docs/04. This
     environment never deploys.
 
@@ -212,7 +216,7 @@ extracted to `.local/generated/templates/`. A green build without them proves on
   offers that are usable.
 - **Open decisions** (docs/02 "Known gaps", docs/06, docs/07):
   - the candidate forms' open questions and the GHL label fixes (docs/06);
-  - approval (or MacroForge-side confirmation) of the `8731317` module-8 fix (docs/09);
+  - business confirmation of the applied `8731317` fix on the next normal run (docs/09);
   - RSFA-DECISION-1/2/3 (docs/06, docs/12);
   - the relay (D-027/D-031) and its public exposure, and the dedicated Monday engine-status column (docs/07, docs/10);
   - 36 constant ticks;

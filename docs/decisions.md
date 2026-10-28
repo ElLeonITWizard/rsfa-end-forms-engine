@@ -459,8 +459,8 @@ Lightweight ADR log, newest last. Status: `proposed` | `accepted` | `superseded`
   - The native function may replace the Code module only after the vector `contracts/hmac-test-vector.json` is
     reproduced in Make.
 
-### D-033 `8731317` "Banks to Send" alias: prepared, not applied
-- **Date:** 2026-10-28 · **Status:** proposed (needs explicit approval; see docs/09)
+### D-033 `8731317` "Banks to Send" alias: approved and applied 2026-10-28
+- **Date:** 2026-10-28 · **Status:** applied 2026-10-28T12:43:58Z after explicit user approval; verified PASS (docs/09 "Iteration 10c")
 - **Context:**
   - Column `dropdown_mkzvfgeg` was renamed `Selected Banks` (2026-10-25, activity log).
   - Module 8 keys columns by live title, and MacroForge Flow C tests `Banks to Send Contains <bank>`.

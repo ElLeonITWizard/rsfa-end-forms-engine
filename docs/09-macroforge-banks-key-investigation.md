@@ -322,3 +322,49 @@ known (no run since the rename).
   guarantees the blueprint is still the verified one, even though `.local/` does not survive a new session.
   Make's own version history keeps the 2026-07-16 version as an extra rollback source.
 - **Production is still unchanged.**
+
+## Iteration 10c (2026-10-28): APPLIED. Result: PASS
+
+**Authorisation:** explicit user approval of this exact change (module-8 code only). Applied with
+`tools/apply_8731317_change.py` through the Make API (`eu2.make.com`). Authentication used the environment's Network
+Secret (Authorization header injected by the proxy; the token was never read). No scenario execution was triggered.
+
+**Pre-checks (all passed):**
+- Live state: active, not paused, hook `3905270`, scheduling `immediately` (100/min), `lastEdit`
+  2026-07-16T22:05:49.471Z.
+- **Reconciled representation difference:** the API returns the blueprint as `{name, flow, metadata}`, while the MCP
+  read also folds `interface` (empty) and `scheduling` into it.
+  - Both equal the API's own `/interface` and `scheduling`.
+  - `flow`, `metadata` and `name` are identical to the verified backup.
+  - API-format digests: pre `5861cc0e…` (≙ MCP `ab76a676…`); approved `e700f1a2…` (≙ MCP `1369b087…`).
+- Live dry run: OK. The full mock cycle (dry run, apply, rollback) was re-run after adapting the client (explicit
+  User-Agent, because Cloudflare rejects Python's default with error 1010; no own Authorization header).
+
+**Change (2026-10-28T12:43:58.652Z, new `lastEdit`):**
+- one `PATCH /api/v2/scenarios/8731317` with only `blueprint`; HTTP 200;
+- module 8: the 7 lines of `make/8731317/module8-banks-alias.snippet.js` inserted after
+  `const result = mapColumns(input.column_values);`.
+
+**Verification after saving (PASS), through two channels:**
+
+| Channel | Result |
+|---|---|
+| Make API re-read | only module 8's code changed, exactly the approved lines; 0 editor-metadata paths changed; no other path changed; `isActive` true, `isPaused` false, hook `3905270`, scheduling, `isinvalid` false, scenario interface unchanged; live digest = approved `e700f1a2…` |
+| MCP `scenarios_get` re-read vs the pre-change MCP read (`tools/verify_8731317_change.py`) | `RESULT: OK`, with the same findings |
+
+- **Behaviour:** `"Selected Banks"` is unchanged, and `"Banks to Send"` is added from column `dropdown_mkzvfgeg`
+  with the identical value. Regression 24/24 passed; the live code parses.
+- **Make history since 2026-10-27:** one `modify` event at 12:43:58Z (API token "Claude RSFA - Temporary Fix") and
+  **no execution**.
+
+**Rollback (available, tested on the mock):**
+- `python3 tools/apply_8731317_change.py --rollback` restores the saved pre-change blueprint
+  (`.local/reference/make/8731317-PRE-CHANGE-api*.json`, mode 600, not in git) and verifies it.
+- Alternatives: Make's version history (the 2026-07-16 version), or deleting the 7 lines in module 8 in the UI.
+- `.local/` exists only in this environment's container; Make's version history is the durable rollback source.
+
+**Not claimed:** no historical production failure has been confirmed. The business outcome (lender forms filed by
+MacroForge) is validated on the next normal execution.
+
+**Recommended:** revoke the temporary API token "Claude RSFA - Temporary Fix" and remove the network secret once
+it is no longer needed.
