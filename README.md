@@ -12,6 +12,8 @@ bank end forms. Mappings are version-controlled and the service can run on Cloud
 - Two more forms are *ready for acceptance testing* locally (GHL Individual and Trust); ASB and ANZ Boarder are
   *blocked* pending RSFA decisions (docs/06).
 - The Make integration contract and an authenticating relay are implemented but not connected (docs/07, docs/10, docs/11).
+- **First Make → Cloud Run → SharePoint run (BNZ Boarder):** importable Make blueprints, relay deployment bundle and
+  test procedure are prepared and tested locally; nothing is deployed or imported (docs/15).
 - Make `8731317` (Monday column renamed `Banks to Send` → `Selected Banks`): the approved 7-line module-8 alias was
   applied and verified on 2026-10-28 (docs/09). See `CLAUDE.md` for the rules and the current status.
 

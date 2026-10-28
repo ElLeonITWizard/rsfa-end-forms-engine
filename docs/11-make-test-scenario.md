@@ -1,5 +1,8 @@
 # 11 — Isolated Make test scenario: module-by-module implementation guide (designed, NOT created)
 
+> **Iteration 12:** the importable blueprints generated from this design, with SharePoint filing and the
+> Monday-mode variant, are in `make/e2e-scenario/` and documented in [docs/15](15-make-cloudrun-sharepoint-e2e.md).
+
 **Do not build this until RSFA approves it, and only after the relay exists (docs/10 §8).** It replaces the outline in
 docs/07 section 4.
 

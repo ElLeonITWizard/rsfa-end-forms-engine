@@ -47,6 +47,9 @@ docs/12-acceptance-checklists.md      business acceptance checklists for Rod (GH
 docs/13-admin-platform-architecture.md local admin MVP, AI-suggestion contract (mock), production storage design, IAP access plan
 docs/14-private-admin-deployment.md   private admin service (Cloud Run + IAP): architecture, verified/unverified GCP facts,
                                       IAM inventory, first-time IAP setup, deploy, rollback, checklists, cost (NOT deployed)
+docs/15-make-cloudrun-sharepoint-e2e.md  first Make → relay → Cloud Run → SharePoint (BNZ Boarder): architecture, payload,
+                                      Make blueprint + settings, SharePoint test destination, test procedure, relay deploy,
+                                      cost, security, rollback, what was verified where (NOT deployed, NOT imported)
 docs/generated/template-coverage.md   GENERATED per-form coverage report (tools/coverage_report.py)
 docs/generated/monday-schema-drift.md GENERATED ID-by-ID schema comparison (tools/schema_drift.py)
 docs/decisions.md                     decision log (ADR-lite)
@@ -57,16 +60,21 @@ tools/schema_drift.py     Monday schema drift report (column IDs, titles, types,
 tools/reimport_curated.sh re-imports the four curated forms (optionally a .local preview of pending decisions)
 tools/make_like_client.py signs /v1 requests like Make (HMAC) for local relay tests; prints a summary only
 tools/stage_admin.py      stages the admin build context (no PDF) and the SANITISED Monday schema (D-041)
+tools/stage_relay.py      stages the relay build context (no PDF; docs/15)
+tools/build_make_blueprints.py  generates make/e2e-scenario blueprints (synthetic | monday) from the tested Code module
 curation/                 reviewed per-form validation (closedOptions, requires), corrections (evidence | decision, D-028)
                           and review status, merged by the importer
 contracts/                Make contract JSON Schema (masterboard.v1) + fictional example requests + HMAC test vector;
                           mapping-suggestions.v1 JSON Schema (D-039)
 make/                     Make material prepared here, never applied automatically: proposed 8731317 module-8 snippet,
-                          test-scenario Code module (build + HMAC sign) and synthetic payloads T1–T12
+                          test-scenario Code module (build + HMAC sign; synthetic and Monday modes) and synthetic payloads T1–T12;
+                          e2e-scenario/: importable Make blueprints (placeholders only) + data store structure (docs/15)
 deploy/                   poc-allowlist.json (approved templates), deployment-state.json (what RSFA deployed), cloudbuild.yaml, deploy_poc.sh (end-to-end deployment),
                           make_bundle.sh (Cloud Shell bundle), verify_pdf.py (post-deploy PDF checks), bucket lifecycle;
                           admin/: private admin service Dockerfile, cloudbuild.yaml, deploy_admin.sh + rollback_admin.sh
-                          (plan by default; never write to the engine), make_admin_bundle.sh, bucket lifecycle
+                          (plan by default; never write to the engine), make_admin_bundle.sh, bucket lifecycle;
+                          relay/: relay Dockerfile, cloudbuild.yaml, deploy_relay.sh (plan by default; only engine change =
+                          relay SA invoker binding), rollback_relay.sh, make_relay_bundle.sh, replay lifecycle
 engine/                   Maven project: library, CLI (inspect | fill | render | serve | example-form), HTTP API (/health,
                           /generate, /v1/masterboard/documents), relay (ENGINE_ROLE=relay, D-027), demo page, routing table
                           (resources/routing), admin area (package admin, resources/ui/admin): local with
@@ -75,7 +83,8 @@ mappings/<lender>/<TEMPLATE_ID>@<version>.json   imported manifests (no client d
 tests/fixtures/           synthetic requests (fictional "Jane Example" data only)
 tests/importer/           importer + staging unit tests (synthetic .mforge)
 tests/ui/                 browser smoke tests of the demo page and the admin area (Playwright from the machine) + PDF checker
-tests/make/               Node tests of the make/ material (+ a runner for the local relay chain)
+tests/make/               Node tests of the make/ material (+ a runner for the local relay chain); e2e_scenario_test.js runs
+                          the Make scenario logic against real engine + relay processes with fake Monday/data store/SharePoint
 tests/admin/              production-like private admin environment: IAP stand-in, fake Cloud Storage, runner, browser e2e
 .local/                   GIT-IGNORED: reference exports, lender PDFs, generated output
 ```
@@ -105,6 +114,9 @@ bash deploy/admin/make_admin_bundle.sh                                          
 bash tools/reimport_curated.sh ".local/reference/<file>.mforge" <YYYY-MM-DD> [--preview-pending .local/preview]
 python3 tools/schema_drift.py --help                                               # schema drift report (docs/08)
 node tests/make/code_module_sign_test.js && node tests/make/module8_banks_alias_test.js   # Make material (docs/09, docs/11)
+node tests/make/e2e_scenario_test.js                                                # Make → relay → engine → SharePoint, local (docs/15)
+python3 tools/build_make_blueprints.py                                              # regenerate make/e2e-scenario blueprints
+python3 tools/stage_relay.py --out .local/deploy-relay && bash deploy/relay/make_relay_bundle.sh   # relay Cloud Shell bundle
 python3 tools/coverage_report.py --board .local/reference/masterboard-columns-<date>.json \
   --contract .local/reference/8731317_result_key_contract.tsv --date <YYYY-MM-DD> --out docs/generated/template-coverage.md
 ```
@@ -135,7 +147,27 @@ extracted to `.local/generated/templates/`. A green build without them proves on
 8. Nothing is deployed or changed in Google Cloud without RSFA's explicit approval of the exact commands (docs/04).
    Never build from the repo root for deployment: only from the staged context.
 
-## Current status (2026-10-28, iteration 11 — private admin deployment preparation)
+## Current status (2026-10-28, iteration 12 — first Make → Cloud Run → SharePoint end-to-end, prepared)
+
+- **Milestone:** one BNZ Boarder PDF generated by Make through the private engine and filed in a SharePoint **test**
+  folder (docs/15, D-044). **Prepared and tested locally; nothing deployed, imported or created.** Scenarios
+  `8731317` / `9254149` / `8732008`, the engine `00005-rih`, Monday and SharePoint are unchanged.
+  - Path: Make HTTP → public HMAC relay `rsfa-end-forms-relay` (own SA, GCS replay store, Secret Manager secret) →
+    IAM-private engine. A public relay is needed because Make cannot present a Google ID token without a JSON key.
+  - The only engine change in the plan: the relay SA's `roles/run.invoker` binding. Public exposure is a separate phase.
+  - Make blueprints `make/e2e-scenario/` (synthetic | monday): Monday columns by ID, BNZ-only, strict address split
+    (refuses rather than guesses; differs from MacroForge's GPT split), idempotency key + data store, 3 re-signed
+    retries, SharePoint `uploadAFile` with replace, run records without values.
+  - **Tested locally:** 28 e2e checks (incl. all negative cases) against the jar and against the bundle-built relay
+    image; T1 is byte-identical to `2ae7bfac…`. **Make:** blueprint and module configurations validated only.
+    **Cloud Run, Make runtime, SharePoint: untested.**
+  - Relay bundle `b242b08c…` (commit `7cdf8cf`, reproducible, rehearsed).
+  - **Next (approvals):** relay deploy (private) → public exposure → Make data store + inactive scenario import →
+    SharePoint test folder + connection `13527429` access → optional Masterboard test item.
+  - Tests: 97 Java + 47 Python + Node 44/24/28 checks.
+- The user reported the private admin service as deployed; this environment has not verified it.
+
+## Status of iteration 11 — private admin deployment preparation
 
 - **Private admin service: prepared and tested locally, NOT deployed** (docs/14, D-041, D-042).
   - Separate Cloud Run service `rsfa-end-forms-admin` (`ENGINE_ROLE=admin`) behind IAP on the default `run.app` URL.

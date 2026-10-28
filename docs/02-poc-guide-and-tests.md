@@ -143,8 +143,15 @@ Unresolved items (138) are listed per manifest in `unresolvedLegacyMappings`.
 | Private admin service, production-like (real image ×2 + IAP stand-in + fake Cloud Storage; needs Docker) | `bash tests/admin/run_private_env.sh up && node tests/admin/private_admin_e2e.js` | 42 checks |
 | Make material (Node): proposed `8731317` module-8 alias against the production code in `.local` (skipped without it); Code-module signer | `node tests/make/module8_banks_alias_test.js`; `node tests/make/code_module_sign_test.js` | 12; 44 |
 | Make test payloads → signer → relay → IAM stand-in → engine (needs the local chain running) | `RELAY_HMAC_SECRET=… node tests/make/run_payloads_against_relay.js <relay-url>` | 12 |
+| Make scenario end-to-end (iteration 12, docs/15): blueprint logic against real engine + relay processes, fake Monday/data store/SharePoint; T1 bytes, Monday mode, duplicate, refusals, auth/stale/replay, unknown bank, engine 500/timeout retries, upload failure + retry, log hygiene. `RELAY_IMAGE=<image>` runs the relay container | `node tests/make/e2e_scenario_test.js` | 28 checks |
+| Relay deployment scripts (stubbed gcloud) + relay staging; Make blueprints current and placeholder-only | `python3 -m unittest discover -s tests/importer -v` | 5 + 4 |
 
-Last full run (2026-10-28, iteration 11):
+Last full run (2026-10-28, iteration 12):
+- Host: **144 passed** (47 Python + 97 Java, none skipped); Node: 44 (signer) + 24 + 28 (e2e, also against the
+  bundle-built relay image).
+- BNZ Boarder regression: SHA-256 still `2ae7bfac…`.
+
+Iteration 11 run (2026-10-28):
 - Host: **135 passed** (38 Python + 97 Java, none skipped); Node: 12 + 44 checks; browser: demo 27 checks (5 forms),
   local admin 27, private admin end-to-end 42 (real image).
 - BNZ Boarder regression: SHA-256 still `2ae7bfac…` (CLI).
