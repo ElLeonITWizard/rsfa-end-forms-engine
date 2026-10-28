@@ -222,14 +222,35 @@ without MacroForge. Commands were written for and checked against `gcloud` 570.0
 - `/v1` in this image can generate only BNZ Boarder. A bank selection that routes other forms is refused with 422
   `UNKNOWN_TEMPLATE` and no PDF. Forms MacroForge must still produce are listed in `notMigrated`.
 
-**Package** (built from commit `80affdd`, which includes the relay review fixes; reproducible: a rebuild gives the same SHA-256):
+**Attempt 1 (RSFA, 2026-10-28): Cloud Build `a88c4f73-4dd2-4ef8-84b5-fa6eb612ea55` FAILED; no revision created.**
+`00002-nan` kept 100% traffic.
+- **Confirmed cause:** every file in the bundle had mtime 1970 (`make_bundle.sh --mtime=@0`).
+  `maven-resources-plugin` copies only sources newer than the missing target (time 0), so the routing table and the
+  demo UI never reached the classpath. Four test classes failed with `routing table missing from the build` (D-037).
+- **Observed but not the cause:** a very slow Maven base-image layer download (it completed).
+- **Superseded bundle:** `6b0e7015…`. **Do not use it**; the new preflight refuses it.
+
+**Package** (corrected; built from commit `a34bd0c`; reproducible: same commit, same SHA-256):
 
 | Item | Value |
 |---|---|
 | Bundle | `.local/deploy/rsfa-end-forms-bundle.tar.gz` (git-ignored; sent separately) |
-| SHA-256 | `6b0e7015164b49c0f6b54c4035a7563e46ebef715d173b2398a6c8291826303d` |
-| Contents | `deploy_poc.sh`, `verify_pdf.py`, `BUNDLE_INFO.json` (commit and per-file SHA-256), staged context (36 files: engine sources and tests, BNZ manifest, the blank allowlisted BNZ template), `/generate` fixture, 3 `/v1` requests (fictional) |
-| Expected PDFs | `/generate` `2ae7bfacf48b8ee8e63aaf9ce28997650abd2c07b59ddbeade9928ce3269d6f6` (unchanged from revisions 1–2); `/v1` `e08a79e00e8702eb1acf56a055870ff6730826ea04bc5bfafb16c02a71088d78` (same data, `today` 2026-10-28) |
+| SHA-256 | `7a570707299456421b87bb17187af63f04bf489f0c0455583fa6d6fc65bbf2ba` |
+| Contents | `deploy_poc.sh`, `verify_pdf.py`, `BUNDLE_INFO.json` (commit and per-file SHA-256), staged context (36 files: engine sources and tests, BNZ manifest, the blank allowlisted BNZ template), `/generate` fixture, 3 `/v1` requests (fictional). Every file mtime is the commit time |
+| Expected PDFs | `/generate` `2ae7bfacf48b8ee8e63aaf9ce28997650abd2c07b59ddbeade9928ce3269d6f6` (unchanged from revisions 1–2); `/v1` `e08a79e00e8702eb1acf56a055870ff6730826ea04bc5bfafb16c02a71088d78` |
+| Cloud Build timeout | 40 min (was 20) |
+
+**Rehearsal of the corrected bundle, exactly as Cloud Build sees it (2026-10-28):**
+1. Extract the archive.
+2. Take exactly the 35 files `gcloud meta list-files-for-upload` lists (what `gcloud builds submit` uploads).
+3. `docker build --no-cache --target poc` on that set.
+
+Results:
+- Inside the build, 81 tests: 63 ran, 0 failures, 18 skipped by design (legacy templates and demo forms need files
+  outside the context). ApiServerTest, MasterboardApiTest, RelayHardeningTest and RelayServerTest all pass.
+- The resulting image, run as `PLATFORM_IAM` behind an IAM stand-in, passed every check of the bundle's own
+  `deploy_poc.sh` code (including `/v1`) and `verify_pdf.py`. Logs contained no data values.
+- `make_bundle.sh` now performs the extraction, mtime and `gcloud` upload-list checks itself on every build.
 
 **What the script verifies, on the no-traffic candidate URL and again on the main URL after promotion:**
 - Everything revision 2 checked:
@@ -246,7 +267,8 @@ without MacroForge. Commands were written for and checked against `gcloud` 570.0
 - **Update mode now requires** `EXPECT_PREVIOUS_REVISION`. Any failure after traffic moved prints the rollback
   command.
 
-**Local rehearsal (2026-10-28):**
+**Earlier local rehearsal (2026-10-28, superseded: it built from the staged directory, not the extracted archive,
+which is why it missed the timestamp defect):**
 - **Image build:** built from the bundle's own staged context (commit `80affdd`) with the Cloud Build target (`poc`);
   the Maven tests ran inside the build. 59 ran; 18 were skipped (legacy-template and demo-form tests need files outside the context, by design).
   - The first rehearsal **failed**: a test read `contracts/`, which is not in the context. Fixed in `d35d5d5`.
@@ -258,10 +280,20 @@ without MacroForge. Commands were written for and checked against `gcloud` 570.0
 - **Not rehearsed:** real Cloud Build, Artifact Registry, Cloud Run IAM and traffic tagging. These only run in RSFA's
   project.
 
-**Command (Cloud Shell, after RSFA approves this exact bundle and SHA-256):**
+**Commands (Cloud Shell; deployment approved by RSFA 2026-10-28, run by RSFA):**
 ```bash
-sha256sum -c rsfa-end-forms-bundle.tar.gz.sha256 && tar -xzf rsfa-end-forms-bundle.tar.gz && cd bundle
+rm -rf bundle cloudrun-output                       # remove the extracted failed bundle and its output
+# upload the new rsfa-end-forms-bundle.tar.gz and .sha256 to Cloud Shell, then:
+sha256sum -c rsfa-end-forms-bundle.tar.gz.sha256    # must print: rsfa-end-forms-bundle.tar.gz: OK
+grep -q 7a570707299456421b87bb17187af63f04bf489f0c0455583fa6d6fc65bbf2ba rsfa-end-forms-bundle.tar.gz.sha256 && echo expected-bundle
+tar -xzf rsfa-end-forms-bundle.tar.gz && cd bundle
 UPDATE_EXISTING=1 EXPECT_PREVIOUS_REVISION=rsfa-end-forms-engine-00002-nan bash deploy_poc.sh
+```
+If Cloud Build fails again, get the exact error without `gcloud builds log` (which crashed):
+```bash
+gcloud builds list --region=australia-southeast1 --project=rsfa-end-forms-engine --limit=1
+gcloud logging read 'resource.type="build" AND resource.labels.build_id="<BUILD_ID>"' --project=rsfa-end-forms-engine \
+  --limit=400 --format='value(textPayload)' | tac | grep -E 'ERROR|FAIL|Tests run|Step|denied|timeout' | tail -40
 ```
 
 **Rollback:**

@@ -128,8 +128,11 @@ extracted to `.local/generated/templates/`. A green build without them proves on
   - **Rollback:** `--rollback` with the `.local` backup, or Make's version history.
   - **Business validation:** on the next normal run. No historical failure is claimed.
   - **Recommended:** revoke the temporary Make API token.
-  - **Revision 3:** deployment approved; **RSFA runs it** from Cloud Shell with the bundle of docs/04. This
-    environment never deploys.
+  - **Revision 3:** deployment approved; **RSFA runs it** from Cloud Shell.
+    - Attempt 1 failed in Cloud Build: epoch-0 file times in the bundle made Maven skip all resources (D-037). No
+      revision was created; `00002-nan` is still serving.
+    - Corrected bundle `7a570707…` (commit `a34bd0c`) is rehearsed from the extracted archive and `gcloud`'s exact
+      upload set (docs/04). This environment never deploys.
 
 - **Iteration 9 (production unchanged; nothing deployed; `00002-nan` untouched):**
   - **`8731317` fix ready for approval (docs/09):**
