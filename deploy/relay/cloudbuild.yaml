@@ -1,0 +1,12 @@
+# Cloud Build config for the relay image (docs/15). Submit ONLY the staged relay context (tools/stage_relay.py).
+steps:
+  - id: build-relay-image
+    name: gcr.io/cloud-builders/docker
+    env:
+      - DOCKER_BUILDKIT=1
+    args: ["build", "--target", "relay", "-f", "deploy/relay/Dockerfile", "-t", "${_IMAGE}", "."]
+images:
+  - "${_IMAGE}"
+options:
+  logging: CLOUD_LOGGING_ONLY
+timeout: 2400s
