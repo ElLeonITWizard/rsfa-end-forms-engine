@@ -209,6 +209,16 @@ Changing users later: re-run with the new `ADMIN_USERS` (`UPDATE_EXISTING=1`, th
 To remove someone, remove their IAP binding too:
 `gcloud iap web remove-iam-policy-binding --resource-type=cloud-run --service=rsfa-end-forms-admin --region=australia-southeast1 --member=user:EMAIL --role=roles/iap.httpsResourceAccessor`.
 
+### Prepared bundle (2026-10-28)
+
+| | |
+|---|---|
+| Bundle | `.local/deploy-admin/rsfa-end-forms-admin-bundle.tar.gz` (not committed; regenerate with the commands above) |
+| SHA-256 | `ef877463a7778b8712beb15986dbb4c0dce417d3efbf457c76a95f08a8c11ad8` (built twice, identical) |
+| Built from | commit `946b5fb`; staged context 66 files, identical to the commit (the bundle script refuses a stale context); no PDF except the fictional `example-bank-form.pdf` |
+| Sanitised schema | 401 columns, SHA-256 `8be789c7…` |
+| Cloud Build rehearsal | the extracted bundle built with `deploy/admin/Dockerfile --target admin --no-cache` (all unit tests ran inside the build): **passed**. That image then passed the 42-check private end-to-end test. Local note: this environment's proxy refuses plain-HTTP apt, so the rehearsal used `--build-arg APT_MIRROR=https://archive.ubuntu.com/ubuntu` (Cloud Build does not need it). |
+
 ## 6. Rollback
 
 `deploy/admin/rollback_admin.sh` is a plan by default; `APPLY=1` executes. The engine is only read, before and after.

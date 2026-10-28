@@ -157,6 +157,8 @@ extracted to `.local/generated/templates/`. A green build without them proves on
     **Verify them at deployment.**
   - Tests: 97 Java + 35 Python; production-like environment (real image ×2 + IAP stand-in + fake GCS): 42 browser
     checks. BNZ Boarder bytes unchanged.
+  - Bundle `ef877463…` (commit `946b5fb`, reproducible): its Cloud Build-style image build passed with the tests inside,
+    and that image passed the 42 checks (docs/14 §5).
   - **Needs from RSFA:** approval of the plan output; the `ADMIN_USERS` emails and roles (Google accounts); an Owner to
     run it and the console IAP step; the bucket name, retention and separate-approver defaults.
 

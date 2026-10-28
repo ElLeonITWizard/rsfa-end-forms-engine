@@ -8,7 +8,7 @@
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 WORK=$ROOT/.local/private-admin-env
-IMAGE=rsfa-end-forms-admin:local
+IMAGE=${IMAGE:-rsfa-end-forms-admin:local}   # IMAGE=<tag> SKIP_BUILD=1: test an image built elsewhere (e.g. the bundle rehearsal)
 AUD=/projects/123456789012/locations/australia-southeast1/services/rsfa-end-forms-admin
 # Fictional identities: two admin users of the app, one IAP-only account (passes IAP, not on the app allowlist).
 USERS=${USERS:-admin.test@firbot.example.org:admin,approver.test@rsfa.example.org:approver,viewer.test@rsfa.example.org:viewer}
@@ -24,12 +24,14 @@ mkdir -p "$WORK"
 [ -f "$ROOT/.local/deploy-admin/context/STAGED_FILES.txt" ] || python3 "$ROOT/tools/stage_admin.py" \
   --schema "$(ls "$ROOT"/.local/reference/masterboard-columns-*.json | sort | tail -1)" --out "$ROOT/.local/deploy-admin"
 [ -f "$ROOT/engine/target/end-forms-engine.jar" ] || (cd "$ROOT/engine" && mvn -B -q package -DskipTests)
+if [ "${SKIP_BUILD:-0}" != 1 ]; then
 rm -rf "$WORK/ctx"; cp -r "$ROOT/.local/deploy-admin/context" "$WORK/ctx"
 mkdir -p "$WORK/ctx/engine/target"; cp "$ROOT/engine/target/end-forms-engine.jar" "$WORK/ctx/engine/target/"
 SECRET=(); [ -f /root/.ccr/ca-bundle.crt ] && SECRET=(--secret id=build_ca,src=/root/.ccr/ca-bundle.crt)
 DOCKER_BUILDKIT=1 docker build -q --network host "${SECRET[@]}" \
   --build-arg http_proxy="${http_proxy:-${HTTP_PROXY:-}}" --build-arg https_proxy="${https_proxy:-${HTTPS_PROXY:-}}" \
   -f "$WORK/ctx/deploy/admin/Dockerfile" --target admin-prebuilt -t "$IMAGE" "$WORK/ctx" >/dev/null
+fi
 echo "image $IMAGE: $(docker image inspect "$IMAGE" --format '{{.Id}}' | cut -c1-19)"
 
 node "$ROOT/tests/admin/fake_gcs.js" --port 4443 --bucket rsfa-admin-local --token local-token \
